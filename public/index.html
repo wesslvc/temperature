@@ -433,7 +433,7 @@ function trend(el, pts, marks){
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
   const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:6,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:214,h:140,u:'%'},{k:'dew',lo:'dmin',hi:'dmax',c:'var(--d)',s:'var(--d-soft)',y:388,h:116,u:'°'}];
   const H = 388+116+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
-  const X = p => m.l + (p.ts-t0)/span*iw;
+  const REV = true, XT = ts => m.l + (REV ? t1-ts : ts-t0)/span*iw, X = p => XT(p.ts), ord = a => REV ? a.slice().reverse() : a;
   let g = '';
   panels.forEach(P => {
     const v = pts.flatMap(p => [p[P.lo],p[P.hi]]).filter(x => x!=null);
@@ -444,15 +444,15 @@ function trend(el, pts, marks){
     // 실측 지점이 보이는 범위(≤300회)에서는 실측값을 지나는 매끄러운 곡선으로, 그보다 촘촘한 범위에서는 보간 격자를 이어서 그린다
     const real = (marks || []).filter(q => q[P.k] != null && q.ts > t0 && q.ts < t1);
     const src = real.length ? [v2[0], ...real, v2.at(-1)] : v2;
-    const line = smooth(src.map(p => [X(p), P.Y(p[P.k])]));
+    const line = smooth(ord(src).map(p => [X(p), P.Y(p[P.k])]));
     let band = '';
-    if(!real.length){ const up = v2.map(p => [X(p), P.Y(p[P.hi])]), dn = v2.map(p => [X(p), P.Y(p[P.lo])]).reverse(); band = `<path d="${smooth(up) + smooth(dn, false)}Z" fill="${P.s}"/>`; }
+    if(!real.length){ const up = ord(v2).map(p => [X(p), P.Y(p[P.hi])]), dn = ord(v2).map(p => [X(p), P.Y(p[P.lo])]).reverse(); band = `<path d="${smooth(up) + smooth(dn, false)}Z" fill="${P.s}"/>`; }
     g += `${band}<path d="${line}" fill="none" stroke="${P.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1).forEach(q => { g += `<circle cx="${(m.l+(q.ts-t0)/span*iw).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="3" fill="var(--bg)" stroke="${P.c}" stroke-width="1.5"/>`; });
+    (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1).forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="3" fill="var(--bg)" stroke="${P.c}" stroke-width="1.5"/>`; });
   });
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : md(ts);
-  const nt = W < 600 ? 3 : 6; for(let i=0;i<=nt;i++){ const ts = t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-4}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
-  if(selTs && selTs >= t0 && selTs <= t1){ const sx = (m.l+(selTs-t0)/span*iw).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="6" y2="${388+116}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
+  const nt = W < 600 ? 3 : 6; for(let i=0;i<=nt;i++){ const ts = REV ? t1-span*i/nt : t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-4}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
+  if(selTs && selTs >= t0 && selTs <= t1){ const sx = XT(selTs).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="6" y2="${388+116}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
   g += `<g id="cur" opacity="0"><line y1="6" y2="${388+116}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4" fill="var(--t)"/><circle id="d2" r="4" fill="var(--h)"/><circle id="d3" r="4" fill="var(--d)"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#cur'), hit = svg.querySelector('#hit');
@@ -466,7 +466,7 @@ function trend(el, pts, marks){
   };
   hit.onmouseleave = () => { cur.setAttribute('opacity',0); hideTip(); };
   hit.style.cursor = 'pointer';
-  hit.onclick = e => { const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W; selectPoint(Math.round(t0 + (px-m.l)/iw*span)); };
+  hit.onclick = e => { const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W; selectPoint(Math.round(REV ? t1 - (px-m.l)/iw*span : t0 + (px-m.l)/iw*span)); };
 }
 
 /* ---------- 히트맵 ---------- */
