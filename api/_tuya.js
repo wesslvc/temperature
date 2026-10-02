@@ -2,11 +2,22 @@ import crypto from 'node:crypto';
 
 const EMPTY_SHA = crypto.createHash('sha256').update('').digest('hex');
 
+// 데이터센터를 모를 때 차례로 시도하는 엔드포인트
+export const ENDPOINTS = [
+  'https://openapi.tuyaus.com',
+  'https://openapi.tuyaeu.com',
+  'https://openapi.tuyacn.com',
+  'https://openapi.tuyain.com',
+  'https://openapi-sg.iotbing.com',
+  'https://openapi-weaz.tuyaus.com',
+  'https://openapi-ueaz.tuyaus.com',
+];
+
 export class Tuya {
   constructor({ id, secret, endpoint }) {
     this.id = id;
     this.secret = secret;
-    this.endpoint = endpoint.replace(/\/$/, '');
+    this.endpoint = endpoint ? endpoint.replace(/\/$/, '') : null;
     this.token = null;
     this.expiresAt = 0;
     this.scales = new Map();
@@ -32,6 +43,24 @@ export class Tuya {
 
   async ensureToken() {
     if (this.token && Date.now() < this.expiresAt - 60_000) return;
+    if (!this.endpoint) {
+      const errors = [];
+      for (const ep of ENDPOINTS) {
+        this.endpoint = ep;
+        try {
+          await this.fetchToken();
+          return;
+        } catch (e) {
+          errors.push(`${ep}: ${e.message}`);
+        }
+      }
+      this.endpoint = null;
+      throw new Error('Tuya 인증 실패\n' + errors.join('\n'));
+    }
+    await this.fetchToken();
+  }
+
+  async fetchToken() {
     const r = await this.request('GET', '/v1.0/token?grant_type=1', { auth: false });
     this.token = r.access_token;
     this.expiresAt = Date.now() + r.expire_time * 1000;

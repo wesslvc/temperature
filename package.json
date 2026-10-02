@@ -1,11 +1,7 @@
 {
-  "name": "temperature",
+  "name": "orionroomtemp",
   "version": "1.0.0",
-  "description": "Smart Life(Tuya) 온습도 대시보드",
+  "private": true,
   "type": "module",
-  "scripts": {
-    "start": "node src/server.js",
-    "demo": "DEMO=1 node src/server.js"
-  },
-  "engines": { "node": ">=22.5" }
+  "engines": { "node": "22.x" }
 }
