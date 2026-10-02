@@ -70,12 +70,12 @@ returns json language sql security definer set search_path = '' stable as $$
       'temp', (select avg(temp) from avgsrc), 'hum', (select avg(hum) from avgsrc),
       'tmin', (select min(temp) from pts), 'tmax', (select max(temp) from pts),
       'hmin', (select min(hum) from pts), 'hmax', (select max(hum) from pts),
-      'tstd', (select stddev_pop(temp) from avgsrc),
+      'tstd', (select stddev_pop(temp) from avgsrc), 'hstd', (select stddev_pop(hum) from avgsrc),
       'tmax_ts', (select (extract(epoch from ts)*1000)::bigint from pts where temp is not null order by temp desc, ts desc limit 1),
       'tmin_ts', (select (extract(epoch from ts)*1000)::bigint from pts where temp is not null order by temp asc, ts desc limit 1),
       'hmax_ts', (select (extract(epoch from ts)*1000)::bigint from pts where hum is not null order by hum desc, ts desc limit 1),
       'hmin_ts', (select (extract(epoch from ts)*1000)::bigint from pts where hum is not null order by hum asc, ts desc limit 1),
-      'comfort', (select avg((temp between 22 and 27 and hum between 40 and 55)::int) * 100 from avgsrc),
+      'comfort', (select avg((temp between 22.5 and 27.5 and hum between 40 and 55)::int) * 100 from avgsrc),
       'dew', (select avg(243.12 * (ln(greatest(hum,1)/100.0) + 17.62*temp/(243.12+temp))
                          / (17.62 - (ln(greatest(hum,1)/100.0) + 17.62*temp/(243.12+temp)))) from avgsrc)),
     'hourly', coalesce((select json_agg(x order by h) from (
@@ -92,11 +92,12 @@ returns json language sql security definer set search_path = '' stable as $$
 $$;
 
 
--- 조회 구간에 주(w:YYYY-MM-DD, 7일) 추가
+-- 조회 구간: 주(w:YYYY-MM-DD, 7일), 임의 구간(r:시작ms:끝ms) 추가
 create or replace function roomtemp._bounds(p_range text)
 returns table(lo timestamptz, hi timestamptz) language sql stable set search_path = '' as $$
   select
     case
+      when p_range ~ '^r:\d{10,13}:\d{10,13}$' then to_timestamp(split_part(p_range, ':', 2)::bigint / 1000.0)
       when p_range ~ '^[dw]:\d{4}-\d{2}-\d{2}$' then (substr(p_range,3)::date)::timestamp at time zone 'Asia/Seoul'
       when p_range ~ '^m:\d{4}-\d{2}$' then ((substr(p_range,3) || '-01')::date)::timestamp at time zone 'Asia/Seoul'
       when p_range ~ '^y:\d{4}$' then ((substr(p_range,3) || '-01-01')::date)::timestamp at time zone 'Asia/Seoul'
@@ -106,6 +107,7 @@ returns table(lo timestamptz, hi timestamptz) language sql stable set search_pat
       when p_range = 'all' then '-infinity'::timestamptz
       else now() - interval '24 hours' end,
     case
+      when p_range ~ '^r:\d{10,13}:\d{10,13}$' then to_timestamp(split_part(p_range, ':', 3)::bigint / 1000.0)
       when p_range ~ '^d:\d{4}-\d{2}-\d{2}$' then ((substr(p_range,3)::date) + 1)::timestamp at time zone 'Asia/Seoul'
       when p_range ~ '^w:\d{4}-\d{2}-\d{2}$' then ((substr(p_range,3)::date) + 7)::timestamp at time zone 'Asia/Seoul'
       when p_range ~ '^m:\d{4}-\d{2}$' then (((substr(p_range,3) || '-01')::date) + interval '1 month')::timestamp at time zone 'Asia/Seoul'
