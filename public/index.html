@@ -43,6 +43,7 @@ header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
 .pickers{display:flex;gap:6px;flex-wrap:wrap}
 .pickers label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);padding:3px 8px;border:1px solid var(--rule);border-radius:3px}
 .pickers label.on{border-color:var(--ink);color:var(--ink)}
+.pickers select{max-width:9.5em;cursor:pointer}
 .pickers input,.pickers select{border:0;background:none;font:inherit;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;outline:none;color-scheme:light dark}
 
 /* quick range + stepper */
@@ -143,9 +144,10 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
       <div class="step" id="step" style="display:none"><button id="stPrev" aria-label="이전">‹</button><span id="stLbl"></span><button id="stNext" aria-label="다음">›</button></div>
     </div>
     <div class="pickers">
-      <label id="pd">일<input type="date" id="inD"></label>
-      <label id="pm">월<input type="month" id="inM"></label>
       <label id="py">연<select id="inY"></select></label>
+      <label id="pm">월<select id="inM"></select></label>
+      <label id="pw">주<select id="inW"></select></label>
+      <label id="pd">일<input type="date" id="inD"></label>
     </div>
   </div>
 
@@ -330,7 +332,7 @@ function trend(el, pts, marks){
 
 /* ---------- 히트맵 ---------- */
 const BINS = {
-  temp: { u:'°', bins:[[18,'#2f5d9e','<18'],[20,'#5b8fc2','18–20'],[22,'#93bfd8','20–22'],[24,'#b9d9a8','22–24'],[26,'#e8e08a','24–26'],[27,'#f6d36b','26–27'],[28,'#f0a94f','27–28'],[29,'#e6794a','28–29'],[30,'#cf4a40','29–30'],[Infinity,'#8f2a3c','30+']] },
+  temp: { u:'°', bins:[[20,'#2f5d9e','≤20'],[21.5,'#4f86bd','20–21.5'],[23,'#7db3d3','21.5–23'],[24.5,'#a6d3c4','23–24.5'],[26,'#c9e2a0','24.5–26'],[27.5,'#f0e27d','26–27.5'],[29,'#f7c45f','27.5–29'],[30.5,'#f0974e','29–30.5'],[32,'#e2663f','30.5–32'],[33.5,'#c43a3a','32–33.5'],[Infinity,'#8c2340','33.5+']] },
   hum:  { u:'%', bins:[[30,'#b9772f','<30'],[35,'#d9a65b','30–35'],[40,'#ecd596','35–40'],[47,'#bfe0cf','40–47'],[55,'#82c4ad','47–55'],[65,'#6aa0d4','55–65'],[Infinity,'#3d6bb0','65+']] },
 };
 const lum = (hex) => { const n = parseInt(hex.slice(1),16), c = [n>>16&255, n>>8&255, n&255].map(v => { v/=255; return v<=.03928 ? v/12.92 : ((v+.055)/1.055)**2.4; }); return .2126*c[0]+.7152*c[1]+.0722*c[2]; };
@@ -340,7 +342,7 @@ function heat(el, rows, metric){
   const days = [...new Set(rows.map(r => r.d))].sort(); const map = {};
   rows.forEach(r => map[r.d+'|'+r.h] = r[metric]);
   const W = Math.max(320, el.clientWidth || 1112), m = {l:monthly ? 40 : 66, t:20, b:4}, cw = (W-m.l)/24, ch = 28, H = m.t + days.length*ch + m.b, nums = cw >= 26;
-  const bin = v => B.bins.find(b => v < b[0]);
+  const bin = v => B.bins.find(b => metric === 'temp' ? v <= b[0] : v < b[0]);
   let g = '';
   for(let h=0;h<24;h+=(W<600?6:3)) g += `<text x="${m.l+h*cw+cw/2}" y="11" text-anchor="middle">${h}시</text>`;
   days.forEach((d,i) => {
@@ -492,9 +494,8 @@ async function loadHeat(){
 function setRange(r){ range = r; cmpIdx = 0; try{localStorage.range = r}catch{} syncPick(); load(); loadHeat(); }
 function syncPick(){
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', tabRange(b.dataset.k) === range));
-  ['d','m','y'].forEach(k => $('#p'+k).classList.toggle('on', range[0]===k && range[1]===':'));
   const v = range.slice(2);
-  if(range.startsWith('d:')) $('#inD').value = v; if(range.startsWith('m:')) $('#inM').value = v; if(range.startsWith('y:')) $('#inY').value = v;
+  [['d','#inD'],['w','#inW'],['m','#inM'],['y','#inY']].forEach(([k, id]) => { const on = range[0]===k && range[1]===':'; $('#p'+k).classList.toggle('on', on); $(id).value = on ? v : ''; });
   const st = $('#step'); st.style.display = canStep(range) ? '' : 'none';
   if(canStep(range)){ $('#stLbl').textContent = rangeLabel(range); $('#stNext').disabled = isFutureStart(shiftRange(range, 1)); }
 }
@@ -503,15 +504,20 @@ $('#tabs').onclick = e => { const k = e.target.dataset.k; if(k) setRange(tabRang
 $('#stPrev').onclick = () => setRange(shiftRange(range, -1));
 $('#stNext').onclick = () => { const n = shiftRange(range, 1); if(!isFutureStart(n)) setRange(n); };
 $('#inD').onchange = e => e.target.value && setRange('d:'+e.target.value);
+$('#inW').onchange = e => e.target.value && setRange('w:'+e.target.value);
 $('#inM').onchange = e => e.target.value && setRange('m:'+e.target.value);
-$('#inY').onchange = e => setRange('y:'+e.target.value);
+$('#inY').onchange = e => e.target.value && setRange('y:'+e.target.value);
 (async () => {
-  let y0 = new Date().getFullYear(), y1 = y0, lo = '', hi = '';
-  try { const b = await get('/api/bounds'); if (b.first) { y0 = new Date(b.first).getFullYear(); y1 = Math.max(y1, new Date(b.last).getFullYear()); lo = new Date(b.first+9*3600e3).toISOString().slice(0,10); hi = new Date(b.last+9*3600e3).toISOString().slice(0,10); } } catch {}
-  $('#inY').innerHTML = Array.from({length:y1-y0+1}, (_,i) => y1-i).map(y => `<option value="${y}">${y}년</option>`).join('');
-  if (lo) { $('#inD').min = lo; $('#inD').max = hi; $('#inM').min = lo.slice(0,7); $('#inM').max = hi.slice(0,7); }
-  const today = new Date(Date.now()+9*3600e3).toISOString();
-  if (!range.includes(':')) { $('#inD').value = today.slice(0,10); $('#inM').value = today.slice(0,7); $('#inY').value = today.slice(0,4); }
+  const today = kstDate(Date.now());
+  let first = today, last = today;
+  try { const b = await get('/api/bounds'); if (b.first) { first = kstDate(b.first); last = kstDate(Math.max(b.last, Date.now())); } } catch {}
+  const opt = (arr, ph) => `<option value="">${ph}</option>` + arr.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  const ys = [], ms = [], ws = [];
+  for (let y = +last.slice(0,4); y >= +first.slice(0,4); y--) ys.push([y, `${y}년`]);
+  for (let m = last.slice(0,7); m >= first.slice(0,7); m = addMonths(m, -1)) ms.push([m, `${m.slice(0,4)}년 ${+m.slice(5)}월`]);
+  for (let w = mondayOf(last), n = 0; w >= mondayOf(first) && n < 156; w = addDays(w, -7), n++) ws.push([w, `${md2(w)} – ${md2(addDays(w, 6))}`]);
+  $('#inY').innerHTML = opt(ys, '선택'); $('#inM').innerHTML = opt(ms, '선택'); $('#inW').innerHTML = opt(ws, '선택');
+  $('#inD').min = first; $('#inD').max = today;
   syncPick();
 })();
 $('#hmSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; hmMetric = m; document.querySelectorAll('#hmSeg button').forEach(b => b.classList.toggle('on', b.dataset.m===m)); heat($('#heat'), heatData, hmMetric); };
