@@ -78,6 +78,26 @@ table.tb td.t{color:var(--t)} table.tb td.h{color:var(--h)}
 .tile .dl{margin-top:8px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .tile .dl i{font-style:normal;font-weight:400;color:var(--faint);margin-left:4px}
 
+/* pills */
+.pick2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--rule)}
+.pick2 .k{margin-right:6px}
+.pill{border:1px solid var(--rule);background:none;color:var(--sub);border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center}
+.pill select{border:0;background:none;font:inherit;color:inherit;outline:none;cursor:pointer;max-width:9.5em;color-scheme:light dark}
+.pill.on{border-color:var(--ink);color:var(--ink);font-weight:600}
+button.pill.on{background:var(--ink);color:var(--bg)}
+.pill.dis{opacity:.4;pointer-events:none}
+.hh{font-size:13px;font-weight:600;margin:14px 0 4px}
+.sw{display:block;height:5px;border-radius:3px;margin-top:10px}
+/* click detail */
+.detail{margin-top:14px;border-top:1px solid var(--ink);padding-top:12px}
+.detail .dh{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap;font-size:13px;color:var(--sub)}
+.detail .dh b{color:var(--ink);font-size:15px}
+.detail .dh button{border:0;background:none;color:var(--sub);cursor:pointer;font:inherit;font-size:12px;text-decoration:underline}
+.detail .dg{display:grid;grid-template-columns:repeat(4,1fr);margin-top:10px;border-left:1px solid var(--rule);border-top:1px solid var(--rule)}
+.detail .dg>div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.detail .dg b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.detail .dg small{color:var(--sub);font-size:12px}
+.tb tr.go{cursor:pointer} .tb tr.go:hover td{background:var(--rule)}
 /* hero */
 .hero{display:grid;grid-template-columns:1.15fr 1fr;gap:0;border-bottom:1px solid var(--rule)}
 .now{padding:34px 40px 30px 0;border-right:1px solid var(--rule)}
@@ -127,6 +147,7 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
   .strip>div{border-bottom:1px solid var(--rule);padding-left:0!important}
   .two{grid-template-columns:1fr;gap:12px}
   .num{font-size:72px}
+  .detail .dg{grid-template-columns:repeat(2,1fr)}
   .tile{padding:12px 12px 10px}.tile .v{font-size:26px}.tile .v em{font-size:12px}
   .pair{gap:36px}
 }
@@ -143,12 +164,14 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
       <nav class="tabs" id="tabs"></nav>
       <div class="step" id="step" style="display:none"><button id="stPrev" aria-label="이전">‹</button><span id="stLbl"></span><button id="stNext" aria-label="다음">›</button></div>
     </div>
-    <div class="pickers">
-      <label id="py">연<select id="inY"></select></label>
-      <label id="pm">월<select id="inM"></select></label>
-      <label id="pw">주<select id="inW"></select></label>
-      <label id="pd">일<input type="date" id="inD"></label>
-    </div>
+  </div>
+  <div class="pick2">
+    <span class="k">기간</span>
+    <button class="pill" id="pAll">전체</button>
+    <label class="pill" id="py"><select id="inY"></select></label>
+    <label class="pill" id="pm"><select id="inM"></select></label>
+    <label class="pill" id="pk"><select id="inK"></select></label>
+    <label class="pill" id="pd"><select id="inD"></select></label>
   </div>
 
   <section class="hero">
@@ -166,6 +189,7 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
       <div class="legend"><span><i style="background:var(--t)"></i>온도 °C</span><span><i style="background:var(--h)"></i>습도 %</span><span id="lgBand"><i class="band" style="background:var(--sub)"></i>최소–최대</span><span id="lgDot"><i style="background:none;border:1.5px solid var(--sub);width:7px;height:7px;border-radius:50%"></i>실측</span></div>
     </div>
     <div id="trend"></div>
+    <div id="detail" class="detail" style="display:none"></div>
   </section>
 
   <div class="strip" id="strip"></div>
@@ -173,12 +197,18 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
   <section class="sec">
     <div class="sec-h">
       <div><h3>시간대 히트맵</h3><p class="cap" id="hmCap"></p></div>
-      <div class="seg" id="hmSeg"><button data-m="temp" class="on">온도</button><button data-m="hum">습도</button></div>
     </div>
-    <div id="heat"></div>
+    <h4 class="hh">온도</h4>
+    <div id="heatT"></div>
+    <h4 class="hh" style="margin-top:28px">습도</h4>
+    <div id="heatH"></div>
   </section>
 
   <section class="sec">
+    <div class="sec-h">
+      <div><h3>구간 집계</h3><p class="cap">막대나 행을 누르면 그 기간으로 이동합니다. 각 칸은 해당 날짜·주·월 전체를 기준으로 계산합니다.</p></div>
+      <div class="seg" id="unitSeg"><button data-u="d">일별</button><button data-u="w">주별</button><button data-u="m">월별</button></div>
+    </div>
     <div class="two">
       <div><h3 id="dailyT">일별 온도 범위</h3><p class="cap">막대는 최저–최고, 눈금은 평균</p><div id="daily"></div></div>
       <div><h3>하루 패턴</h3><p class="cap">시간대별 평균 (서울 시간)</p><div id="hourly"></div></div>
@@ -206,29 +236,35 @@ const wd = (d) => WD[new Date(d+'T00:00:00Z').getUTCDay()];
 const md2 = (d) => `${+d.slice(5,7)}/${+d.slice(8,10)}`;
 const kstMs = (d) => Date.parse(d + 'T00:00:00+09:00');
 const periodBounds = (r) => { const v = r.slice(2);
+  if(r[0]==='k'){ const [mm, k] = v.split(':'); return [kstMs(kStart(mm,+k)), kstMs(kEnd(mm,+k))]; }
   return r[0]==='d' ? [kstMs(v), kstMs(addDays(v,1))] : r[0]==='w' ? [kstMs(v), kstMs(addDays(v,7))] : r[0]==='m' ? [kstMs(v+'-01'), kstMs(addMonths(v,1)+'-01')] : [kstMs(v+'-01-01'), kstMs((+v+1)+'-01-01')]; };
 // 비교 대상 구간. 아직 끝나지 않은 기간(오늘·이번 주 등)은 지난 기간의 같은 경과 시간만큼만 비교한다.
 const compareSpecs = (r) => {
-  if(!/^[dwmy]:/.test(r)) return [];
+  if(!/^[dwmyk]:/.test(r)) return [];
   const [s, e] = periodBounds(r), el = Math.min(Date.now(), e) - s; if(el <= 0) return [];
   const mk = (shifted, label) => { const [ps, pe] = periodBounds(shifted), to = Math.min(pe, ps + el); return {label, range: `r:${ps}:${to}`, from: ps, to}; };
   return r[0]==='d' ? [mk(shiftRange(r,-1),'전날 같은 시간대'), mk('d:'+addDays(r.slice(2),-7),'지난주 같은 요일')]
-       : r[0]==='w' ? [mk(shiftRange(r,-1),'지난주 같은 기간')] : r[0]==='m' ? [mk(shiftRange(r,-1),'지난달 같은 기간')] : [mk(shiftRange(r,-1),'작년 같은 기간')];
+       : r[0]==='k' ? [mk(shiftRange(r,-1),'이전 주 같은 기간')] : r[0]==='w' ? [mk(shiftRange(r,-1),'지난주 같은 기간')] : r[0]==='m' ? [mk(shiftRange(r,-1),'지난달 같은 기간')] : [mk(shiftRange(r,-1),'작년 같은 기간')];
 };
-let cmpIdx = 0;
+let cmpIdx = 0, unit = '', selTs = null, lastStats = null, lastTrend = null, dataFirst = null, dataLast = null;
+const wkOfDay = (d) => Math.min(4, Math.floor((+d.slice(8,10)-1)/7)+1);
+const kStart = (m, n) => `${m}-${String(1+7*(n-1)).padStart(2,'0')}`;
+const kEnd = (m, n) => n === 4 ? addMonths(m,1)+'-01' : addDays(kStart(m,n), 7);
+const kSpan = (n) => n === 4 ? '22~말일' : `${(n-1)*7+1}~${n*7}`;
 const TABS = [['24h','현재'],['today','오늘'],['yest','어제'],['week','이번 주'],['month','이번 달'],['year','올해'],['all','전체']];
-const tabRange = (k) => { const t = kstDate(Date.now()); return k==='24h' ? '24h' : k==='today' ? 'd:'+t : k==='yest' ? 'd:'+addDays(t,-1) : k==='week' ? 'w:'+mondayOf(t) : k==='month' ? 'm:'+t.slice(0,7) : k==='year' ? 'y:'+t.slice(0,4) : 'all'; };
+const tabRange = (k) => { const t = kstDate(Date.now()); return k==='24h' ? '24h' : k==='today' ? 'd:'+t : k==='yest' ? 'd:'+addDays(t,-1) : k==='week' ? `k:${t.slice(0,7)}:${wkOfDay(t)}` : k==='month' ? 'm:'+t.slice(0,7) : k==='year' ? 'y:'+t.slice(0,4) : 'all'; };
 const rangeLabel = (r) => { const v = r.slice(2), thisYear = kstDate(Date.now()).slice(0,4);
   if (r === '24h') return '최근 24시간'; if (r === 'all') return '전체 기간'; if (r === '1h') return '최근 1시간'; if (r === '7d') return '최근 7일'; if (r === '30d') return '최근 30일';
   if (r[0]==='d') return `${v.slice(0,4)===thisYear ? '' : v.slice(0,4)+'년 '}${+v.slice(5,7)}월 ${+v.slice(8,10)}일 (${wd(v)})`;
   if (r[0]==='w') return `${md2(v)} – ${md2(addDays(v,6))} 주`;
+  if (r[0]==='k') { const [mm, n] = v.split(':'); return `${mm.slice(0,4)===thisYear ? '' : mm.slice(0,4)+'년 '}${+mm.slice(5)}월 ${n}주 (${kSpan(+n)}일)`; }
   if (r[0]==='m') return `${v.slice(0,4)}년 ${+v.slice(5,7)}월`;
   return `${v}년`; };
-const shiftRange = (r, n) => r[0]==='d' ? 'd:'+addDays(r.slice(2), n) : r[0]==='w' ? 'w:'+addDays(r.slice(2), 7*n) : r[0]==='m' ? 'm:'+addMonths(r.slice(2), n) : r[0]==='y' ? 'y:'+(+r.slice(2)+n) : r;
-const startOfRange = (r) => r[0]==='m' ? r.slice(2)+'-01' : r[0]==='y' ? r.slice(2)+'-01-01' : r.slice(2);
-const canStep = (r) => /^[dwmy]:/.test(r);
+const shiftRange = (r, n) => r[0]==='k' ? (() => { const [mm, k] = r.slice(2).split(':'); let i = +k + n, m = mm; while(i > 4){ i -= 4; m = addMonths(m, 1); } while(i < 1){ i += 4; m = addMonths(m, -1); } return `k:${m}:${i}`; })() : r[0]==='d' ? 'd:'+addDays(r.slice(2), n) : r[0]==='w' ? 'w:'+addDays(r.slice(2), 7*n) : r[0]==='m' ? 'm:'+addMonths(r.slice(2), n) : r[0]==='y' ? 'y:'+(+r.slice(2)+n) : r;
+const startOfRange = (r) => r[0]==='k' ? (() => { const [mm, k] = r.slice(2).split(':'); return kStart(mm, +k); })() : r[0]==='m' ? r.slice(2)+'-01' : r[0]==='y' ? r.slice(2)+'-01-01' : r.slice(2);
+const canStep = (r) => /^[dwmyk]:/.test(r);
 const isFutureStart = (r) => startOfRange(r) > kstDate(Date.now());
-let range = (()=>{try{const r = localStorage.range; return /^(24h|all|[dw]:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2}|y:\d{4})$/.test(r) ? r : null}catch{return null}})() || '24h', hmMetric = 'temp', heatData = [];
+let range = (()=>{try{const r = localStorage.range; return /^(24h|all|[dw]:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2}|k:\d{4}-\d{2}:[1-4]|y:\d{4})$/.test(r) ? r : null}catch{return null}})() || '24h', heatData = [];
 const n1 = (v) => v == null ? '–' : v.toFixed(1);
 const n0 = (v) => v == null ? '–' : Math.round(v);
 const hhmm = (ts) => new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
@@ -241,7 +277,7 @@ const get = (u) => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); re
 
 const dew = (t, h) => { const g = Math.log(Math.max(h,1)/100) + 17.62*t/(243.12+t); return 243.12*g/(17.62-g); };
 function feel(t, h){
-  const ts = t < 19.5 ? '쌀쌀하고' : t < 22.5 ? '약간 서늘하고' : t <= 27.5 ? '적정 온도에' : t <= 29.5 ? '조금 덥고' : '더운 편이고';
+  const ts = t < 19.5 ? '쌀쌀하고' : t < 22.5 ? '약간 서늘하고' : t <= 28 ? '적정 온도에' : t <= 30 ? '조금 덥고' : '더운 편이고';
   const hs = h < 30 ? '매우 건조합니다' : h < 40 ? '조금 건조합니다' : h <= 55 ? '습도도 쾌적합니다' : h <= 65 ? '조금 습합니다' : '습합니다';
   return `${ts} ${hs}.`;
 }
@@ -270,6 +306,30 @@ function smooth(pts, move = true){
   return d;
 }
 
+/* ---------- 클릭한 시점의 상세 ---------- */
+async function selectPoint(ts){
+  try {
+    const d = await get(`/api/point?ts=${ts}`); if(!d) return;
+    selTs = d.ts; if(lastTrend) trend(...lastTrend); renderDetail(d);
+  } catch {}
+}
+function renderDetail(d){
+  const el = $('#detail'), dp = dew(d.temp, d.hum), p = d.prev, pdp = p ? dew(p.temp, p.hum) : null, avgT = lastStats && lastStats.overall.temp;
+  const chg = (v, u, dec) => v == null ? '–' : Math.abs(v) < (dec ? .05 : .5) ? '– 변화 없음' : `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(dec)}${u}`;
+  const gapMin = p ? (d.ts-p.ts)/60000 : null, gap = gapMin == null ? '' : gapMin < 60 ? `${Math.round(gapMin)}분` : gapMin < 1440 ? `${Math.floor(gapMin/60)}시간 ${Math.round(gapMin%60)}분` : `${(gapMin/1440).toFixed(1)}일`;
+  const inT = d.temp >= 22.5 && d.temp <= 28, inH = d.hum >= 40 && d.hum <= 55;
+  const st = inT && inH ? '쾌적 범위 안' : `쾌적 범위 밖 (${[!inT && (d.temp > 28 ? '온도 높음' : '온도 낮음'), !inH && (d.hum > 55 ? '습도 높음' : '습도 낮음')].filter(Boolean).join(' · ')})`;
+  const ct = colorOf('temp', d.temp), ch = colorOf('hum', d.hum);
+  const c = (k, v, sub, color) => `<div><span class="k">${k}</span><b ${color ? `style="color:${color}"` : ''}>${v}</b><small>${sub || '&nbsp;'}</small></div>`;
+  el.style.display = '';
+  el.innerHTML = `<div class="dh"><span><b>${when(d.ts)} 측정</b> &nbsp;${p ? `직전 측정 ${when(p.ts)} · ${gap} 간격` : '기록상 첫 측정입니다'}</span><button id="dClose">닫기</button></div>
+    <div class="dg">
+      ${c('온도', n1(d.temp)+'°C', ct.label+'°', ct.ink)}${c('습도', n0(d.hum)+'%', ch.label+'%', ch.ink)}${c('이슬점', n1(dp)+'°C', '')}${c('쾌적 판정', `<span style="font-size:15px">${st}</span>`, '22.5–28°C · 40–55%')}
+      ${c('직전 대비 온도', chg(p ? d.temp-p.temp : null, '°', 1), p ? `${n1(p.temp)}° → ${n1(d.temp)}°` : '')}${c('직전 대비 습도', chg(p ? d.hum-p.hum : null, '%p', 0), p ? `${n0(p.hum)}% → ${n0(d.hum)}%` : '')}${c('직전 대비 이슬점', chg(p ? dp-pdp : null, '°', 1), p ? `${n1(pdp)}° → ${n1(dp)}°` : '')}${c('구간 평균 대비 온도', chg(avgT == null ? null : d.temp-avgT, '°', 1), avgT == null ? '' : `구간 평균 ${n1(avgT)}°`)}
+    </div>`;
+  $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
+}
+
 /* ---------- scatter: 온도 × 습도 ---------- */
 function scatter(el, pts, cur, marks){
   const W = 460, H = 330, m = {l:38,r:10,t:8,b:30}, iw = W-m.l-m.r, ih = H-m.t-m.b;
@@ -278,7 +338,7 @@ function scatter(el, pts, cur, marks){
   let g = '';
   for(let t=x0;t<=x1;t+=4) g += `<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${m.t+ih}"/><text x="${X(t)}" y="${H-10}" text-anchor="middle">${t}°</text>`;
   for(let h=y0;h<=y1;h+=20) g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${Y(h)}" y2="${Y(h)}"/><text x="${m.l-8}" y="${Y(h)+4}" text-anchor="end">${h}%</text>`;
-  g += `<rect x="${X(22.5)}" y="${Y(55)}" width="${X(27.5)-X(22.5)}" height="${Y(40)-Y(55)}" fill="var(--comfort)" stroke="var(--ok)" stroke-opacity=".5" stroke-dasharray="3 3"/>`;
+  g += `<rect x="${X(22.5)}" y="${Y(55)}" width="${X(28)-X(22.5)}" height="${Y(40)-Y(55)}" fill="var(--comfort)" stroke="var(--ok)" stroke-opacity=".5" stroke-dasharray="3 3"/>`;
   const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
   const p = (marks && marks.length ? marks : pts).filter(q => q.temp != null && q.hum != null);
   p.forEach((q,i) => { const a = .12 + .5*i/Math.max(1,p.length-1);
@@ -292,6 +352,7 @@ function scatter(el, pts, cur, marks){
 
 /* ---------- 추이 (온도/습도 2단) ---------- */
 function trend(el, pts, marks){
+  lastTrend = [el, pts, marks];
   if(pts.length < 2){ el.innerHTML = '<div class="empty">아직 그릴 만큼의 데이터가 없습니다. 수집이 시작되면 이곳에 나타납니다.</div>'; return; }
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
   const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:6,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:214,h:140,u:'%'}];
@@ -316,6 +377,7 @@ function trend(el, pts, marks){
   });
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : md(ts);
   const nt = W < 600 ? 3 : 6; for(let i=0;i<=nt;i++){ const ts = t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-4}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
+  if(selTs && selTs >= t0 && selTs <= t1){ const sx = (m.l+(selTs-t0)/span*iw).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="6" y2="${214+140}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
   g += `<g id="cur" opacity="0"><line y1="6" y2="${214+140}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4" fill="var(--t)"/><circle id="d2" r="4" fill="var(--h)"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#cur'), hit = svg.querySelector('#hit');
@@ -328,6 +390,8 @@ function trend(el, pts, marks){
     showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° <span style="opacity:.6">(${n1(b.tmin)}–${n1(b.tmax)})</span><br>습도 ${n0(b.hum)}% <span style="opacity:.6">(${n0(b.hmin)}–${n0(b.hmax)})</span>`);
   };
   hit.onmouseleave = () => { cur.setAttribute('opacity',0); hideTip(); };
+  hit.style.cursor = 'pointer';
+  hit.onclick = e => { const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W; selectPoint(Math.round(t0 + (px-m.l)/iw*span)); };
 }
 
 /* ---------- 히트맵 ---------- */
@@ -335,6 +399,13 @@ const BINS = {
   temp: { u:'°', bins:[[20,'#2f5d9e','≤20'],[21.5,'#4f86bd','20–21.5'],[23,'#7db3d3','21.5–23'],[24.5,'#a6d3c4','23–24.5'],[26,'#c9e2a0','24.5–26'],[27.5,'#f0e27d','26–27.5'],[29,'#f7c45f','27.5–29'],[30.5,'#f0974e','29–30.5'],[32,'#e2663f','30.5–32'],[33.5,'#c43a3a','32–33.5'],[Infinity,'#8c2340','33.5+']] },
   hum:  { u:'%', bins:[[30,'#b9772f','<30'],[35,'#d9a65b','30–35'],[40,'#ecd596','35–40'],[47,'#bfe0cf','40–47'],[55,'#82c4ad','47–55'],[65,'#6aa0d4','55–65'],[Infinity,'#3d6bb0','65+']] },
 };
+const binOf = (metric, v) => BINS[metric].bins.find(b => metric === 'temp' ? v <= b[0] : v < b[0]);
+const darkMode = () => matchMedia('(prefers-color-scheme: dark)').matches;
+function inkFor(hex){ let c = [1,3,5].map(i => parseInt(hex.slice(i,i+2),16)); const dark = darkMode();
+  const toHex = a => '#' + a.map(v => Math.round(v).toString(16).padStart(2,'0')).join('');
+  for(let i=0;i<24;i++){ const L = lum(toHex(c)); if(dark ? L >= .32 : L <= .2) break; c = dark ? c.map(v => v+(255-v)*.1) : c.map(v => v*.9); }
+  return toHex(c); }
+const colorOf = (metric, v) => { if(v == null) return null; const b = binOf(metric, v); return { fill: b[1], ink: inkFor(b[1]), label: b[2] }; };
 const lum = (hex) => { const n = parseInt(hex.slice(1),16), c = [n>>16&255, n>>8&255, n&255].map(v => { v/=255; return v<=.03928 ? v/12.92 : ((v+.055)/1.055)**2.4; }); return .2126*c[0]+.7152*c[1]+.0722*c[2]; };
 function heat(el, rows, metric){
   if(!rows.length){ el.innerHTML = '<div class="empty">이 기간에는 표시할 기록이 없습니다.</div>'; return; }
@@ -360,19 +431,26 @@ function heat(el, rows, metric){
 }
 
 /* ---------- 일별 범위 ---------- */
-function daily(el, rows, monthly){
-  rows = rows.slice(monthly ? -24 : -31);
+const rowLabel = (u, d, long) => u==='d' ? (long ? `${md2(d)} (${wd(d)})` : md2(d))
+  : u==='w' ? (() => { const [, m, n] = d.split('-'); return `${+m}월 ${n}주${long ? ` (${kSpan(+n)}일)` : ''}`; })()
+  : (long ? `${d.slice(0,4)}년 ${+d.slice(5)}월` : `${+d.slice(5)}월`);
+const rowRange = (u, d) => u==='d' ? 'd:'+d : u==='w' ? (() => { const p = d.split('-'); return `k:${p[0]}-${p[1]}:${p[2]}`; })() : 'm:'+d;
+const UNITS = { d:['일별','daily',31], w:['주별','weekly',26], m:['월별','monthly',24] };
+function daily(el, rows, u){
+  rows = rows.slice(-UNITS[u][2]);
   if(!rows.length){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
   const W = 520, H = 240, m = {l:36,r:4,t:8,b:26}, iw = W-m.l-m.r, ih = H-m.t-m.b;
   let lo = Math.floor(Math.min(...rows.map(r => r.tmin))-1), hi = Math.ceil(Math.max(...rows.map(r => r.tmax))+1);
   const Y = v => m.t+ih-(v-lo)/(hi-lo)*ih, bw = iw/rows.length; let g = '';
   for(let i=0;i<=4;i++){ const yy = m.t+ih*i/4; g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${Math.round(hi-(hi-lo)*i/4)}°</text>`; }
   const step = Math.ceil(rows.length/6);
-  rows.forEach((r,i) => { const x = m.l+i*bw+bw*.25, w = bw*.5;
-    g += `<rect data-i="${i}" x="${x}" y="${Y(r.tmax)}" width="${w}" height="${Math.max(2,Y(r.tmin)-Y(r.tmax))}" fill="var(--t)" fill-opacity=".28"/><line x1="${x-2}" x2="${x+w+2}" y1="${Y(r.temp)}" y2="${Y(r.temp)}" stroke="var(--t)" stroke-width="2"/>`;
-    if(i%step===0) g += `<text x="${x+w/2}" y="${H-8}" text-anchor="middle">${monthly ? (rows.length > 12 ? r.d.slice(2).replace('-','.') : +r.d.slice(5)+'월') : r.d.slice(5).replace('-','/')}</text>`; });
+  rows.forEach((r,i) => { const x = m.l+i*bw+bw*.2, w = bw*.6, c = colorOf('temp', r.temp);
+    g += `<rect data-i="${i}" x="${x}" y="${Y(r.tmax)}" width="${w}" height="${Math.max(3,Y(r.tmin)-Y(r.tmax))}" rx="2" fill="${c.fill}" fill-opacity=".55" style="cursor:pointer"/><line x1="${x-2}" x2="${x+w+2}" y1="${Y(r.temp)}" y2="${Y(r.temp)}" stroke="${c.ink}" stroke-width="2.5" pointer-events="none"/>`;
+    if(i%step===0) g += `<text x="${x+w/2}" y="${H-8}" text-anchor="middle">${rowLabel(u, r.d, false)}</text>`; });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
-  el.querySelectorAll('rect[data-i]').forEach(r => { const d = rows[r.dataset.i]; r.onmousemove = e => showTip(e, `<b>${monthly ? d.d.replace('-','.') : d.d.slice(5)}</b><br>평균 ${n1(d.temp)}° · ${n1(d.tmin)}–${n1(d.tmax)}°<br>습도 ${n0(d.hum)}%`); r.onmouseleave = hideTip; });
+  el.querySelectorAll('rect[data-i]').forEach(r => { const d = rows[r.dataset.i];
+    r.onmousemove = e => showTip(e, `<b>${rowLabel(u, d.d, true)}</b><br>평균 ${n1(d.temp)}° · 최저 ${n1(d.tmin)}° · 최고 ${n1(d.tmax)}°<br>습도 평균 ${n0(d.hum)}%`);
+    r.onmouseleave = hideTip; r.onclick = () => { hideTip(); setRange(rowRange(u, d.d)); }; });
 }
 
 /* ---------- 하루 패턴 ---------- */
@@ -400,9 +478,9 @@ function hourly(el, rows){
 /* ---------- 히어로 / 요약 ---------- */
 function renderNow(cur, ref, st, cmp){
   const o = st.overall, now = range === '24h';
-  const big = (t, h, tl, hl) => `<div class="pair">
-      <div><div class="num t mono">${n1(t)}<small>°C</small></div><div class="lbl"><b>${tl[0]}</b>${tl[1]}</div></div>
-      <div><div class="num h mono">${n0(h)}<small>%</small></div><div class="lbl"><b>${hl[0]}</b>${hl[1]}</div></div></div>`;
+  const big = (t, h, tl, hl) => { const ct = colorOf('temp', t), ch = colorOf('hum', h); return `<div class="pair">
+      <div><div class="num t mono" ${ct ? `style="color:${ct.ink}"` : ''}>${n1(t)}<small>°C</small></div>${ct ? `<i class="sw" style="background:${ct.fill}"></i>` : ''}<div class="lbl"><b>${tl[0]}</b>${tl[1]}</div></div>
+      <div><div class="num h mono" ${ch ? `style="color:${ch.ink}"` : ''}>${n0(h)}<small>%</small></div>${ch ? `<i class="sw" style="background:${ch.fill}"></i>` : ''}<div class="lbl"><b>${hl[0]}</b>${hl[1]}</div></div></div>`; };
   const tm = (ts) => !ts ? '' : range[0]==='d' ? hhmm(ts) : when(ts);
   const fact = (k, v, u, sub) => `<div><span class="k">${k}</span><b>${v}<em>${u}</em></b>${sub ? `<small>${sub}</small>` : ''}</div>`;
   if(now && !cur){ $('#now').innerHTML = big(null,null,['온도',''],['습도','']).replace(/class="num (t|h) mono"/g,'class="num $1 mono" style="color:var(--faint)"') + `<p class="verdict" style="color:var(--sub)">첫 측정값을 기다리고 있습니다. 센서 연결이 끝나면 1분 안에 이곳에 표시됩니다.</p>`; return; }
@@ -424,7 +502,7 @@ function renderNow(cur, ref, st, cmp){
   const base = sp && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
   const dl = (k, u, dec) => { if(!base || base[k] == null || o[k] == null) return ''; const d = o[k] - base[k];
     return `<div class="dl">${Math.abs(d) < (dec ? .05 : .5) ? '– 변화 없음' : `${d > 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(dec)}${u}`}</div>`; };
-  const tile = (cls, label, val, unit, sub, k, du, dec) => `<div class="tile ${cls}"><span class="k">${label}</span><div class="v">${val}<em>${unit}</em></div><small>${sub || '&nbsp;'}</small>${dl(k, du, dec)}</div>`;
+  const tile = (cls, label, val, unit, sub, k, du, dec) => { const c = colorOf(cls === 't' ? 'temp' : 'hum', o[k]); return `<div class="tile ${cls}"><span class="k">${label}</span><div class="v" ${c ? `style="color:${c.ink}"` : ''}>${val}<em>${unit}</em></div>${c ? `<i class="sw" style="background:${c.fill};height:4px;margin-top:6px"></i>` : ''}<small>${sub || '&nbsp;'}</small>${dl(k, du, dec)}</div>`; };
   const fmtW = (ms) => `${md(ms)} ${hhmm(ms)}`;
   const bar = specs.length ? `<div class="cmpbar"><span>변화 비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)} 대비` : `비교 구간(${fmtW(sp.from)} – ${fmtW(sp.to)})에 기록이 없습니다`}</span></div>` : '';
@@ -438,19 +516,19 @@ function renderNow(cur, ref, st, cmp){
 }
 
 /* ---------- 일/월 요약 표 ---------- */
-function table(el, rows, monthly){
+function table(el, rows, u){
   if(!rows.length){ el.innerHTML = '<div class="empty">이 기간에는 기록이 없습니다.</div>'; return; }
   const lo = Math.min(...rows.map(r => r.tmin)), hi = Math.max(...rows.map(r => r.tmax));
-  const lab = d => monthly ? `${d.slice(0,4)}년 ${+d.slice(5)}월` : `${md2(d)} (${wd(d)})`;
-  el.innerHTML = `<table class="tb"><thead><tr><th>${monthly?'월':'날짜'}</th><th>최저 온도</th><th>평균 온도</th><th>최고 온도</th><th>평균 습도</th><th>습도 범위</th></tr></thead><tbody>${
-    [...rows].reverse().map(r => `<tr><td>${lab(r.d)}</td><td class="t${r.tmin===lo?' ex':''}">${n1(r.tmin)}°</td><td class="t">${n1(r.temp)}°</td><td class="t${r.tmax===hi?' ex':''}">${n1(r.tmax)}°</td><td class="h">${n0(r.hum)}%</td><td>${n0(r.hmin)}–${n0(r.hmax)}%</td></tr>`).join('')}</tbody></table>`;
+  el.innerHTML = `<table class="tb"><thead><tr><th>${u==='d'?'날짜':u==='w'?'주':'월'}</th><th>최저 온도</th><th>평균 온도</th><th>최고 온도</th><th>평균 습도</th><th>습도 범위</th></tr></thead><tbody>${
+    [...rows].reverse().map(r => { const c = colorOf('temp', r.temp); return `<tr class="go" data-r="${rowRange(u, r.d)}"><td>${rowLabel(u, r.d, true)}</td><td class="t${r.tmin===lo?' ex':''}">${n1(r.tmin)}°</td><td class="t" style="color:${c.ink}">${n1(r.temp)}°</td><td class="t${r.tmax===hi?' ex':''}">${n1(r.tmax)}°</td><td class="h">${n0(r.hum)}%</td><td>${n0(r.hmin)}–${n0(r.hmax)}%</td></tr>`; }).join('')}</tbody></table>`;
+  el.querySelectorAll('tr.go').forEach(tr => tr.onclick = () => setRange(tr.dataset.r));
 }
 
 function renderStrip(st){
   const o = st.overall, rl = rangeLabel(range);
   const c = (k,v,s) => `<div><span class="k">${k}</span><b>${v}</b><small>${s}</small></div>`;
   $('#strip').innerHTML = [
-    c('쾌적 시간 비율', o.comfort == null ? '–' : n0(o.comfort)+'%', '22.5–27.5°C · 40–55%'),
+    c('쾌적 시간 비율', o.comfort == null ? '–' : n0(o.comfort)+'%', '22.5–28°C · 40–55%'),
     c('평균 이슬점', n1(o.dew)+'°', '습도·온도로 계산'),
     c('온도 변동폭', o.tmax == null ? '–' : (o.tmax-o.tmin).toFixed(1)+'°', `${n1(o.tmin)}° ~ ${n1(o.tmax)}°`),
     c('습도 변동폭', o.hmax == null ? '–' : Math.round(o.hmax-o.hmin)+'%p', `${n0(o.hmin)}% ~ ${n0(o.hmax)}%`),
@@ -466,18 +544,20 @@ async function load(){
     const cur = curR.devices[0] || null;
     renderNow(cur, cur && cur.prev, st, cmp);
     const now = range === '24h', o = st.overall;
-    $('#scCap').textContent = '초록 영역이 22.5–27.5°C · 습도 40–55%. 점은 선택 기간의 실측 흐름, 큰 점이 ' + (now ? '현재.' : '구간 평균.');
+    $('#scCap').textContent = '초록 영역이 22.5–28°C · 습도 40–55%. 점은 선택 기간의 실측 흐름, 큰 점이 ' + (now ? '현재.' : '구간 평균.');
     scatter($('#scatter'), hist.points, now ? cur : (o.temp == null ? null : {temp:o.temp, hum:o.hum}), hist.marks);
     $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · 실측 ${hist.samples.toLocaleString()}회 · 측정값 사이는 직선으로 이어 계산` : '';
     trend($('#trend'), hist.points, hist.marks);
     const dense = !(hist.marks && hist.marks.length); $('#lgBand').style.display = dense ? '' : 'none'; $('#lgDot').style.display = dense ? 'none' : '';
     renderStrip(st);
-    const useMonthly = (range === 'all' || range[0] === 'y') && st.monthly.length > 1;
-    $('#dailyT').textContent = useMonthly ? '월별 온도 범위' : '일별 온도 범위';
-    daily($('#daily'), useMonthly ? st.monthly : st.daily, useMonthly);
-    $('#tblT').textContent = useMonthly ? '월별 요약' : '일별 요약';
-    $('#tblCap').textContent = '최저·최고는 측정값과 보간값을 모두 포함한 해당 기간의 극값이며, 굵게 표시한 칸이 전체 기간의 가장 낮은/높은 날입니다.';
-    table($('#tbl'), useMonthly ? st.monthly : st.daily, useMonthly);
+    const u = unit || (range === 'all' || range[0] === 'y' ? 'm' : 'd'), rows = st[UNITS[u][1]];
+    document.querySelectorAll('#unitSeg button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
+    $('#dailyT').textContent = UNITS[u][0] + ' 온도 범위';
+    daily($('#daily'), rows, u);
+    $('#tblT').textContent = UNITS[u][0] + ' 요약';
+    $('#tblCap').textContent = '평균·최저·최고는 해당 날짜·주·월 전체를 기준으로 계산합니다(선택한 구간 밖의 같은 날 데이터 포함). 굵게 표시한 칸이 표 안에서 가장 낮은/높은 값입니다.';
+    table($('#tbl'), rows, u);
+    lastStats = st;
     hourly($('#hourly'), st.hourly);
     // 센서가 실제로 보고한 시각만 표시 (화면을 불러온 시각이 아님)
     const age = cur ? (Date.now()-cur.ts)/60000 : null, f = $('#fresh');
@@ -486,43 +566,51 @@ async function load(){
     f.lastChild.textContent = cur ? `마지막 측정 ${md(cur.ts)} ${hhmm(cur.ts)} · ${ago}` : '수집 대기 중';
   } catch(e){ $('#fresh').lastChild.textContent = '연결 오류'; }
 }
+const drawHeat = () => { heat($('#heatT'), heatData, 'temp'); heat($('#heatH'), heatData, 'hum'); };
 async function loadHeat(){
   $('#hmCap').textContent = (range === '24h' ? '최근 14일' : rangeLabel(range)) + (range === 'all' || range[0]==='y' ? ' · 월별 평균' : ' · 하루를 한 줄로') + ' · 색은 구간별로 구분';
-  try { heatData = await get(`/api/heatmap?range=${range}`); heat($('#heat'), heatData, hmMetric); } catch { heat($('#heat'), [], hmMetric); }
+  try { heatData = await get(`/api/heatmap?range=${range}`); } catch { heatData = []; }
+  drawHeat();
 }
 
-function setRange(r){ range = r; cmpIdx = 0; try{localStorage.range = r}catch{} syncPick(); load(); loadHeat(); }
+function setRange(r){ range = r; cmpIdx = 0; selTs = null; $('#detail').style.display = 'none'; try{localStorage.range = r}catch{} syncPick(); load(); loadHeat(); }
+function derive(r){ const o = {y:'', m:'', k:'', d:''}, v = r.slice(2);
+  if(r[0]==='y') o.y = v;
+  else if(r[0]==='m'){ o.y = v.slice(0,4); o.m = v; }
+  else if(r[0]==='k'){ const [mm, n] = v.split(':'); o.y = mm.slice(0,4); o.m = mm; o.k = n; }
+  else if(r[0]==='d'){ o.y = v.slice(0,4); o.m = v.slice(0,7); o.k = String(wkOfDay(v)); o.d = v; }
+  return o; }
+function fillPickers(){
+  const sel = derive(range), today = kstDate(Date.now()), first = dataFirst || today, last = dataLast || today;
+  const opt = (arr, ph, val) => `<option value="">${ph}</option>` + arr.map(([v, l]) => `<option value="${v}"${String(v) === val ? ' selected' : ''}>${l}</option>`).join('');
+  const ys = []; for(let y = +last.slice(0,4); y >= +first.slice(0,4); y--) ys.push([y, `${y}년`]);
+  const ms = []; if(sel.y) for(let i = 12; i >= 1; i--){ const m = `${sel.y}-${String(i).padStart(2,'0')}`; if(m >= first.slice(0,7) && m <= last.slice(0,7)) ms.push([m, `${i}월`]); }
+  const ks = []; if(sel.m) for(let n = 1; n <= 4; n++) if(kStart(sel.m, n) <= last && kEnd(sel.m, n) > first) ks.push([n, `${n}주 (${kSpan(n)}일)`]);
+  const ds = []; if(sel.m){ const n = +sel.k; const from = n ? kStart(sel.m, n) : sel.m+'-01', to = n ? kEnd(sel.m, n) : addMonths(sel.m,1)+'-01';
+    for(let d = from; d < to; d = addDays(d, 1)) if(d >= first && d <= last) ds.push([d, `${+d.slice(8)}일 (${wd(d)})`]); }
+  $('#inY').innerHTML = opt(ys, '연도', sel.y); $('#inM').innerHTML = opt(ms, '월', sel.m); $('#inK').innerHTML = opt(ks, '주', sel.k); $('#inD').innerHTML = opt(ds, '일', sel.d);
+  $('#pm').classList.toggle('dis', !sel.y); $('#pk').classList.toggle('dis', !sel.m); $('#pd').classList.toggle('dis', !sel.m);
+  [['y','#py'],['m','#pm'],['k','#pk'],['d','#pd']].forEach(([k, id]) => $(id).classList.toggle('on', !!sel[k]));
+  $('#pAll').classList.toggle('on', range === 'all');
+}
 function syncPick(){
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', tabRange(b.dataset.k) === range));
-  const v = range.slice(2);
-  [['d','#inD'],['w','#inW'],['m','#inM'],['y','#inY']].forEach(([k, id]) => { const on = range[0]===k && range[1]===':'; $('#p'+k).classList.toggle('on', on); $(id).value = on ? v : ''; });
+  fillPickers();
   const st = $('#step'); st.style.display = canStep(range) ? '' : 'none';
   if(canStep(range)){ $('#stLbl').textContent = rangeLabel(range); $('#stNext').disabled = isFutureStart(shiftRange(range, 1)); }
 }
-$('#tabs').innerHTML = TABS.map(([k,l]) => `<button data-k="${k}">${l}</button>`).join('');
+$('#tabs').innerHTML = TABS.filter(t => t[0] !== 'all').map(([k,l]) => `<button data-k="${k}">${l}</button>`).join('');
 $('#tabs').onclick = e => { const k = e.target.dataset.k; if(k) setRange(tabRange(k)); };
 $('#stPrev').onclick = () => setRange(shiftRange(range, -1));
 $('#stNext').onclick = () => { const n = shiftRange(range, 1); if(!isFutureStart(n)) setRange(n); };
-$('#inD').onchange = e => e.target.value && setRange('d:'+e.target.value);
-$('#inW').onchange = e => e.target.value && setRange('w:'+e.target.value);
-$('#inM').onchange = e => e.target.value && setRange('m:'+e.target.value);
-$('#inY').onchange = e => e.target.value && setRange('y:'+e.target.value);
-(async () => {
-  const today = kstDate(Date.now());
-  let first = today, last = today;
-  try { const b = await get('/api/bounds'); if (b.first) { first = kstDate(b.first); last = kstDate(Math.max(b.last, Date.now())); } } catch {}
-  const opt = (arr, ph) => `<option value="">${ph}</option>` + arr.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-  const ys = [], ms = [], ws = [];
-  for (let y = +last.slice(0,4); y >= +first.slice(0,4); y--) ys.push([y, `${y}년`]);
-  for (let m = last.slice(0,7); m >= first.slice(0,7); m = addMonths(m, -1)) ms.push([m, `${m.slice(0,4)}년 ${+m.slice(5)}월`]);
-  for (let w = mondayOf(last), n = 0; w >= mondayOf(first) && n < 156; w = addDays(w, -7), n++) ws.push([w, `${md2(w)} – ${md2(addDays(w, 6))}`]);
-  $('#inY').innerHTML = opt(ys, '선택'); $('#inM').innerHTML = opt(ms, '선택'); $('#inW').innerHTML = opt(ws, '선택');
-  $('#inD').min = first; $('#inD').max = today;
-  syncPick();
-})();
-$('#hmSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; hmMetric = m; document.querySelectorAll('#hmSeg button').forEach(b => b.classList.toggle('on', b.dataset.m===m)); heat($('#heat'), heatData, hmMetric); };
-syncPick();
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { load(); heat($('#heat'), heatData, hmMetric); }, 200); });
+$('#pAll').onclick = () => setRange('all');
+$('#inY').onchange = e => setRange(e.target.value ? 'y:'+e.target.value : 'all');
+$('#inM').onchange = e => setRange(e.target.value ? 'm:'+e.target.value : 'y:'+derive(range).y);
+$('#inK').onchange = e => { const m = derive(range).m; setRange(e.target.value ? `k:${m}:${e.target.value}` : 'm:'+m); };
+$('#inD').onchange = e => { const o = derive(range); setRange(e.target.value ? 'd:'+e.target.value : (o.k ? `k:${o.m}:${o.k}` : 'm:'+o.m)); };
+$('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; load(); };
+(async () => { try { const b = await get('/api/bounds'); if(b.first){ dataFirst = kstDate(b.first); dataLast = kstDate(Math.max(b.last, Date.now())); } } catch {} syncPick(); })();
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { load(); drawHeat(); }, 200); });
 load(); loadHeat(); setInterval(load, 30000); setInterval(loadHeat, 300000);
 </script>
 </body>
