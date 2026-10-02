@@ -98,7 +98,7 @@ button.pill.on{background:var(--ink);color:var(--bg)}
 .detail .dh{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap;font-size:13px;color:var(--sub)}
 .detail .dh b{color:var(--ink);font-size:15px}
 .detail .dh button{border:0;background:none;color:var(--sub);cursor:pointer;font:inherit;font-size:12px;text-decoration:underline}
-.detail .dg{display:grid;grid-template-columns:repeat(4,1fr);margin-top:10px;border-left:1px solid var(--rule);border-top:1px solid var(--rule)}
+.detail .num{font-size:60px}.detail .pair{gap:44px;margin-top:12px}
 .detail .dg>div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
 .detail .dg b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 .detail .dg small{color:var(--sub);font-size:12px}
@@ -181,7 +181,7 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
   .strip>div{border-bottom:1px solid var(--rule);padding-left:0!important}
   .two{grid-template-columns:1fr;gap:12px}
   .num{font-size:72px}
-  .detail .dg{grid-template-columns:repeat(2,1fr)}
+  .detail .num{font-size:44px}.detail .num small{font-size:16px}.detail .pair{gap:22px}
   .tile{padding:12px 12px 10px}.tile .v{font-size:26px}.tile .v em{font-size:12px}
   .pair{gap:36px}
 }
@@ -373,19 +373,17 @@ async function selectPoint(ts){
   } catch {}
 }
 function renderDetail(d){
-  const el = $('#detail'), dp = dew(d.temp, d.hum), p = d.prev, pdp = p ? dew(p.temp, p.hum) : null, avgT = lastStats && lastStats.overall.temp;
-  const chg = (v, u, dec) => v == null ? '–' : Math.abs(v) < (dec ? .05 : .5) ? '– 변화 없음' : `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(dec)}${u}`;
+  const el = $('#detail'), p = d.prev, dp = dew(d.temp, d.hum), pdp = p ? dew(p.temp, p.hum) : null, avgT = lastStats && lastStats.overall.temp;
   const gapMin = p ? (d.ts-p.ts)/60000 : null, gap = gapMin == null ? '' : gapMin < 60 ? `${Math.round(gapMin)}분` : gapMin < 1440 ? `${Math.floor(gapMin/60)}시간 ${Math.round(gapMin%60)}분` : `${(gapMin/1440).toFixed(1)}일`;
+  const dd = (v, u, dec) => v == null ? '' : `<span class="delta">${Math.abs(v) < (dec ? .05 : .5) ? '–' : (v > 0 ? '▲' : '▼')} ${Math.abs(v).toFixed(dec)}${u} <span style="color:var(--faint)">직전(${gap} 전) 대비</span></span>`;
+  const num = (cls, c, val, unit, label, delta) => `<div><div class="num ${cls} mono" style="color:${c.ink}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
   const inT = d.temp >= 22.5 && d.temp <= 28, inH = d.hum >= 40 && d.hum <= 55;
-  const st = `온도 ${tempWord(d.temp)[3]} · 습도 ${humWord(d.hum)[3]}`;
-  const ct = colorOf('temp', d.temp), ch = colorOf('hum', d.hum);
-  const c = (k, v, sub, color) => `<div><span class="k">${k}</span><b ${color ? `style="color:${color}"` : ''}>${v}</b><small>${sub || '&nbsp;'}</small></div>`;
+  const vsAvg = avgT == null ? '' : ` · 구간 평균(${n1(avgT)}°) 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°`}`;
   el.style.display = '';
-  el.innerHTML = `<div class="dh"><span><b>${when(d.ts)} 측정</b> &nbsp;${p ? `직전 측정 ${when(p.ts)} · ${gap} 간격` : '기록상 첫 측정입니다'}</span><button id="dClose">닫기</button></div>
-    <div class="dg">
-      ${c('온도', n1(d.temp)+'°C', ct.label+'°', ct.ink)}${c('습도', n0(d.hum)+'%', ch.label+'%', ch.ink)}${c('이슬점', n1(dp)+'°C', '')}${c('상태', `<span style="font-size:15px">${st}</span>`, (inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖') + ' (22.5–28°C · 40–55%)')}
-      ${c('직전 대비 온도', chg(p ? d.temp-p.temp : null, '°', 1), p ? `${n1(p.temp)}° → ${n1(d.temp)}°` : '')}${c('직전 대비 습도', chg(p ? d.hum-p.hum : null, '%p', 0), p ? `${n0(p.hum)}% → ${n0(d.hum)}%` : '')}${c('직전 대비 이슬점', chg(p ? dp-pdp : null, '°', 1), p ? `${n1(pdp)}° → ${n1(dp)}°` : '')}${c('구간 평균 대비 온도', chg(avgT == null ? null : d.temp-avgT, '°', 1), avgT == null ? '' : `구간 평균 ${n1(avgT)}°`)}
-    </div>`;
+  el.innerHTML = `<div class="dh"><span class="k">선택한 시점 · ${when(d.ts)} 측정${p ? ` · 직전 측정 ${when(p.ts)}` : ' · 기록상 첫 측정'}</span><button id="dClose">닫기</button></div>
+    <div class="pair">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(p ? d.temp-p.temp : null, '°', 1))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(p ? d.hum-p.hum : null, '%p', 0))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(p ? dp-pdp : null, '°', 1))}</div>
+    <p class="verdict">${feel(d.temp, d.hum)}</p>
+    <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (22.5–28°C · 40–55%)${vsAvg}</div>`;
   $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
 }
 
