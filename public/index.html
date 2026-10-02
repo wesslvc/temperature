@@ -64,6 +64,8 @@ table.tb th:first-child,table.tb td:first-child{text-align:left;padding-left:0}
 table.tb td.ex{font-weight:700}
 table.tb td.t{color:var(--t)} table.tb td.h{color:var(--h)}
 .tbw{overflow-x:auto}
+.chip{display:inline-block;min-width:3.6em;text-align:center;padding:2px 8px;border-radius:999px;font-weight:500}
+.chip.ex{font-weight:700;box-shadow:inset 0 0 0 1.5px currentColor}
 
 /* period tiles */
 .cmpbar{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;margin:14px 0 12px;font-size:12px;color:var(--sub)}
@@ -536,13 +538,14 @@ function table(el, rows, u, M){
   const K = MK[M];
   if(!rows.length){ el.innerHTML = '<div class="empty">이 기간에는 기록이 없습니다.</div>'; return; }
   const lo = Math.min(...rows.map(r => r[K.lo])), hi = Math.max(...rows.map(r => r[K.hi])), w = UW[u], multi = u !== 'd';
-  const cls = M === 'temp' ? 't' : 'h';
   const head = multi ? `<th>${w}최저</th><th>일 최저 평균</th><th>평균</th><th>일 최고 평균</th><th>${w}최고</th>` : `<th>최저</th><th>평균</th><th>최고</th>`;
+  // 값마다 히트맵과 같은 색 단계로 칩 표시
+  const cell = (v, bold) => { if(v == null) return '<td>–</td>'; const c = colorOf(M, v);
+    return `<td><span class="chip${bold ? ' ex' : ''}" style="background:${c.fill}38;color:${c.ink}">${K.fmt(v)}${K.u}</span></td>`; };
   el.innerHTML = `<table class="tb"><thead><tr><th>${u==='d'?'날짜':u==='w'?'주':'월'}</th>${head}</tr></thead><tbody>${
-    [...rows].reverse().map(r => { const c = colorOf(M, r[K.av]), f = v => v == null ? '–' : K.fmt(v) + K.u;
-      const cells = multi ? `<td class="${cls}${r[K.lo]===lo?' ex':''}">${f(r[K.lo])}</td><td class="${cls}">${f(r[K.alo])}</td><td class="${cls}" style="color:${c.ink};font-weight:700">${f(r[K.av])}</td><td class="${cls}">${f(r[K.ahi])}</td><td class="${cls}${r[K.hi]===hi?' ex':''}">${f(r[K.hi])}</td>`
-        : `<td class="${cls}${r[K.lo]===lo?' ex':''}">${f(r[K.lo])}</td><td class="${cls}" style="color:${c.ink};font-weight:700">${f(r[K.av])}</td><td class="${cls}${r[K.hi]===hi?' ex':''}">${f(r[K.hi])}</td>`;
-      return `<tr class="go" data-r="${rowRange(u, r.d)}"><td>${rowLabel(u, r.d, true)}</td>${cells}</tr>`; }).join('')}</tbody></table>`;
+    [...rows].reverse().map(r => `<tr class="go" data-r="${rowRange(u, r.d)}"><td>${rowLabel(u, r.d, true)}</td>${
+      multi ? cell(r[K.lo], r[K.lo]===lo) + cell(r[K.alo]) + cell(r[K.av], true) + cell(r[K.ahi]) + cell(r[K.hi], r[K.hi]===hi)
+            : cell(r[K.lo], r[K.lo]===lo) + cell(r[K.av], true) + cell(r[K.hi], r[K.hi]===hi)}</tr>`).join('')}</tbody></table>`;
   el.querySelectorAll('tr.go').forEach(tr => tr.onclick = () => setRange(tr.dataset.r));
 }
 
