@@ -10,11 +10,13 @@
 :root{
   --bg:#f3f0e9; --panel:#faf8f3; --ink:#1d1c1a; --sub:#77736a; --faint:#a9a498; --rule:#dcd7ca;
   --t:#c2410c; --h:#1e6a8c; --ok:#4d7c3a;
+  --d:#7b5ea7; --d-soft:rgba(123,94,167,.13);
   --t-soft:rgba(194,65,12,.13); --h-soft:rgba(30,106,140,.13); --comfort:rgba(77,124,58,.12);
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#121211; --panel:#191917; --ink:#ece9e1; --sub:#928e83; --faint:#5c5951; --rule:#2c2b27;
   --t:#f08a52; --h:#6cb4d6; --ok:#98c27c;
+  --d:#b9a1e6; --d-soft:rgba(185,161,230,.16);
   --t-soft:rgba(240,138,82,.16); --h-soft:rgba(108,180,214,.16); --comfort:rgba(152,194,124,.1);
 }}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -100,6 +102,14 @@ button.pill.on{background:var(--ink);color:var(--bg)}
 .detail .dg b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 .detail .dg small{color:var(--sub);font-size:12px}
 .tb tr.go{cursor:pointer} .tb tr.go:hover td{background:var(--rule)}
+/* rates + three-up */
+.rates{display:grid;grid-template-columns:repeat(3,1fr);gap:0 18px;margin-top:18px;padding-top:12px;border-top:1px solid var(--rule)}
+.rate b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
+.rate .bar2{height:4px;border-radius:2px;background:var(--rule);margin-top:6px;overflow:hidden}
+.rate .bar2 i{display:block;height:100%;background:var(--ok)}
+.rate small{display:block;font-size:12px;color:var(--sub);margin-top:4px;font-variant-numeric:tabular-nums}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+@media(max-width:860px){.three{grid-template-columns:1fr;gap:12px}.rates{grid-template-columns:1fr}}
 /* hero */
 .hero{display:grid;grid-template-columns:1.15fr 1fr;gap:0;border-bottom:1px solid var(--rule)}
 .now{padding:34px 40px 30px 0;border-right:1px solid var(--rule)}
@@ -188,7 +198,7 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
   <section class="sec">
     <div class="sec-h">
       <div><h3>추이</h3><p class="cap" id="trendCap"></p></div>
-      <div class="legend"><span><i style="background:var(--t)"></i>온도 °C</span><span><i style="background:var(--h)"></i>습도 %</span><span id="lgBand"><i class="band" style="background:var(--sub)"></i>최소–최대</span><span id="lgDot"><i style="background:none;border:1.5px solid var(--sub);width:7px;height:7px;border-radius:50%"></i>실측</span></div>
+      <div class="legend"><span><i style="background:var(--t)"></i>온도 °C</span><span><i style="background:var(--h)"></i>습도 %</span><span><i style="background:var(--d)"></i>이슬점 °C</span><span id="lgBand"><i class="band" style="background:var(--sub)"></i>최소–최대</span><span id="lgDot"><i style="background:none;border:1.5px solid var(--sub);width:7px;height:7px;border-radius:50%"></i>실측</span></div>
     </div>
     <div id="trend"></div>
     <div id="detail" class="detail" style="display:none"></div>
@@ -204,6 +214,8 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
     <div id="heatT"></div>
     <h4 class="hh" style="margin-top:28px">습도</h4>
     <div id="heatH"></div>
+    <h4 class="hh" style="margin-top:28px">이슬점</h4>
+    <div id="heatD"></div>
   </section>
 
   <section class="sec">
@@ -212,9 +224,10 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
       <div class="seg" id="unitSeg"><button data-u="d">일별</button><button data-u="w">주별</button><button data-u="m">월별</button></div>
     </div>
     <p class="cap" id="rangeCap" style="margin:6px 0 2px"></p>
-    <div class="two">
+    <div class="three">
       <div><h3 id="dailyT">일별 온도 범위</h3><div id="daily"></div></div>
       <div><h3 id="dailyHT">일별 습도 범위</h3><div id="dailyHum"></div></div>
+      <div><h3 id="dailyDT">일별 이슬점 범위</h3><div id="dailyDew"></div></div>
     </div>
   </section>
 
@@ -228,6 +241,7 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
     <p class="cap" id="tblCap"></p>
     <h4 class="hh">온도</h4><div class="tbw" id="tbl"></div>
     <h4 class="hh" style="margin-top:22px">습도</h4><div class="tbw" id="tblH"></div>
+    <h4 class="hh" style="margin-top:22px">이슬점</h4><div class="tbw" id="tblD"></div>
   </section>
 
   <footer><span>센서가 보고한 값만 기록합니다 · 선택한 기간의 모든 측정값 기준</span></footer>
@@ -293,6 +307,15 @@ const HUM_STEPS = [[30,'매우 건조하고','매우 건조합니다','매우 �
 const tempWord = (t) => TEMP_STEPS.find(x => t < x[0]) || TEMP_STEPS.at(-1);
 const humWord = (h) => HUM_STEPS.find(x => h < x[0]) || HUM_STEPS.at(-1);
 function feel(t, h){ return `온도는 ${tempWord(t)[1]} 습도는 ${humWord(h)[2]}.`; }
+
+function niceScale(a, b){
+  const span = Math.max(b - a, .5);
+  const step = [0.5,1,2,2.5,5,10,20,25,50,100].find(x => span / x <= 5) || 100;
+  let lo = Math.floor(a/step + 1e-9)*step, hi = Math.ceil(b/step - 1e-9)*step; if(hi - lo < step) hi = lo + step;
+  const ticks = []; for(let v = lo; v <= hi + 1e-9; v += step) ticks.push(+v.toFixed(2));
+  return { lo, hi, step, ticks };
+}
+const tickLabel = (v, step) => step < 1 ? v.toFixed(1) : String(Math.round(v));
 
 /* ---------- 매끄러운 곡선: 단조 3차 보간(Fritsch–Carlson). 1차 미분이 연속이고 overshoot 없음 ---------- */
 function smooth(pts, move = true){
@@ -367,16 +390,15 @@ function trend(el, pts, marks){
   lastTrend = [el, pts, marks];
   if(pts.length < 2){ el.innerHTML = '<div class="empty">아직 그릴 만큼의 데이터가 없습니다. 수집이 시작되면 이곳에 나타납니다.</div>'; return; }
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
-  const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:6,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:214,h:140,u:'%'}];
-  const H = 214+140+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
+  const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:6,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:214,h:140,u:'%'},{k:'dew',lo:'dmin',hi:'dmax',c:'var(--d)',s:'var(--d-soft)',y:372,h:120,u:'°'}];
+  const H = 372+120+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
   const X = p => m.l + (p.ts-t0)/span*iw;
   let g = '';
   panels.forEach(P => {
     const v = pts.flatMap(p => [p[P.lo],p[P.hi]]).filter(x => x!=null);
-    let lo = Math.min(...v), hi = Math.max(...v); const pad = Math.max((hi-lo)*.2,1); lo = Math.floor(lo-pad); hi = Math.ceil(hi+pad);
+    const mn = Math.min(...v), mx = Math.max(...v), pad = Math.max((mx-mn)*.12, .3), sc = niceScale(mn-pad, mx+pad), lo = sc.lo, hi = sc.hi;
     P.Y = val => P.y + P.h - (val-lo)/(hi-lo)*P.h;
-    const ticks = 4;
-    for(let i=0;i<=ticks;i++){ const yy = P.y + P.h*i/ticks; g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${Math.round(hi-(hi-lo)*i/ticks)}${P.u}</text>`; }
+    sc.ticks.forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
     const v2 = pts.filter(p => p[P.k]!=null);
     // 실측 지점이 보이는 범위(≤300회)에서는 실측값을 지나는 매끄러운 곡선으로, 그보다 촘촘한 범위에서는 보간 격자를 이어서 그린다
     const real = (marks || []).filter(q => q[P.k] != null && q.ts > t0 && q.ts < t1);
@@ -389,8 +411,8 @@ function trend(el, pts, marks){
   });
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : md(ts);
   const nt = W < 600 ? 3 : 6; for(let i=0;i<=nt;i++){ const ts = t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-4}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
-  if(selTs && selTs >= t0 && selTs <= t1){ const sx = (m.l+(selTs-t0)/span*iw).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="6" y2="${214+140}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
-  g += `<g id="cur" opacity="0"><line y1="6" y2="${214+140}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4" fill="var(--t)"/><circle id="d2" r="4" fill="var(--h)"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
+  if(selTs && selTs >= t0 && selTs <= t1){ const sx = (m.l+(selTs-t0)/span*iw).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="6" y2="${372+120}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
+  g += `<g id="cur" opacity="0"><line y1="6" y2="${372+120}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4" fill="var(--t)"/><circle id="d2" r="4" fill="var(--h)"/><circle id="d3" r="4" fill="var(--d)"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#cur'), hit = svg.querySelector('#hit');
   hit.onmousemove = e => {
@@ -398,8 +420,8 @@ function trend(el, pts, marks){
     let b = pts[0]; for(const p of pts) if(Math.abs(X(p)-px) < Math.abs(X(b)-px)) b = p;
     cur.setAttribute('opacity',1); cur.firstChild.setAttribute('x1',X(b)); cur.firstChild.setAttribute('x2',X(b));
     const d1 = cur.querySelector('#d1'), d2 = cur.querySelector('#d2');
-    d1.setAttribute('cx',X(b)); d1.setAttribute('cy',panels[0].Y(b.temp)); d2.setAttribute('cx',X(b)); d2.setAttribute('cy',panels[1].Y(b.hum));
-    showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° <span style="opacity:.6">(${n1(b.tmin)}–${n1(b.tmax)})</span><br>습도 ${n0(b.hum)}% <span style="opacity:.6">(${n0(b.hmin)}–${n0(b.hmax)})</span>`);
+    d1.setAttribute('cx',X(b)); d1.setAttribute('cy',panels[0].Y(b.temp)); d2.setAttribute('cx',X(b)); d2.setAttribute('cy',panels[1].Y(b.hum)); const d3 = cur.querySelector('#d3'); if(b.dew != null){ d3.setAttribute('cx',X(b)); d3.setAttribute('cy',panels[2].Y(b.dew)); }
+    showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° <span style="opacity:.6">(${n1(b.tmin)}–${n1(b.tmax)})</span><br>습도 ${n0(b.hum)}% <span style="opacity:.6">(${n0(b.hmin)}–${n0(b.hmax)})</span><br>이슬점 ${n1(b.dew)}° <span style="opacity:.6">(${n1(b.dmin)}–${n1(b.dmax)})</span>`);
   };
   hit.onmouseleave = () => { cur.setAttribute('opacity',0); hideTip(); };
   hit.style.cursor = 'pointer';
@@ -409,6 +431,7 @@ function trend(el, pts, marks){
 /* ---------- 히트맵 ---------- */
 const BINS = {
   temp: { u:'°', bins:[[20,'#2f5d9e','≤20'],[21.5,'#4f86bd','20–21.5'],[23,'#7db3d3','21.5–23'],[24.5,'#a6d3c4','23–24.5'],[26,'#c9e2a0','24.5–26'],[27.5,'#f0e27d','26–27.5'],[29,'#f7c45f','27.5–29'],[30.5,'#f0974e','29–30.5'],[32,'#e2663f','30.5–32'],[33.5,'#c43a3a','32–33.5'],[Infinity,'#8c2340','33.5+']] },
+  dew:  { u:'°', bins:[[10,'#c98f4a','<10'],[13,'#bfe0cf','10–13'],[16,'#82c4ad','13–16'],[18,'#f0e27d','16–18'],[21,'#f0974e','18–21'],[Infinity,'#c43a3a','21+']] },
   hum:  { u:'%', bins:[[30,'#b9772f','<30'],[35,'#d9a65b','30–35'],[40,'#ecd596','35–40'],[47,'#bfe0cf','40–47'],[55,'#82c4ad','47–55'],[65,'#6aa0d4','55–65'],[Infinity,'#3d6bb0','65+']] },
 };
 const binOf = (metric, v) => BINS[metric].bins.find(b => metric === 'temp' ? v <= b[0] : v < b[0]);
@@ -439,7 +462,7 @@ function heat(el, rows, metric){
   });
   const legend = B.bins.map(b => `<span><i style="background:${b[1]}"></i>${b[2]}${B.u}</span>`).join('');
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg><div class="legend2">${legend}</div>`;
-  el.querySelectorAll('rect[data-v]').forEach(r => { const d = r.dataset.d; r.onmousemove = e => showTip(e, `<b>${monthly ? `${+d.slice(5)}월 평균` : `${md2(d)} (${wd(d)})`} ${r.dataset.h}시</b><br>${metric==='temp' ? n1(+r.dataset.v) : n0(+r.dataset.v)}${B.u}`); r.onmouseleave = hideTip; });
+  el.querySelectorAll('rect[data-v]').forEach(r => { const d = r.dataset.d; r.onmousemove = e => showTip(e, `<b>${monthly ? `${+d.slice(5)}월 평균` : `${md2(d)} (${wd(d)})`} ${r.dataset.h}시</b><br>${metric==='hum' ? n0(+r.dataset.v) : n1(+r.dataset.v)}${B.u}`); r.onmouseleave = hideTip; });
 }
 
 /* ---------- 일별 범위 ---------- */
@@ -449,15 +472,16 @@ const rowLabel = (u, d, long) => u==='d' ? (long ? `${md2(d)} (${wd(d)})` : md2(
 const rowRange = (u, d) => u==='d' ? 'd:'+d : u==='w' ? (() => { const p = d.split('-'); return `k:${p[0]}-${p[1]}:${p[2]}`; })() : 'm:'+d;
 const UNITS = { d:['일별','daily',31], w:['주별','weekly',26], m:['월별','monthly',24] };
 const MK = { temp: { lo:'tmin', hi:'tmax', alo:'tminavg', ahi:'tmaxavg', av:'temp', fmt:n1, u:'°', pad:1, name:'온도' },
+             dew:  { lo:'dmin', hi:'dmax', alo:'dminavg', ahi:'dmaxavg', av:'dew', fmt:n1, u:'°', pad:1, name:'이슬점' },
              hum:  { lo:'hmin', hi:'hmax', alo:'hminavg', ahi:'hmaxavg', av:'hum',  fmt:n0, u:'%', pad:3, name:'습도' } };
 const UW = { d:'', w:'주 ', m:'월 ' };
 function rangeChart(el, rows, u, M){
   const K = MK[M]; rows = rows.slice(-UNITS[u][2]);
   if(!rows.length){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
-  const W = 520, H = 250, m = {l:38,r:6,t:16,b:28}, iw = W-m.l-m.r, ih = H-m.t-m.b;
-  let lo = Math.floor(Math.min(...rows.map(r => r[K.lo]))-K.pad), hi = Math.ceil(Math.max(...rows.map(r => r[K.hi]))+K.pad);
+  const W = 400, H = 250, m = {l:36,r:6,t:16,b:28}, iw = W-m.l-m.r, ih = H-m.t-m.b;
+  const sc = niceScale(Math.min(...rows.map(r => r[K.lo])) - K.pad/2, Math.max(...rows.map(r => r[K.hi])) + K.pad/2), lo = sc.lo, hi = sc.hi;
   const Y = v => m.t+ih-(v-lo)/(hi-lo)*ih, bw = iw/rows.length; let g = '';
-  for(let i=0;i<=4;i++){ const yy = m.t+ih*i/4; g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${Math.round(hi-(hi-lo)*i/4)}${K.u}</text>`; }
+  sc.ticks.forEach(v => { const yy = Y(v); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${tickLabel(v, sc.step)}${K.u}</text>`; });
   const step = Math.ceil(rows.length/6), labels = rows.length <= 14;
   rows.forEach((r,i) => { const x = m.l+i*bw+bw*.2, w = bw*.6, c = colorOf(M, r[K.av]), cx = x+w/2;
     g += `<rect data-i="${i}" x="${x}" y="${Y(r[K.hi])}" width="${w}" height="${Math.max(3,Y(r[K.lo])-Y(r[K.hi]))}" rx="2" fill="${c.fill}" fill-opacity=".3" style="cursor:pointer"/>`;
@@ -475,11 +499,12 @@ function rangeChart(el, rows, u, M){
 function hourly(el, rows){
   if(rows.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
   const W = Math.max(320, el.clientWidth || 1112), H = 240, m = {l:36,r:36,t:8,b:26}, iw = W-m.l-m.r, ih = H-m.t-m.b;
-  const ext = k => { const v = rows.map(r => r[k]); const lo = Math.min(...v), hi = Math.max(...v), p = Math.max((hi-lo)*.3,1); return [Math.floor(lo-p),Math.ceil(hi+p)]; };
-  const [tl,th] = ext('temp'), [hl,hh] = ext('hum');
+  const ext = k => { const v = rows.map(r => r[k]), lo = Math.min(...v), hi = Math.max(...v), p = Math.max((hi-lo)*.25,.3); return niceScale(lo-p, hi+p); };
+  const sT = ext('temp'), sH = ext('hum'), tl = sT.lo, th = sT.hi, hl = sH.lo, hh = sH.hi;
   const X = r => m.l + r.h/23*iw, YT = v => m.t+ih-(v-tl)/(th-tl)*ih, YH = v => m.t+ih-(v-hl)/(hh-hl)*ih;
   let g = '';
-  for(let i=0;i<=4;i++){ const yy = m.t+ih*i/4; g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${Math.round(th-(th-tl)*i/4)}°</text><text x="${W-m.r+6}" y="${yy+4}">${Math.round(hh-(hh-hl)*i/4)}%</text>`; }
+  sT.ticks.forEach(v => { const yy = YT(v); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${tickLabel(v, sT.step)}°</text>`; });
+  sH.ticks.forEach(v => { g += `<text x="${W-m.r+6}" y="${YH(v)+4}">${tickLabel(v, sH.step)}%</text>`; });
   for(let h=0;h<24;h+=6) g += `<text x="${m.l+h/23*iw}" y="${H-8}" text-anchor="middle">${h}시</text>`;
   const L = (k,Y) => smooth(rows.map(r => [X(r), Y(r[k])]));
   g += `<path d="${L('hum',YH)}" fill="none" stroke="var(--h)" stroke-width="1.8"/><path d="${L('temp',YT)}" fill="none" stroke="var(--t)" stroke-width="1.8"/>`;
@@ -494,6 +519,12 @@ function hourly(el, rows){
 }
 
 /* ---------- 히어로 / 요약 ---------- */
+// 쾌적 진입률: 선택 구간에서 쾌적 범위 안에 머문 시간 비율 (사잇값 보간 기준)
+function ratesHtml(o, base){
+  const d = (k) => !base || base[k] == null || o[k] == null ? '' : (() => { const x = o[k] - base[k]; return Math.abs(x) < .5 ? '– 변화 없음' : `${x > 0 ? '▲' : '▼'} ${Math.abs(x).toFixed(0)}%p`; })();
+  const r = (label, k, sub) => `<div class="rate"><span class="k">${label}</span><b>${o[k] == null ? '–' : n0(o[k])}%</b><div class="bar2"><i style="width:${o[k] == null ? 0 : Math.min(100, o[k])}%"></i></div><small>${sub}${d(k) ? ' · ' + d(k) : ''}</small></div>`;
+  return `<div class="rates">${r('쾌적 온도 진입률', 'comfort_t', '22.5–28°C')}${r('쾌적 습도 진입률', 'comfort_h', '40–55%')}${r('둘 다 진입률', 'comfort', '온도·습도 동시')}</div>`;
+}
 function renderNow(cur, ref, st, cmp){
   const o = st.overall, now = range === '24h';
   const big = (t, h, tl, hl) => { const ct = colorOf('temp', t), ch = colorOf('hum', h); return `<div class="pair">
@@ -513,14 +544,14 @@ function renderNow(cur, ref, st, cmp){
       <div class="facts">
         ${fact('24시간 최저 온도', n1(o.tmin), '°C', tm(o.tmin_ts))}${fact('24시간 최고 온도', n1(o.tmax), '°C', tm(o.tmax_ts))}${fact('쾌적 시간 비율', o.comfort == null ? '–' : n0(o.comfort), '%', '')}
         ${fact('24시간 최저 습도', n0(o.hmin), '%', tm(o.hmin_ts))}${fact('24시간 최고 습도', n0(o.hmax), '%', tm(o.hmax_ts))}${fact('이슬점', n1(dp), '°C', '')}
-      </div>`;
+      </div>${ratesHtml(o, null)}`;
     return;
   }
   const specs = compareSpecs(range), sp = specs[Math.min(cmpIdx, specs.length-1)];
   const base = sp && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
   const dl = (k, u, dec) => { if(!base || base[k] == null || o[k] == null) return ''; const d = o[k] - base[k];
     return `<div class="dl">${Math.abs(d) < (dec ? .05 : .5) ? '– 변화 없음' : `${d > 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(dec)}${u}`}</div>`; };
-  const tile = (cls, label, val, unit, sub, k, du, dec) => { const c = colorOf(cls === 't' ? 'temp' : 'hum', o[k]); return `<div class="tile ${cls}"><span class="k">${label}</span><div class="v" ${c ? `style="color:${c.ink}"` : ''}>${val}<em>${unit}</em></div>${c ? `<i class="sw" style="background:${c.fill};height:4px;margin-top:6px"></i>` : ''}<small>${sub || '&nbsp;'}</small>${dl(k, du, dec)}</div>`; };
+  const tile = (cls, label, val, unit, sub, k, du, dec) => { const c = colorOf(cls === 't' ? 'temp' : cls === 'd' ? 'dew' : 'hum', o[k]); return `<div class="tile ${cls}"><span class="k">${label}</span><div class="v" ${c ? `style="color:${c.ink}"` : ''}>${val}<em>${unit}</em></div>${c ? `<i class="sw" style="background:${c.fill};height:4px;margin-top:6px"></i>` : ''}<small>${sub || '&nbsp;'}</small>${dl(k, du, dec)}</div>`; };
   const fmtW = (ms) => `${md(ms)} ${hhmm(ms)}`;
   const bar = specs.length ? `<div class="cmpbar"><span>변화 비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)} 대비` : `비교 구간(${fmtW(sp.from)} – ${fmtW(sp.to)})에 기록이 없습니다`}</span></div>` : '';
@@ -528,7 +559,8 @@ function renderNow(cur, ref, st, cmp){
     <div class="tiles">
       ${tile('t','최저 온도', n1(o.tmin),'°C', tm(o.tmin_ts), 'tmin','°',1)}${tile('t','최고 온도', n1(o.tmax),'°C', tm(o.tmax_ts), 'tmax','°',1)}${tile('t','평균 온도', n1(o.temp),'°C', '', 'temp','°',1)}
       ${tile('h','최저 습도', n0(o.hmin),'%', tm(o.hmin_ts), 'hmin','%p',0)}${tile('h','최고 습도', n0(o.hmax),'%', tm(o.hmax_ts), 'hmax','%p',0)}${tile('h','평균 습도', n0(o.hum),'%', '', 'hum','%p',0)}
-    </div>
+      ${tile('d','최저 이슬점', n1(o.dmin),'°C', tm(o.dmin_ts), 'dmin','°',1)}${tile('d','최고 이슬점', n1(o.dmax),'°C', tm(o.dmax_ts), 'dmax','°',1)}${tile('d','평균 이슬점', n1(o.dew),'°C', '', 'dew','°',1)}
+    </div>${ratesHtml(o, base)}
     <p class="verdict">구간 평균 기준으로 ${feel(o.temp, o.hum)}</p>`;
   document.querySelectorAll('.cmpbar button').forEach(bn => bn.onclick = () => { cmpIdx = +bn.dataset.i; load(); });
 }
@@ -553,11 +585,11 @@ function renderStrip(st){
   const o = st.overall, rl = rangeLabel(range);
   const c = (k,v,s) => `<div><span class="k">${k}</span><b>${v}</b><small>${s}</small></div>`;
   $('#strip').innerHTML = [
-    c('쾌적 시간 비율', o.comfort == null ? '–' : n0(o.comfort)+'%', '22.5–28°C · 40–55%'),
-    c('평균 이슬점', n1(o.dew)+'°', '습도·온도로 계산'),
     c('온도 변동폭', o.tmax == null ? '–' : (o.tmax-o.tmin).toFixed(1)+'°', `${n1(o.tmin)}° ~ ${n1(o.tmax)}°`),
     c('습도 변동폭', o.hmax == null ? '–' : Math.round(o.hmax-o.hmin)+'%p', `${n0(o.hmin)}% ~ ${n0(o.hmax)}%`),
-    c('온도 편차', o.tstd == null ? '–' : '±'+o.tstd.toFixed(1)+'°', o.hstd == null ? '' : `습도 ±${o.hstd.toFixed(1)}%p`),
+    c('이슬점 변동폭', o.dmax == null ? '–' : (o.dmax-o.dmin).toFixed(1)+'°', `${n1(o.dmin)}° ~ ${n1(o.dmax)}°`),
+    c('온도 편차', o.tstd == null ? '–' : '±'+o.tstd.toFixed(1)+'°', '시간 가중 표준편차'),
+    c('습도 편차', o.hstd == null ? '–' : '±'+o.hstd.toFixed(1)+'%p', '시간 가중 표준편차'),
     c('측정 횟수', (o.n||0).toLocaleString(), `${rl} · 실제 보고`),
   ].join('');
 }
@@ -580,10 +612,11 @@ async function load(){
     $('#dailyT').textContent = UNITS[u][0] + ' 온도 범위';
     $('#dailyHT').textContent = UNITS[u][0] + ' 습도 범위';
     $('#rangeCap').textContent = u === 'd' ? '연한 막대 = 하루의 최저~최고, 가로선 = 하루 평균' : `연한 막대 = ${UW[u]}최저~${UW[u]}최고 · 진한 막대 = 일 최저 평균~일 최고 평균 · 가로선 = 평균`;
-    rangeChart($('#daily'), rows, u, 'temp'); rangeChart($('#dailyHum'), rows, u, 'hum');
+    rangeChart($('#daily'), rows, u, 'temp'); rangeChart($('#dailyHum'), rows, u, 'hum'); rangeChart($('#dailyDew'), rows, u, 'dew');
+    $('#dailyDT').textContent = UNITS[u][0] + ' 이슬점 범위';
     $('#tblT').textContent = UNITS[u][0] + ' 요약';
     $('#tblCap').textContent = '평균·최저·최고는 해당 날짜·주·월 전체를 기준으로 계산합니다(선택한 구간 밖의 같은 날 데이터 포함). 굵게 표시한 칸이 표 안에서 가장 낮은/높은 값입니다.';
-    table($('#tbl'), rows, u, 'temp'); table($('#tblH'), rows, u, 'hum');
+    table($('#tbl'), rows, u, 'temp'); table($('#tblH'), rows, u, 'hum'); table($('#tblD'), rows, u, 'dew');
     lastStats = st;
     hourly($('#hourly'), st.hourly);
     // 센서가 실제로 보고한 시각만 표시 (화면을 불러온 시각이 아님)
@@ -593,7 +626,7 @@ async function load(){
     f.lastChild.textContent = cur ? `마지막 측정 ${md(cur.ts)} ${hhmm(cur.ts)} · ${ago}` : '수집 대기 중';
   } catch(e){ $('#fresh').lastChild.textContent = '연결 오류'; }
 }
-const drawHeat = () => { heat($('#heatT'), heatData, 'temp'); heat($('#heatH'), heatData, 'hum'); };
+const drawHeat = () => { heat($('#heatT'), heatData, 'temp'); heat($('#heatH'), heatData, 'hum'); heat($('#heatD'), heatData, 'dew'); };
 async function loadHeat(){
   $('#hmCap').textContent = (range === '24h' ? '최근 14일' : rangeLabel(range)) + (range === 'all' || range[0]==='y' ? ' · 월별 평균' : ' · 하루를 한 줄로') + ' · 색은 구간별로 구분';
   try { heatData = await get(`/api/heatmap?range=${range}`); } catch { heatData = []; }
