@@ -1,6 +1,6 @@
 // 앱 셸만 캐시하고 데이터(/api)는 항상 네트워크에서 가져온다 (오프라인이면 마지막 화면 껍데기만 표시)
-const CACHE = 'orion-room-v1';
-const SHELL = ['/', '/icon.svg', '/manifest.webmanifest', '/icons/icon-192.png'];
+const CACHE = 'orion-room-v2';
+const SHELL = ['/', '/icon.svg?v=2', '/manifest.webmanifest', '/icons/icon-192.png?v=2'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
