@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>온습도 대시보드</title>
+<style>
+:root{
+  --bg:#f5f6f8;--card:#fff;--ink:#14171c;--sub:#6b7380;--line:#e8eaee;
+  --temp:#ff6b4a;--temp-soft:rgba(255,107,74,.14);--hum:#2d8cff;--hum-soft:rgba(45,140,255,.14);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0d0f13;--card:#161a20;--ink:#eef1f5;--sub:#8b94a3;--line:#262c35;
+  --temp-soft:rgba(255,107,74,.2);--hum-soft:rgba(45,140,255,.2);--shadow:0 0 0 1px #20262e;
+}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 20px 64px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.live{color:var(--sub);font-size:13px;display:flex;align-items:center;gap:8px;margin-top:4px}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.5);animation:p 2s infinite}
+@keyframes p{70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.seg{display:inline-flex;background:var(--card);border-radius:12px;padding:4px;box-shadow:var(--shadow)}
+.seg button{border:0;background:none;color:var(--sub);font:inherit;font-size:13px;font-weight:600;padding:6px 14px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.grid{display:grid;gap:16px}
+.rooms{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-bottom:16px}
+.card{background:var(--card);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
+.card h2{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:14px;letter-spacing:.01em}
+.room{cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .15s}
+.room:hover{transform:translateY(-2px)}
+.room.sel{border-color:var(--ink)}
+.room .name{font-weight:600;display:flex;justify-content:space-between}
+.room .name small{color:var(--sub);font-weight:400;font-size:12px}
+.vals{display:flex;gap:24px;margin-top:14px}
+.big{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.big sup{font-size:16px;font-weight:600;color:var(--sub);margin-left:2px;vertical-align:top;position:relative;top:4px}
+.lab{font-size:12px;color:var(--sub);margin-top:6px;display:flex;align-items:center;gap:6px}
+.lab i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.bar{height:6px;border-radius:3px;background:var(--line);margin-top:12px;overflow:hidden}
+.bar b{display:block;height:100%;border-radius:3px}
+.avg{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:16px}
+.stat .num{font-size:34px;font-weight:700;letter-spacing:-.03em}
+.stat .rng{font-size:12px;color:var(--sub);margin-top:4px}
+.two{grid-template-columns:repeat(auto-fit,minmax(420px,1fr));margin-bottom:16px}
+@media(max-width:520px){.two{grid-template-columns:1fr}}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--sub);margin-bottom:6px}
+.legend span{display:flex;align-items:center;gap:6px}.legend i{width:10px;height:3px;border-radius:2px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--sub);font-size:11px;font-family:inherit}
+.grid-l{stroke:var(--line);stroke-width:1}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.5;opacity:0;transition:opacity .1s;z-index:9;white-space:nowrap}
+.empty{color:var(--sub);text-align:center;padding:40px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:9px 6px;text-align:right;border-bottom:1px solid var(--line)}
+th{color:var(--sub);font-weight:500;font-size:12px}td:first-child,th:first-child{text-align:left}
+tr:last-child td{border:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>온습도</h1>
+      <div class="live"><span class="dot"></span><span id="upd">불러오는 중…</span></div>
+    </div>
+    <div class="seg" id="range"></div>
+  </header>
+
+  <div class="grid rooms" id="rooms"></div>
+  <div class="grid avg" id="avg"></div>
+
+  <div class="card" style="margin-bottom:16px">
+    <h2 id="trendTitle">추이</h2>
+    <div class="legend"><span><i style="background:var(--temp)"></i>온도 (°C)</span><span><i style="background:var(--hum)"></i>습도 (%)</span><span style="margin-left:auto">연한 영역 = 최소~최대</span></div>
+    <div id="trend"></div>
+  </div>
+
+  <div class="grid two">
+    <div class="card"><h2>시간대별 평균 온도</h2><div id="hourT"></div></div>
+    <div class="card"><h2>시간대별 평균 습도</h2><div id="hourH"></div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="card"><h2>일별 평균</h2><div id="daily"></div></div>
+    <div class="card"><h2>기기별 평균</h2><div id="per"></div></div>
+  </div>
+</div>
+<div id="tip"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const RANGES = [['1h','1시간'],['24h','24시간'],['7d','7일'],['30d','30일'],['all','전체']];
+let range = localStorage.range || '24h', device = null;
+const f1 = (v) => v == null ? '–' : v.toFixed(1);
+const f0 = (v) => v == null ? '–' : Math.round(v);
+const tip = $('#tip');
+const showTip = (e, html) => { tip.innerHTML = html; tip.style.opacity = 1; tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = e.clientY + 14 + 'px'; };
+const hideTip = () => tip.style.opacity = 0;
+
+function tempColor(t){ return t==null?'var(--sub)': t<18?'#2d8cff': t<26?'#22c55e': t<30?'#f59e0b':'#ef4444'; }
+function humNote(h){ return h==null?'': h<30?'건조':h<=60?'쾌적':'습함'; }
+
+// ---------- 차트 ----------
+function lineChart(el, pts, {w=1040,h=300}={}){
+  if(pts.length<2){ el.innerHTML='<div class="empty">데이터를 수집하는 중입니다…</div>'; return; }
+  const m={l:40,r:40,t:12,b:26}, iw=w-m.l-m.r, ih=h-m.t-m.b;
+  const t0=pts[0].ts, t1=pts.at(-1).ts;
+  const ext=(a,b)=>{ const v=pts.flatMap(p=>[p[a],p[b]]).filter(x=>x!=null); const lo=Math.min(...v),hi=Math.max(...v),pad=(hi-lo||2)*.15; return [Math.floor(lo-pad),Math.ceil(hi+pad)]; };
+  const [tl,th]=ext('tmin','tmax'), [hl,hh]=ext('hmin','hmax');
+  const x=p=>m.l+(p.ts-t0)/(t1-t0||1)*iw;
+  const yT=v=>m.t+ih-(v-tl)/(th-tl)*ih, yH=v=>m.t+ih-(v-hl)/(hh-hl)*ih;
+  const line=(k,y)=>pts.filter(p=>p[k]!=null).map((p,i)=>(i?'L':'M')+x(p).toFixed(1)+','+y(p[k]).toFixed(1)).join('');
+  const band=(a,b,y)=>{const v=pts.filter(p=>p[a]!=null); return 'M'+v.map(p=>x(p).toFixed(1)+','+y(p[b]).toFixed(1)).join('L')+'L'+[...v].reverse().map(p=>x(p).toFixed(1)+','+y(p[a]).toFixed(1)).join('L')+'Z';};
+  let g='';
+  for(let i=0;i<=4;i++){ const yy=m.t+ih*i/4; g+=`<line class="grid-l" x1="${m.l}" x2="${w-m.r}" y1="${yy}" y2="${yy}"/>
+    <text x="${m.l-8}" y="${yy+4}" text-anchor="end">${Math.round(th-(th-tl)*i/4)}</text>
+    <text x="${w-m.r+8}" y="${yy+4}">${Math.round(hh-(hh-hl)*i/4)}</text>`; }
+  const span=t1-t0, fmt=ts=>{const d=new Date(ts); return span<2*864e5? d.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}) : `${d.getMonth()+1}/${d.getDate()}`;};
+  for(let i=0;i<=5;i++){ const ts=t0+span*i/5; g+=`<text x="${m.l+iw*i/5}" y="${h-6}" text-anchor="${i==0?'start':i==5?'end':'middle'}">${fmt(ts)}</text>`; }
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${g}
+    <path d="${band('tmin','tmax',yT)}" fill="var(--temp-soft)"/><path d="${band('hmin','hmax',yH)}" fill="var(--hum-soft)"/>
+    <path d="${line('hum',yH)}" fill="none" stroke="var(--hum)" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="${line('temp',yT)}" fill="none" stroke="var(--temp)" stroke-width="2.2" stroke-linejoin="round"/>
+    <line id="cur" y1="${m.t}" y2="${m.t+ih}" stroke="var(--sub)" stroke-dasharray="3 3" opacity="0"/>
+    <rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" id="hit"/></svg>`;
+  const svg=el.firstChild, hit=svg.querySelector('#hit'), cur=svg.querySelector('#cur');
+  hit.onmousemove=e=>{ const r=svg.getBoundingClientRect(), px=(e.clientX-r.left)/r.width*w;
+    let best=pts[0]; for(const p of pts) if(Math.abs(x(p)-px)<Math.abs(x(best)-px)) best=p;
+    cur.setAttribute('x1',x(best)); cur.setAttribute('x2',x(best)); cur.setAttribute('opacity',1);
+    showTip(e,`<b>${new Date(best.ts).toLocaleString('ko',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}</b><br>🌡 ${f1(best.temp)}°C <span style="opacity:.6">(${f1(best.tmin)}~${f1(best.tmax)})</span><br>💧 ${f0(best.hum)}%`); };
+  hit.onmouseleave=()=>{cur.setAttribute('opacity',0);hideTip();};
+}
+
+function barChart(el, rows, key, color, {fmt=f1,labels,h=220}={}){
+  if(!rows.length){ el.innerHTML='<div class="empty">데이터 없음</div>'; return; }
+  const w=520,m={l:34,r:4,t:10,b:24},iw=w-m.l-m.r,ih=h-m.t-m.b;
+  const vals=rows.map(r=>r[key]); const lo=Math.min(...vals),hi=Math.max(...vals),pad=(hi-lo||2)*.5;
+  const a=Math.floor(lo-pad),b=Math.ceil(hi+pad), bw=iw/rows.length;
+  let g='';
+  for(let i=0;i<=3;i++){ const yy=m.t+ih*i/3; g+=`<line class="grid-l" x1="${m.l}" x2="${w}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${Math.round(b-(b-a)*i/3)}</text>`; }
+  const avg=vals.reduce((s,v)=>s+v,0)/vals.length, ya=m.t+ih-(avg-a)/(b-a)*ih;
+  rows.forEach((r,i)=>{ const v=r[key], bh=(v-a)/(b-a)*ih;
+    g+=`<rect data-i="${i}" x="${m.l+i*bw+bw*.18}" y="${m.t+ih-bh}" width="${bw*.64}" height="${bh}" rx="4" fill="${color}" opacity=".85"/>`;
+    if(i%Math.ceil(rows.length/8)==0) g+=`<text x="${m.l+i*bw+bw/2}" y="${h-6}" text-anchor="middle">${labels(r)}</text>`; });
+  g+=`<line x1="${m.l}" x2="${w}" y1="${ya}" y2="${ya}" stroke="var(--ink)" stroke-dasharray="4 4" opacity=".45"/><text x="${w}" y="${ya-5}" text-anchor="end">평균 ${fmt(avg)}</text>`;
+  el.innerHTML=`<svg viewBox="0 0 ${w} ${h}">${g}</svg>`;
+  el.querySelectorAll('rect').forEach(r=>{ r.onmousemove=e=>{r.setAttribute('opacity',1);showTip(e,`<b>${labels(rows[r.dataset.i])}</b><br>${fmt(rows[r.dataset.i][key])}`)}; r.onmouseleave=()=>{r.setAttribute('opacity',.85);hideTip();}; });
+}
+
+// ---------- 렌더 ----------
+function renderRooms(list){
+  $('#rooms').innerHTML = list.length ? list.map(d=>`
+    <div class="card room ${device===d.id?'sel':''}" data-id="${d.id}">
+      <div class="name">${d.name}<small>${d.ts?new Date(d.ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'대기 중'}</small></div>
+      <div class="vals">
+        <div><div class="big" style="color:${tempColor(d.temp)}">${f1(d.temp)}<sup>°C</sup></div><div class="lab"><i style="background:var(--temp)"></i>온도</div></div>
+        <div><div class="big">${f0(d.hum)}<sup>%</sup></div><div class="lab"><i style="background:var(--hum)"></i>습도 · ${humNote(d.hum)}</div></div>
+      </div>
+      <div class="bar"><b style="width:${Math.min(100,d.hum||0)}%;background:var(--hum)"></b></div>
+    </div>`).join('') : '<div class="card empty" style="grid-column:1/-1">연결된 기기가 없습니다. 서버 로그와 .env 설정을 확인하세요.</div>';
+  document.querySelectorAll('.room').forEach(el=>el.onclick=()=>{ device = device===el.dataset.id?null:el.dataset.id; load(); });
+}
+
+function renderAvg(s){
+  const o=s.overall, rl=RANGES.find(r=>r[0]===range)[1];
+  $('#avg').innerHTML=[
+    ['평균 온도',f1(o.temp)+'°C',`최저 ${f1(o.tmin)} · 최고 ${f1(o.tmax)}`,'var(--temp)'],
+    ['평균 습도',f0(o.hum)+'%',`최저 ${f0(o.hmin)} · 최고 ${f0(o.hmax)}`,'var(--hum)'],
+    ['측정 횟수',(o.n||0).toLocaleString(),`${rl} 동안`,'var(--ink)'],
+  ].map(([t,n,r,c])=>`<div class="card stat"><h2>${t}</h2><div class="num" style="color:${c}">${n}</div><div class="rng">${r}</div></div>`).join('');
+  barChart($('#hourT'),s.hourly.filter(r=>r.temp!=null),'temp','var(--temp)',{labels:r=>r.h+'시'});
+  barChart($('#hourH'),s.hourly.filter(r=>r.hum!=null),'hum','var(--hum)',{fmt:f0,labels:r=>r.h+'시'});
+  const days=s.daily.slice(-14);
+  $('#daily').innerHTML=days.length?`<table><tr><th>날짜</th><th>평균 온도</th><th>최저/최고</th><th>평균 습도</th></tr>${days.reverse().map(d=>`<tr><td>${d.d.slice(5)}</td><td style="color:var(--temp);font-weight:600">${f1(d.temp)}°</td><td>${f1(d.tmin)} / ${f1(d.tmax)}</td><td style="color:var(--hum);font-weight:600">${f0(d.hum)}%</td></tr>`).join('')}</table>`:'<div class="empty">데이터 없음</div>';
+  $('#per').innerHTML=s.perDevice.length?`<table><tr><th>기기</th><th>평균 온도</th><th>평균 습도</th></tr>${s.perDevice.map(d=>`<tr><td>${d.name}</td><td style="color:var(--temp);font-weight:600">${f1(d.temp)}°</td><td style="color:var(--hum);font-weight:600">${f0(d.hum)}%</td></tr>`).join('')}</table>`:'<div class="empty">데이터 없음</div>';
+}
+
+async function load(){
+  const dq=device?`&device=${encodeURIComponent(device)}`:'';
+  const [cur,hist,st]=await Promise.all([ '/api/current',`/api/history?range=${range}${dq}`,`/api/stats?range=${range}${dq}` ].map(u=>fetch(u).then(r=>r.json())));
+  renderRooms(cur.devices);
+  const name=device?cur.devices.find(d=>d.id===device)?.name:'전체 평균';
+  $('#trendTitle').textContent=`추이 · ${name||'전체 평균'}`;
+  lineChart($('#trend'),hist.points);
+  renderAvg(st);
+  $('#upd').textContent='마지막 갱신 '+new Date().toLocaleTimeString('ko',{hour12:false});
+}
+
+$('#range').innerHTML=RANGES.map(([k,l])=>`<button data-k="${k}" class="${k===range?'on':''}">${l}</button>`).join('');
+$('#range').onclick=e=>{ const k=e.target.dataset.k; if(!k)return; range=k; localStorage.range=k; document.querySelectorAll('#range button').forEach(b=>b.classList.toggle('on',b.dataset.k===k)); load(); };
+load(); setInterval(load,30000);
+</script>
+</body>
+</html>
