@@ -38,11 +38,7 @@ export function startCollector(cfg) {
 
 // ---- 데모: 지난 7일치 가짜 데이터 생성 후 계속 이어서 생성 ----
 function startDemo(cfg) {
-  const rooms = [
-    { id: 'demo-living', name: '거실', t: 23.5, h: 45 },
-    { id: 'demo-bed', name: '침실', t: 22, h: 52 },
-    { id: 'demo-kitchen', name: '주방', t: 25, h: 58 },
-  ];
+  const rooms = [{ id: 'demo-room', name: '내 방', t: 23.5, h: 48 }];
   const sample = (r, ts, i) => {
     const hr = new Date(ts).getHours() + new Date(ts).getMinutes() / 60;
     const day = Math.sin(((hr - 9) / 24) * 2 * Math.PI);

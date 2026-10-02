@@ -26,16 +26,13 @@ h1{font-size:26px;font-weight:700;letter-spacing:-.02em}
 .seg button{border:0;background:none;color:var(--sub);font:inherit;font-size:13px;font-weight:600;padding:6px 14px;border-radius:9px;cursor:pointer}
 .seg button.on{background:var(--ink);color:var(--bg)}
 .grid{display:grid;gap:16px}
-.rooms{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-bottom:16px}
+.rooms{grid-template-columns:1fr;margin-bottom:16px}
 .card{background:var(--card);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
 .card h2{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:14px;letter-spacing:.01em}
-.room{cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .15s}
-.room:hover{transform:translateY(-2px)}
-.room.sel{border-color:var(--ink)}
 .room .name{font-weight:600;display:flex;justify-content:space-between}
 .room .name small{color:var(--sub);font-weight:400;font-size:12px}
-.vals{display:flex;gap:24px;margin-top:14px}
-.big{font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.vals{display:flex;gap:56px;flex-wrap:wrap;margin-top:14px}
+.big{font-size:64px;font-weight:700;letter-spacing:-.03em;line-height:1}
 .big sup{font-size:16px;font-weight:600;color:var(--sub);margin-left:2px;vertical-align:top;position:relative;top:4px}
 .lab{font-size:12px;color:var(--sub);margin-top:6px;display:flex;align-items:center;gap:6px}
 .lab i{width:8px;height:8px;border-radius:50%;display:inline-block}
@@ -73,7 +70,7 @@ tr:last-child td{border:0}
   <div class="grid avg" id="avg"></div>
 
   <div class="card" style="margin-bottom:16px">
-    <h2 id="trendTitle">추이</h2>
+    <h2>온습도 추이</h2>
     <div class="legend"><span><i style="background:var(--temp)"></i>온도 (°C)</span><span><i style="background:var(--hum)"></i>습도 (%)</span><span style="margin-left:auto">연한 영역 = 최소~최대</span></div>
     <div id="trend"></div>
   </div>
@@ -85,7 +82,7 @@ tr:last-child td{border:0}
 
   <div class="grid two">
     <div class="card"><h2>일별 평균</h2><div id="daily"></div></div>
-    <div class="card"><h2>기기별 평균</h2><div id="per"></div></div>
+    <div class="card"><h2>일별 평균 온도</h2><div id="per"></div></div>
   </div>
 </div>
 <div id="tip"></div>
@@ -153,8 +150,8 @@ function barChart(el, rows, key, color, {fmt=f1,labels,h=220}={}){
 
 // ---------- 렌더 ----------
 function renderRooms(list){
-  $('#rooms').innerHTML = list.length ? list.map(d=>`
-    <div class="card room ${device===d.id?'sel':''}" data-id="${d.id}">
+  $('#rooms').innerHTML = list.length ? list.slice(0,1).map(d=>`
+    <div class="card room">
       <div class="name">${d.name}<small>${d.ts?new Date(d.ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false}):'대기 중'}</small></div>
       <div class="vals">
         <div><div class="big" style="color:${tempColor(d.temp)}">${f1(d.temp)}<sup>°C</sup></div><div class="lab"><i style="background:var(--temp)"></i>온도</div></div>
@@ -162,7 +159,6 @@ function renderRooms(list){
       </div>
       <div class="bar"><b style="width:${Math.min(100,d.hum||0)}%;background:var(--hum)"></b></div>
     </div>`).join('') : '<div class="card empty" style="grid-column:1/-1">연결된 기기가 없습니다. 서버 로그와 .env 설정을 확인하세요.</div>';
-  document.querySelectorAll('.room').forEach(el=>el.onclick=()=>{ device = device===el.dataset.id?null:el.dataset.id; load(); });
 }
 
 function renderAvg(s){
@@ -176,15 +172,13 @@ function renderAvg(s){
   barChart($('#hourH'),s.hourly.filter(r=>r.hum!=null),'hum','var(--hum)',{fmt:f0,labels:r=>r.h+'시'});
   const days=s.daily.slice(-14);
   $('#daily').innerHTML=days.length?`<table><tr><th>날짜</th><th>평균 온도</th><th>최저/최고</th><th>평균 습도</th></tr>${days.reverse().map(d=>`<tr><td>${d.d.slice(5)}</td><td style="color:var(--temp);font-weight:600">${f1(d.temp)}°</td><td>${f1(d.tmin)} / ${f1(d.tmax)}</td><td style="color:var(--hum);font-weight:600">${f0(d.hum)}%</td></tr>`).join('')}</table>`:'<div class="empty">데이터 없음</div>';
-  $('#per').innerHTML=s.perDevice.length?`<table><tr><th>기기</th><th>평균 온도</th><th>평균 습도</th></tr>${s.perDevice.map(d=>`<tr><td>${d.name}</td><td style="color:var(--temp);font-weight:600">${f1(d.temp)}°</td><td style="color:var(--hum);font-weight:600">${f0(d.hum)}%</td></tr>`).join('')}</table>`:'<div class="empty">데이터 없음</div>';
+  barChart($('#per'),s.daily.slice(-14).filter(r=>r.temp!=null),'temp','var(--temp)',{labels:r=>r.d.slice(5)});
 }
 
 async function load(){
   const dq=device?`&device=${encodeURIComponent(device)}`:'';
   const [cur,hist,st]=await Promise.all([ '/api/current',`/api/history?range=${range}${dq}`,`/api/stats?range=${range}${dq}` ].map(u=>fetch(u).then(r=>r.json())));
   renderRooms(cur.devices);
-  const name=device?cur.devices.find(d=>d.id===device)?.name:'전체 평균';
-  $('#trendTitle').textContent=`추이 · ${name||'전체 평균'}`;
   lineChart($('#trend'),hist.points);
   renderAvg(st);
   $('#upd').textContent='마지막 갱신 '+new Date().toLocaleTimeString('ko',{hour12:false});
