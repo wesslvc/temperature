@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Orion Room — 온습도</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#f3f0e9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="온습도">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -56,7 +66,7 @@ header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
 .step button:disabled{color:var(--faint);cursor:default}
 .step span{min-width:9.5em;text-align:center;font-weight:600}
 .facts small{display:block;font-size:12px;color:var(--sub);margin-top:1px;font-variant-numeric:tabular-nums}
-.spec{position:relative;margin:16px 0 0 auto;max-width:440px;padding-right:18px}
+.spec{position:relative;margin:16px 0 0 auto;max-width:440px;padding:0 14px}
 .specbar{height:10px;border-radius:5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
 .spect{position:relative;height:18px;margin-top:4px;font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
 .spect span{position:absolute;transform:translateX(-50%);white-space:nowrap}
@@ -104,7 +114,8 @@ button.pill.on{background:var(--ink);color:var(--bg)}
 .detail .dh{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap;font-size:13px;color:var(--sub)}
 .detail .dh b{color:var(--ink);font-size:15px}
 .detail .dh button{border:0;background:none;color:var(--sub);cursor:pointer;font:inherit;font-size:12px;text-decoration:underline}
-.detail .num{font-size:60px}.detail .pair{gap:44px;margin-top:12px}
+.detail .pair3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:14px}
+.detail .pc{min-width:0}.detail .num{font-size:56px}.detail .lbl{display:flex;flex-direction:column;gap:2px;align-items:flex-start;margin-top:10px}.detail .delta{font-size:13px;font-weight:600}
 .detail .dg>div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
 .detail .dg b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 .detail .dg small{color:var(--sub);font-size:12px}
@@ -187,7 +198,7 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
   .strip>div{border-bottom:1px solid var(--rule);padding-left:0!important}
   .two{grid-template-columns:1fr;gap:12px}
   .num{font-size:72px}
-  .detail .num{font-size:34px}.detail .num small{font-size:13px;margin-top:4px}.detail .pair{gap:12px;flex-wrap:nowrap}.detail .pair>div{min-width:0}.detail .lbl{flex-direction:column;gap:2px;align-items:flex-start}.detail .delta{font-size:12px}
+  .detail .pair3{gap:10px}.detail .num{font-size:30px;letter-spacing:-.04em}.detail .num small{font-size:12px;margin:3px 0 0 2px}.detail .delta{font-size:12px}
   .tile{padding:12px 12px 10px}.tile .v{font-size:26px}.tile .v em{font-size:12px}
   .pair{gap:36px}
 }
@@ -324,10 +335,11 @@ const hhmm = (ts) => new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute
 const md = (ts) => { const d = new Date(ts); return `${d.getMonth()+1}/${d.getDate()}`; };
 const when = (ts) => ts ? `${md(ts)} ${hhmm(ts)}` : '';
 const tip = $('#tip');
-const showTip = (e, h) => { tip.innerHTML = h; tip.style.opacity = 1; const w = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, innerWidth - w - 8) + 'px'; tip.style.top = e.clientY + 16 + 'px'; };
+const showTip = (e, h) => { if(matchMedia('(hover: none)').matches) return; tip.innerHTML = h; tip.style.opacity = 1; const w = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, innerWidth - w - 8) + 'px'; tip.style.top = e.clientY + 16 + 'px'; };
 const hideTip = () => tip.style.opacity = 0;
 const get = (u) => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
 
+const fmtGap = (min) => min < 60 ? `${Math.max(1,Math.round(min))}분` : min < 1440 ? `${Math.floor(min/60)}시간${Math.round(min%60) ? ' ' + Math.round(min%60) + '분' : ''}` : `${(min/1440).toFixed(1)}일`;
 const dew = (t, h) => { const g = Math.log(Math.max(h,1)/100) + 17.62*t/(243.12+t); return 243.12*g/(17.62-g); };
 // 온도·습도를 단계별 표현으로 (쾌적 범위 안에서도 '살짝 따뜻한 편', '매우 적절' 등으로 구분)
 const TEMP_STEPS = [[18,'매우 춥고','매우 춥습니다','매우 추움'],[20.5,'춥고','춥습니다','추움'],[22.5,'조금 춥고','조금 춥습니다','조금 추움'],[23.5,'살짝 춥고','살짝 춥습니다','살짝 추움'],
@@ -380,16 +392,17 @@ async function selectPoint(ts){
 }
 function renderDetail(d){
   const el = $('#detail'), p = d.prev, dp = dew(d.temp, d.hum), pdp = p ? dew(p.temp, p.hum) : null, avgT = lastStats && lastStats.overall.temp;
-  const gapMin = p ? (d.ts-p.ts)/60000 : null, gap = gapMin == null ? '' : gapMin < 60 ? `${Math.round(gapMin)}분` : gapMin < 1440 ? `${Math.floor(gapMin/60)}시간 ${Math.round(gapMin%60)}분` : `${(gapMin/1440).toFixed(1)}일`;
-  const dd = (v, u, dec) => v == null ? '' : `<span class="delta">${Math.abs(v) < (dec ? .05 : .5) ? '–' : (v > 0 ? '▲' : '▼')} ${Math.abs(v).toFixed(dec)}${u} <span style="color:var(--faint)">직전(${gap} 전) 대비</span></span>`;
-  const num = (cls, c, val, unit, label, delta) => `<div><div class="num ${cls} mono" style="color:${c.ink}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
+  const gap = p ? fmtGap((d.ts-p.ts)/60000) : '';
+  const dd = (v, u, dec) => v == null ? '<span class="delta">&nbsp;</span>' : `<span class="delta">${Math.abs(v) < (dec ? .05 : .5) ? '– 변화 없음' : `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(dec)}${u}`}</span>`;
+  const num = (cls, c, val, unit, label, delta) => `<div class="pc"><div class="num ${cls} mono" style="color:${c.ink}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
   const inT = d.temp >= 22.5 && d.temp <= 28, inH = d.hum >= 40 && d.hum <= 55;
-  const vsAvg = avgT == null ? '' : ` · 구간 평균(${n1(avgT)}°) 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°`}`;
+  const vsAvg = avgT == null ? '' : `구간 평균 ${n1(avgT)}° 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°`}`;
   el.style.display = '';
-  el.innerHTML = `<div class="dh"><span class="k">선택한 시점 · ${when(d.ts)} 측정${p ? ` · 직전 측정 ${when(p.ts)}` : ' · 기록상 첫 측정'}</span><button id="dClose">닫기</button></div>
-    <div class="pair">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(p ? d.temp-p.temp : null, '°', 1))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(p ? d.hum-p.hum : null, '%p', 0))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(p ? dp-pdp : null, '°', 1))}</div>
+  el.innerHTML = `<div class="dh"><span class="k">선택한 시점 · ${when(d.ts)} 측정</span><button id="dClose">닫기</button></div>
+    <div class="k" style="margin-top:2px">${p ? `변화는 직전 측정(${when(p.ts)}, ${gap} 전) 대비` : '기록상 첫 측정입니다'}</div>
+    <div class="pair3">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(p ? d.temp-p.temp : null, '°', 1))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(p ? d.hum-p.hum : null, '%p', 0))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(p ? dp-pdp : null, '°', 1))}</div>
     <p class="verdict">${feel(d.temp, d.hum)}</p>
-    <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (22.5–28°C · 40–55%)${vsAvg}</div>`;
+    <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (22.5–28°C · 40–55%)${vsAvg ? ' · ' + vsAvg : ''}</div>`;
   $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
 }
 
@@ -460,11 +473,11 @@ function trend(el, pts, marks){
 // 연속 색 스펙트럼: 값에 따라 색 정지점 사이를 부드럽게 보간한다
 const BINS = {
   temp: { u:'°', stops:[[20,'#2f5d9e'],[21.3,'#4f86bd'],[22.6,'#7db3d3'],[23.9,'#a6d3c4'],[25.2,'#c9e2a0'],[26.5,'#f0e27d'],[27.8,'#f7c45f'],[29.1,'#f0974e'],[30.4,'#e2663f'],[31.7,'#c43a3a'],[33,'#8c2340']],
-          ticks:[[20,'≤20'],[23,'23'],[26,'26'],[29,'29'],[33,'33+']] },
+          ticks:[[20,'≤20°'],[23,'23°'],[26,'26°'],[29,'29°'],[33,'33°+']] },
   hum:  { u:'%', stops:[[25,'#b9772f'],[32,'#d9a65b'],[40,'#ecd596'],[47,'#bfe0cf'],[55,'#82c4ad'],[65,'#6aa0d4'],[75,'#3d6bb0']],
-          ticks:[[25,'≤25'],[35,'35'],[45,'45'],[55,'55'],[65,'65'],[75,'75+']] },
+          ticks:[[25,'≤25%'],[35,'35%'],[45,'45%'],[55,'55%'],[65,'65%'],[75,'75%+']] },
   dew:  { u:'°', stops:[[8,'#c98f4a'],[11.5,'#bfe0cf'],[14.5,'#82c4ad'],[17,'#f0e27d'],[19.5,'#f0974e'],[22,'#c43a3a']],
-          ticks:[[8,'≤8'],[11,'11'],[14,'14'],[17,'17'],[20,'20'],[22,'22+']] },
+          ticks:[[8,'≤8°'],[11,'11°'],[14,'14°'],[17,'17°'],[20,'20°'],[22,'22°+']] },
 };
 const hex2rgb = (h) => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
 const rgb2hex = (c) => '#' + c.map(v => Math.round(v).toString(16).padStart(2,'0')).join('');
@@ -475,7 +488,7 @@ function specColor(metric, v){
 }
 function legendHtml(metric){
   const B = BINS[metric], st = B.stops, lo = st[0][0], hi = st.at(-1)[0], pos = v => ((v-lo)/(hi-lo)*100).toFixed(1);
-  return `<div class="spec"><div class="specbar" style="background:linear-gradient(90deg,${st.map(([v,c]) => `${c} ${pos(v)}%`).join(',')})"></div><div class="spect">${B.ticks.map(([v,l]) => `<span style="left:${pos(v)}%">${l}${/\d$/.test(l) || l.endsWith('+') ? '' : ''}</span>`).join('')}</div><div class="specu">${B.u}</div></div>`;
+  return `<div class="spec"><div class="specbar" style="background:linear-gradient(90deg,${st.map(([v,c]) => `${c} ${pos(v)}%`).join(',')})"></div><div class="spect">${B.ticks.map(([v,l]) => `<span style="left:${pos(v)}%">${l}</span>`).join('')}</div></div>`;
 }
 const darkMode = () => matchMedia('(prefers-color-scheme: dark)').matches;
 function inkFor(hex){ let c = hex2rgb(hex); const dark = darkMode();
@@ -587,9 +600,9 @@ function renderNow(cur, ref, st, cmp){
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `비교 구간(${fmtW(sp.from)} – ${fmtW(sp.to)})에 기록이 없습니다`}</span></div>` : '';
   if(now){
     const dT = ref && ref.temp != null ? cur.temp - ref.temp : null, dH = ref && ref.hum != null ? cur.hum - ref.hum : null;
-    const gap = ref ? (() => { const m = (cur.ts-ref.ts)/60000; return m < 60 ? `${Math.max(1,Math.round(m))}분` : m < 1440 ? `${Math.round(m/60)}시간` : `${Math.round(m/1440)}일`; })() : '';
-    const dd = (v,u) => v == null ? '' : `<span class="delta">${Math.abs(v)<.05?'–':(v>0?'▲':'▼')} ${Math.abs(v).toFixed(u==='°'?1:0)}${u} <span style="color:var(--faint)">직전(${gap} 전) 대비</span></span>`;
-    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정</div>` + big(cur.temp, cur.hum, ['온도', dd(dT,'°')], ['습도', dd(dH,'%')]) + `
+    const gap = ref ? fmtGap((cur.ts-ref.ts)/60000) : '';
+    const dd = (v,u) => v == null ? '' : `<span class="delta">${Math.abs(v)<.05?'–':(v>0?'▲':'▼')} ${Math.abs(v).toFixed(u==='°'?1:0)}${u}</span>`;
+    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정${ref ? ` · 변화는 직전 측정(${gap} 전) 대비` : ''}</div>` + big(cur.temp, cur.hum, ['온도', dd(dT,'°')], ['습도', dd(dH,'%')]) + `
       <p class="verdict">${feel(cur.temp, cur.hum)}</p>
       <div class="k" style="margin-top:22px">최근 24시간</div>${matrix}`;
     $('#rates').innerHTML = ratesHtml(o, null);
@@ -728,6 +741,7 @@ $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(p
 $('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 직접 선택 ▴' : '기간 직접 선택 ▾'; };
 (async () => { try { const b = await get('/api/bounds'); if(b.first){ dataFirst = kstDate(b.first); dataLast = kstDate(Math.max(b.last, Date.now())); } } catch {} syncPick(); })();
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 200); });
+if('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 showPanel(panel); load(); loadHeat(); setInterval(load, 30000); setInterval(loadHeat, 300000);
 </script>
 </body>
