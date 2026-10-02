@@ -113,3 +113,22 @@ returns json language sql security definer set search_path = '' stable as $$
            extract(hour from ts at time zone 'Asia/Seoul')::int as h, avg(temp) as temp, avg(hum) as hum, avg(roomtemp._dew(temp, hum)) as dew
     from g group by 1, 2) x
 $$;
+
+-- 히트맵 단위 선택: p_by = 'd'(날짜×시간, 최근 62일까지) | 'm'(월×시간) | null(자동)
+create or replace function public.roomtemp_heatmap2(p_range text, p_by text default null)
+returns json language sql security definer set search_path = '' stable as $$
+  with by as (select coalesce(p_by, case when p_range = 'all' or p_range ~ '^y:' then 'm' else 'd' end) as u),
+       b0 as (select case when p_range in ('24h','1h','7d','30d') then now() - interval '14 days' else lo end as lo,
+                     case when p_range in ('24h','1h','7d','30d') then 'infinity'::timestamptz else hi end as hi from roomtemp._bounds(p_range)),
+       b as (select case when (select u from by) = 'd' then greatest(b0.lo, least(b0.hi, now()) - interval '62 days') else b0.lo end as lo, b0.hi from b0),
+       e as (select greatest(b.lo, min(r.ts)) as lo2, least(b.hi - interval '1 second', max(r.ts)) as hi2 from b, roomtemp.readings r group by b.lo, b.hi),
+       g as (select i.* from e, lateral roomtemp._interp(e.lo2, e.hi2,
+               least(10000, greatest(1, ceil(extract(epoch from e.hi2 - e.lo2) / 600)::int))) i where e.lo2 < e.hi2)
+  select coalesce(json_agg(x order by d, h), '[]'::json) from (
+    select case when (select u from by) = 'm' then to_char(ts at time zone 'Asia/Seoul', 'YYYY-MM')
+                else to_char(ts at time zone 'Asia/Seoul', 'YYYY-MM-DD') end as d,
+           extract(hour from ts at time zone 'Asia/Seoul')::int as h, avg(temp) as temp, avg(hum) as hum, avg(roomtemp._dew(temp, hum)) as dew
+    from g group by 1, 2) x
+$$;
+revoke all on function public.roomtemp_heatmap2(text, text) from public;
+grant execute on function public.roomtemp_heatmap2(text, text) to anon;

@@ -234,7 +234,10 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
   </div>
 
   <div class="panel" id="p-heat">
-    <p class="cap" id="hmCap"></p>
+    <div class="sec-h">
+      <p class="cap" id="hmCap"></p>
+      <div class="seg" id="hmSeg"><button data-b="d">일별</button><button data-b="m">월별</button></div>
+    </div>
     <h4 class="hh">온도</h4>
     <div id="heatT"></div>
     <h4 class="hh" style="margin-top:28px">습도</h4>
@@ -290,7 +293,7 @@ const compareSpecs = (r) => {
   return r[0]==='d' ? [mk(shiftRange(r,-1),'전날 같은 시간대'), mk('d:'+addDays(r.slice(2),-7),'지난주 같은 요일')]
        : r[0]==='k' ? [mk(shiftRange(r,-1),'이전 주 같은 기간')] : r[0]==='w' ? [mk(shiftRange(r,-1),'지난주 같은 기간')] : r[0]==='m' ? [mk(shiftRange(r,-1),'지난달 같은 기간')] : [mk(shiftRange(r,-1),'작년 같은 기간')];
 };
-let cmpIdx = 0, unit = '', tblMetric = 'temp', panel = (() => { try { return localStorage.panel || 'trend'; } catch { return 'trend'; } })(), cache = null, selTs = null, lastStats = null, lastTrend = null, dataFirst = null, dataLast = null;
+let cmpIdx = 0, heatBy = '', unit = '', tblMetric = 'temp', panel = (() => { try { return localStorage.panel || 'trend'; } catch { return 'trend'; } })(), cache = null, selTs = null, lastStats = null, lastTrend = null, dataFirst = null, dataLast = null;
 const wkOfDay = (d) => Math.min(4, Math.floor((+d.slice(8,10)-1)/7)+1);
 const kStart = (m, n) => `${m}-${String(1+7*(n-1)).padStart(2,'0')}`;
 const kEnd = (m, n) => n === 4 ? addMonths(m,1)+'-01' : addDays(kStart(m,n), 7);
@@ -659,9 +662,12 @@ function showPanel(name){
   renderAll();
 }
 const drawHeat = () => { heat($('#heatT'), heatData, 'temp'); heat($('#heatH'), heatData, 'hum'); heat($('#heatD'), heatData, 'dew'); };
+const heatUnit = () => heatBy || (range === 'all' || range[0] === 'y' ? 'm' : 'd');
 async function loadHeat(){
-  $('#hmCap').textContent = (range === '24h' ? '최근 14일' : rangeLabel(range)) + (range === 'all' || range[0]==='y' ? ' · 월별 평균' : ' · 하루 한 줄');
-  try { heatData = await get(`/api/heatmap?range=${range}`); } catch { heatData = []; }
+  const by = heatUnit();
+  document.querySelectorAll('#hmSeg button').forEach(b => b.classList.toggle('on', b.dataset.b === by));
+  $('#hmCap').textContent = (range === '24h' ? '최근 14일' : rangeLabel(range)) + (by === 'm' ? ' · 월별 평균 (월 × 시간)' : ' · 일별 (날짜 × 시간)' + (range === 'all' || range[0] === 'y' ? ', 최근 62일' : ''));
+  try { heatData = await get(`/api/heatmap?range=${range}&by=${by}`); } catch { heatData = []; }
   if(panel === 'heat') drawHeat();
 }
 
@@ -700,6 +706,7 @@ $('#inY').onchange = e => setRange(e.target.value ? 'y:'+e.target.value : 'all')
 $('#inM').onchange = e => setRange(e.target.value ? 'm:'+e.target.value : 'y:'+derive(range).y);
 $('#inK').onchange = e => { const m = derive(range).m; setRange(e.target.value ? `k:${m}:${e.target.value}` : 'm:'+m); };
 $('#inD').onchange = e => { const o = derive(range); setRange(e.target.value ? 'd:'+e.target.value : (o.k ? `k:${o.m}:${o.k}` : 'm:'+o.m)); };
+$('#hmSeg').onclick = e => { const bb = e.target.dataset.b; if(!bb) return; heatBy = bb; loadHeat(); };
 $('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); };
 $('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); };
 $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(pn); };
