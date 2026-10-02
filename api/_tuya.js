@@ -27,7 +27,9 @@ export class Tuya {
     return crypto.createHmac('sha256', this.secret).update(str).digest('hex').toUpperCase();
   }
 
-  async request(method, path, { auth = true } = {}) {
+  async request(method, rawPath, { auth = true } = {}) {
+    const [base, query] = rawPath.split('?');
+    const path = query ? `${base}?${query.split('&').sort().join('&')}` : base;
     const t = Date.now().toString();
     const nonce = crypto.randomUUID();
     const token = auth ? this.token : '';
@@ -143,4 +145,58 @@ export class Tuya {
     const measuredAt = await this.measuredAt(id, [tCode, hCode].filter(Boolean));
     return { temp, hum, measuredAt };
   }
+
+  // 기기가 보고한 과거 기록 (Tuya 클라우드 보관 기간 내). 반환: [{ ts, temp, hum }] 시간순
+  async reportLogs(id, startMs, endMs) {
+    const tCode = await this.pickCode(id, ['va_temperature', 'temp_current', 'temp_current_external']);
+    const hCode = await this.pickCode(id, ['va_humidity', 'humidity_value', 'humidity_current']);
+    const codes = [tCode, hCode].filter(Boolean);
+    const events = [];
+    let lastKey = '';
+    for (let page = 0; page < 60; page++) {
+      const r = await this.get(
+        `/v2.0/cloud/thing/${id}/report-logs?codes=${codes.join(',')}&end_time=${endMs}&start_time=${startMs}&size=100${lastKey ? `&last_row_key=${lastKey}` : ''}`
+      );
+      for (const l of r.logs || []) events.push({ code: l.code, ts: Number(l.event_time), v: Number(l.value) });
+      if (!r.has_more || !r.last_row_key) break;
+      lastKey = r.last_row_key;
+    }
+    events.sort((a, b) => a.ts - b.ts);
+    const ts = await this.scaleFor(id, tCode);
+    const hs = await this.scaleFor(id, hCode);
+    // 같은 순간(±2초)에 온 온도/습도를 한 행으로 합친다. 한쪽만 바뀐 보고는 직전 값을 유지한 채 기록한다.
+    const rows = [];
+    let temp = null, hum = null, lastTs = -1e12;
+    for (const e of events) {
+      if (e.code === tCode) { temp = e.v / 10 ** ts; if (ts === 0 && Math.abs(temp) > 80) temp /= 10; }
+      else if (e.code === hCode) hum = e.v / 10 ** hs;
+      if (temp == null || hum == null) continue;
+      if (e.ts - lastTs <= 2000 && rows.length) { rows[rows.length - 1].temp = temp; rows[rows.length - 1].hum = hum; }
+      else rows.push({ ts: e.ts, temp, hum });
+      lastTs = e.ts;
+    }
+    return rows;
+  }
+
+  async pickCode(id, candidates) {
+    const status = await this.get(`/v1.0/devices/${id}/status`);
+    return candidates.find((c) => status.some((s) => s.code === c));
+  }
 }
+
+// 웜 인스턴스 동안 토큰/엔드포인트/기기 ID 재사용
+let cached;
+export async function sharedTuya() {
+  if (!cached) {
+    const tuya = new Tuya({
+      id: process.env.TUYA_CLIENT_ID,
+      secret: process.env.TUYA_CLIENT_SECRET,
+      endpoint: process.env.TUYA_ENDPOINT,
+    });
+    const deviceId = process.env.TUYA_DEVICE_ID || (await tuya.discoverDevices())[0]?.id;
+    if (!deviceId) throw new Error('온습도 기기를 찾지 못했습니다. TUYA_DEVICE_ID 를 지정하세요.');
+    cached = { tuya, deviceId };
+  }
+  return cached;
+}
+export const resetTuya = () => { cached = undefined; };
