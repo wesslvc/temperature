@@ -18,10 +18,14 @@ export default async function handler(req, res) {
     });
     deviceId ??= process.env.TUYA_DEVICE_ID || (await tuya.discoverDevices())[0]?.id;
     if (!deviceId) throw new Error('온습도 기기를 찾지 못했습니다. TUYA_DEVICE_ID 를 지정하세요.');
-    const { temp, hum } = await tuya.readDevice(deviceId);
+    const { temp, hum, measuredAt } = await tuya.readDevice(deviceId);
     if (temp == null && hum == null) throw new Error('온도/습도 값을 읽지 못했습니다.');
-    await rpc('roomtemp_ingest', { p_token: process.env.INGEST_TOKEN, p_temp: temp, p_hum: hum });
-    res.json({ ok: true, temp, hum });
+    if (!measuredAt) throw new Error('센서의 측정 시각을 알 수 없어 저장하지 않았습니다.');
+    // 센서의 측정 시각(ts)이 이미 저장돼 있으면(새 보고 없음) 저장하지 않는다
+    const inserted = await rpc('roomtemp_ingest', {
+      p_token: process.env.INGEST_TOKEN, p_temp: temp, p_hum: hum, p_measured_ms: measuredAt,
+    });
+    res.json({ ok: true, inserted, temp, hum, measuredAt });
   } catch (e) {
     tuya = deviceId = undefined;
     console.error(e.message);

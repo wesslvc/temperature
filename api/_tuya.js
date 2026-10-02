@@ -108,7 +108,21 @@ export class Tuya {
     return scale;
   }
 
-  // 반환: { temp: ℃, hum: % } (없으면 null)
+  // 센서가 마지막으로 값을 보고한 시각(ms). 수집 시각이 아니라 기기 쪽 시각을 쓴다.
+  async measuredAt(id, codes) {
+    try {
+      const r = await this.get(`/v2.0/cloud/thing/${id}/shadow/properties`);
+      const times = (r.properties || []).filter((p) => codes.includes(p.code) && p.time).map((p) => Number(p.time));
+      if (times.length) return Math.max(...times);
+    } catch {}
+    try {
+      const r = await this.get(`/v1.0/devices/${id}`);
+      if (r.update_time) return Number(r.update_time) * 1000;
+    } catch {}
+    return null;
+  }
+
+  // 반환: { temp: ℃, hum: %, measuredAt: ms } (값이 없으면 null)
   async readDevice(id) {
     const status = await this.get(`/v1.0/devices/${id}/status`);
     const by = Object.fromEntries(status.map((s) => [s.code, s.value]));
@@ -126,6 +140,7 @@ export class Tuya {
       const s = await this.scaleFor(id, hCode);
       hum = by[hCode] / 10 ** s;
     }
-    return { temp, hum };
+    const measuredAt = await this.measuredAt(id, [tCode, hCode].filter(Boolean));
+    return { temp, hum, measuredAt };
   }
 }

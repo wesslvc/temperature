@@ -25,30 +25,38 @@ body{background:var(--bg);color:var(--ink);font:15px/1.55 "Pretendard Variable",
 .k{font-size:12px;letter-spacing:.04em;color:var(--sub)}
 
 /* header */
-header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--ink)}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--ink)}
 .brand{font-weight:700;font-size:15px;letter-spacing:.01em}
 .brand span{color:var(--sub);font-weight:400;margin-left:10px}
 .meta{display:flex;gap:22px;align-items:baseline;flex-wrap:wrap}
 .fresh{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:7px}
 .fresh i{width:6px;height:6px;border-radius:50%;background:var(--faint)}
 .fresh.live i{background:var(--ok)}
+.fresh.stale i{background:#d99a2b}
 .tabs{display:flex;gap:2px}
 .tabs button{border:0;background:none;color:var(--sub);font:inherit;font-size:13px;padding:4px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
 .tabs button:hover{color:var(--ink)}
 .tabs button.on{color:var(--ink);font-weight:600;border-color:var(--ink)}
 
+/* period picker */
+.pick{display:flex;justify-content:space-between;align-items:center;gap:12px 24px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--rule)}
+.pickers{display:flex;gap:6px;flex-wrap:wrap}
+.pickers label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);padding:3px 8px;border:1px solid var(--rule);border-radius:3px}
+.pickers label.on{border-color:var(--ink);color:var(--ink)}
+.pickers input,.pickers select{border:0;background:none;font:inherit;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums;outline:none;color-scheme:light dark}
+
 /* hero */
 .hero{display:grid;grid-template-columns:1.15fr 1fr;gap:0;border-bottom:1px solid var(--rule)}
 .now{padding:34px 40px 30px 0;border-right:1px solid var(--rule)}
 .pair{display:flex;gap:56px;flex-wrap:wrap}
-.num{font-size:92px;font-weight:200;letter-spacing:-.045em;line-height:.95;display:flex;align-items:flex-start}
-.num small{font-size:26px;font-weight:300;letter-spacing:0;color:var(--sub);margin:8px 0 0 4px}
+.num{font-size:88px;font-weight:600;letter-spacing:-.05em;line-height:.95;display:flex;align-items:flex-start}
+.num small{font-size:26px;font-weight:500;letter-spacing:0;color:var(--sub);margin:8px 0 0 4px}
 .num.t{color:var(--t)} .num.h{color:var(--h)}
 .lbl{display:flex;gap:10px;align-items:baseline;margin-top:12px;font-size:13px;color:var(--sub)}
-.lbl b{color:var(--ink);font-weight:600;font-size:14px}
+.lbl b{color:var(--ink);font-weight:700;font-size:14px}
 .delta{font-variant-numeric:tabular-nums}
 .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:34px;padding-top:18px;border-top:1px solid var(--rule)}
-.facts div b{display:block;font-size:19px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums}
+.facts div b{display:block;font-size:20px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
 .facts div b em{font-style:normal;font-size:13px;color:var(--sub);font-weight:400;margin-left:2px}
 .verdict{margin-top:22px;font-size:15px;max-width:34em}
 .scatter{padding:34px 0 24px 36px}
@@ -68,7 +76,7 @@ svg text{fill:var(--sub);font-size:11px;font-family:inherit;font-variant-numeric
 .strip{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:36px 0 0}
 .strip>div{padding:18px 18px 18px 0;border-right:1px solid var(--rule);padding-left:18px}
 .strip>div:first-child{padding-left:0}.strip>div:last-child{border:0}
-.strip b{display:block;font-size:24px;font-weight:300;letter-spacing:-.02em;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.strip b{display:block;font-size:26px;font-weight:700;letter-spacing:-.025em;margin:4px 0 2px;font-variant-numeric:tabular-nums}
 .strip small{font-size:12px;color:var(--sub)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:56px}
 .seg{display:inline-flex;gap:14px;font-size:12px}
@@ -94,17 +102,22 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
 <div class="wrap">
   <header>
     <div class="brand">Orion Room<span>온습도 기록</span></div>
-    <div class="meta">
-      <div class="fresh" id="fresh"><i></i><span>불러오는 중</span></div>
-      <nav class="tabs" id="tabs"></nav>
-    </div>
+    <div class="fresh" id="fresh"><i></i><span>불러오는 중</span></div>
   </header>
+  <div class="pick">
+    <nav class="tabs" id="tabs"></nav>
+    <div class="pickers">
+      <label id="pd">일<input type="date" id="inD"></label>
+      <label id="pm">월<input type="month" id="inM"></label>
+      <label id="py">연<select id="inY"></select></label>
+    </div>
+  </div>
 
   <section class="hero">
     <div class="now" id="now"></div>
     <div class="scatter">
       <h3>쾌적 구간</h3>
-      <p>초록 영역이 20–26°C · 습도 40–60%. 점은 선택 기간의 흐름, 큰 점이 현재.</p>
+      <p>초록 영역이 22–27°C · 습도 40–55%. 점은 선택 기간의 흐름, 큰 점이 현재.</p>
       <div id="scatter"></div>
     </div>
   </section>
@@ -129,19 +142,23 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
 
   <section class="sec">
     <div class="two">
-      <div><h3>일별 온도 범위</h3><p class="cap">막대는 최저–최고, 눈금은 평균</p><div id="daily"></div></div>
+      <div><h3 id="dailyT">일별 온도 범위</h3><p class="cap">막대는 최저–최고, 눈금은 평균</p><div id="daily"></div></div>
       <div><h3>하루 패턴</h3><p class="cap">시간대별 평균 (서울 시간)</p><div id="hourly"></div></div>
     </div>
   </section>
 
-  <footer><span>1분 간격 수집 · 선택한 기간의 모든 측정값 기준</span><span id="upd"></span></footer>
+  <footer><span>센서가 보고한 값만 기록합니다 · 선택한 기간의 모든 측정값 기준</span></footer>
 </div>
 <div id="tip"></div>
 
 <script>
 const $ = (s) => document.querySelector(s);
 const RANGES = [['1h','1시간'],['24h','24시간'],['7d','7일'],['30d','30일'],['all','전체']];
-let range = (()=>{try{return localStorage.range}catch{return null}})() || '24h', hmMetric = 'temp', heatData = [];
+const bucketLabel = (ms) => { const m = Math.round(ms/60000); return m < 60 ? `${m}분` : m < 1440 ? `${Math.round(m/60)}시간` : `${Math.round(m/1440)}일`; };
+const rangeLabel = (r) => { const f = RANGES.find(x => x[0]===r); if (f) return f[1];
+  const [k, v] = [r[0], r.slice(2)]; const [y, m, d] = v.split('-');
+  return k==='d' ? `${y}년 ${+m}월 ${+d}일` : k==='m' ? `${y}년 ${+m}월` : `${y}년`; };
+let range = (()=>{try{const r = localStorage.range; return /^(1h|24h|7d|30d|all|d:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2}|y:\d{4})$/.test(r) ? r : null}catch{return null}})() || '24h', hmMetric = 'temp', heatData = [];
 const n1 = (v) => v == null ? '–' : v.toFixed(1);
 const n0 = (v) => v == null ? '–' : Math.round(v);
 const hhmm = (ts) => new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
@@ -154,8 +171,8 @@ const get = (u) => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); re
 
 const dew = (t, h) => { const g = Math.log(Math.max(h,1)/100) + 17.62*t/(243.12+t); return 243.12*g/(17.62-g); };
 function feel(t, h){
-  const ts = t < 18 ? '쌀쌀하고' : t < 20 ? '약간 서늘하고' : t <= 26 ? '적정 온도에' : t <= 28 ? '조금 덥고' : '더운 편이고';
-  const hs = h < 30 ? '매우 건조합니다' : h < 40 ? '조금 건조합니다' : h <= 60 ? '습도도 쾌적합니다' : h <= 70 ? '조금 습합니다' : '습합니다';
+  const ts = t < 19 ? '쌀쌀하고' : t < 22 ? '약간 서늘하고' : t <= 27 ? '적정 온도에' : t <= 29 ? '조금 덥고' : '더운 편이고';
+  const hs = h < 30 ? '매우 건조합니다' : h < 40 ? '조금 건조합니다' : h <= 55 ? '습도도 쾌적합니다' : h <= 65 ? '조금 습합니다' : '습합니다';
   return `${ts} ${hs}.`;
 }
 
@@ -167,7 +184,7 @@ function scatter(el, pts, cur){
   let g = '';
   for(let t=x0;t<=x1;t+=4) g += `<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${m.t+ih}"/><text x="${X(t)}" y="${H-10}" text-anchor="middle">${t}°</text>`;
   for(let h=y0;h<=y1;h+=20) g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${Y(h)}" y2="${Y(h)}"/><text x="${m.l-8}" y="${Y(h)+4}" text-anchor="end">${h}%</text>`;
-  g += `<rect x="${X(20)}" y="${Y(60)}" width="${X(26)-X(20)}" height="${Y(40)-Y(60)}" fill="var(--comfort)" stroke="var(--ok)" stroke-opacity=".5" stroke-dasharray="3 3"/>`;
+  g += `<rect x="${X(22)}" y="${Y(55)}" width="${X(27)-X(22)}" height="${Y(40)-Y(55)}" fill="var(--comfort)" stroke="var(--ok)" stroke-opacity=".5" stroke-dasharray="3 3"/>`;
   const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
   const p = pts.filter(q => q.temp != null && q.hum != null);
   p.forEach((q,i) => { const a = .12 + .5*i/Math.max(1,p.length-1);
@@ -235,8 +252,8 @@ function heat(el, rows, metric){
 }
 
 /* ---------- 일별 범위 ---------- */
-function daily(el, rows){
-  rows = rows.slice(-21);
+function daily(el, rows, monthly){
+  rows = rows.slice(monthly ? -24 : -31);
   if(!rows.length){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
   const W = 520, H = 240, m = {l:36,r:4,t:8,b:26}, iw = W-m.l-m.r, ih = H-m.t-m.b;
   let lo = Math.floor(Math.min(...rows.map(r => r.tmin))-1), hi = Math.ceil(Math.max(...rows.map(r => r.tmax))+1);
@@ -245,9 +262,9 @@ function daily(el, rows){
   const step = Math.ceil(rows.length/6);
   rows.forEach((r,i) => { const x = m.l+i*bw+bw*.25, w = bw*.5;
     g += `<rect data-i="${i}" x="${x}" y="${Y(r.tmax)}" width="${w}" height="${Math.max(2,Y(r.tmin)-Y(r.tmax))}" fill="var(--t)" fill-opacity=".28"/><line x1="${x-2}" x2="${x+w+2}" y1="${Y(r.temp)}" y2="${Y(r.temp)}" stroke="var(--t)" stroke-width="2"/>`;
-    if(i%step===0) g += `<text x="${x+w/2}" y="${H-8}" text-anchor="middle">${r.d.slice(5).replace('-','/')}</text>`; });
+    if(i%step===0) g += `<text x="${x+w/2}" y="${H-8}" text-anchor="middle">${monthly ? (rows.length > 12 ? r.d.slice(2).replace('-','.') : +r.d.slice(5)+'월') : r.d.slice(5).replace('-','/')}</text>`; });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
-  el.querySelectorAll('rect[data-i]').forEach(r => { const d = rows[r.dataset.i]; r.onmousemove = e => showTip(e, `<b>${d.d.slice(5)}</b><br>평균 ${n1(d.temp)}° · ${n1(d.tmin)}–${n1(d.tmax)}°<br>습도 ${n0(d.hum)}%`); r.onmouseleave = hideTip; });
+  el.querySelectorAll('rect[data-i]').forEach(r => { const d = rows[r.dataset.i]; r.onmousemove = e => showTip(e, `<b>${monthly ? d.d.replace('-','.') : d.d.slice(5)}</b><br>평균 ${n1(d.temp)}° · ${n1(d.tmin)}–${n1(d.tmax)}°<br>습도 ${n0(d.hum)}%`); r.onmouseleave = hideTip; });
 }
 
 /* ---------- 하루 패턴 ---------- */
@@ -287,12 +304,12 @@ function renderNow(cur, ref, st){
     <div class="facts">
       <div><span class="k">이슬점</span><b>${n1(dp)}<em>°C</em></b></div>
       <div><span class="k">쾌적 시간 비율</span><b>${o.comfort == null ? '–' : n0(o.comfort)}<em>%</em></b></div>
-      <div><span class="k">측정 시각</span><b>${hhmm(cur.ts)}</b></div>
+      <div><span class="k">마지막 측정</span><b>${md(cur.ts)} ${hhmm(cur.ts)}</b></div>
     </div>`;
 }
 
 function renderStrip(st){
-  const o = st.overall, rl = RANGES.find(r => r[0]===range)[1];
+  const o = st.overall, rl = rangeLabel(range);
   const c = (k,v,s) => `<div><span class="k">${k}</span><b>${v}</b><small>${s}</small></div>`;
   $('#strip').innerHTML = [
     c('평균 온도', n1(o.temp)+'°', `${rl} 평균`),
@@ -311,22 +328,45 @@ async function load(){
     const refPt = ref.points && ref.points.length > 1 ? ref.points[0] : null;
     renderNow(cur, refPt, st);
     scatter($('#scatter'), hist.points, cur);
-    $('#trendCap').textContent = hist.points.length ? `${RANGES.find(r => r[0]===range)[1]} · ${Math.round(hist.bucketMs/60000)}분 단위 평균` : '';
+    $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · ${bucketLabel(hist.bucketMs)} 단위 평균` : '';
     trend($('#trend'), hist.points);
     renderStrip(st);
-    daily($('#daily'), st.daily);
+    const useMonthly = (range === 'all' || range[0] === 'y') && st.monthly.length > 1;
+    $('#dailyT').textContent = useMonthly ? '월별 온도 범위' : '일별 온도 범위';
+    daily($('#daily'), useMonthly ? st.monthly : st.daily, useMonthly);
     hourly($('#hourly'), st.hourly);
+    // 센서가 실제로 보고한 시각만 표시 (화면을 불러온 시각이 아님)
     const age = cur ? (Date.now()-cur.ts)/60000 : null, f = $('#fresh');
-    f.className = 'fresh' + (age != null && age < 5 ? ' live' : '');
-    f.lastChild.textContent = cur ? (age < 1 ? '방금 갱신' : age < 90 ? `${Math.round(age)}분 전 갱신` : `${hhmm(cur.ts)} 마지막 측정`) : '수집 대기 중';
-    $('#upd').textContent = '화면 갱신 ' + new Date().toLocaleTimeString('ko',{hour12:false});
+    f.className = 'fresh' + (age == null ? '' : age < 120 ? ' live' : ' stale');
+    const ago = age == null ? '' : age < 1 ? '1분 미만 전' : age < 60 ? `${Math.round(age)}분 전` : age < 1440 ? `${Math.floor(age/60)}시간 ${Math.round(age%60)}분 전` : `${Math.floor(age/1440)}일 전`;
+    f.lastChild.textContent = cur ? `마지막 측정 ${md(cur.ts)} ${hhmm(cur.ts)} · ${ago}` : '수집 대기 중';
   } catch(e){ $('#fresh').lastChild.textContent = '연결 오류'; }
 }
 async function loadHeat(){ try { heatData = await get('/api/heatmap?days=14'); heat($('#heat'), heatData, hmMetric); } catch { heat($('#heat'), [], hmMetric); } }
 
-$('#tabs').innerHTML = RANGES.map(([k,l]) => `<button data-k="${k}" class="${k===range?'on':''}">${l}</button>`).join('');
-$('#tabs').onclick = e => { const k = e.target.dataset.k; if(!k) return; range = k; try{localStorage.range = k}catch{} document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.k===k)); load(); };
+function setRange(r){ range = r; try{localStorage.range = r}catch{} syncPick(); load(); }
+function syncPick(){
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.k===range));
+  ['d','m','y'].forEach(k => $('#p'+k).classList.toggle('on', range[0]===k && range[1]===':'));
+  const v = range.slice(2);
+  if(range.startsWith('d:')) $('#inD').value = v; if(range.startsWith('m:')) $('#inM').value = v; if(range.startsWith('y:')) $('#inY').value = v;
+}
+$('#tabs').innerHTML = RANGES.map(([k,l]) => `<button data-k="${k}">${l}</button>`).join('');
+$('#tabs').onclick = e => { const k = e.target.dataset.k; if(k) setRange(k); };
+$('#inD').onchange = e => e.target.value && setRange('d:'+e.target.value);
+$('#inM').onchange = e => e.target.value && setRange('m:'+e.target.value);
+$('#inY').onchange = e => setRange('y:'+e.target.value);
+(async () => {
+  let y0 = new Date().getFullYear(), y1 = y0, lo = '', hi = '';
+  try { const b = await get('/api/bounds'); if (b.first) { y0 = new Date(b.first).getFullYear(); y1 = Math.max(y1, new Date(b.last).getFullYear()); lo = new Date(b.first+9*3600e3).toISOString().slice(0,10); hi = new Date(b.last+9*3600e3).toISOString().slice(0,10); } } catch {}
+  $('#inY').innerHTML = Array.from({length:y1-y0+1}, (_,i) => y1-i).map(y => `<option value="${y}">${y}년</option>`).join('');
+  if (lo) { $('#inD').min = lo; $('#inD').max = hi; $('#inM').min = lo.slice(0,7); $('#inM').max = hi.slice(0,7); }
+  const today = new Date(Date.now()+9*3600e3).toISOString();
+  if (!range.includes(':')) { $('#inD').value = today.slice(0,10); $('#inM').value = today.slice(0,7); $('#inY').value = today.slice(0,4); }
+  syncPick();
+})();
 $('#hmSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; hmMetric = m; document.querySelectorAll('#hmSeg button').forEach(b => b.classList.toggle('on', b.dataset.m===m)); heat($('#heat'), heatData, hmMetric); };
+syncPick();
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { load(); heat($('#heat'), heatData, hmMetric); }, 200); });
 load(); loadHeat(); setInterval(load, 30000); setInterval(loadHeat, 300000);
 </script>

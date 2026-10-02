@@ -11,7 +11,7 @@ returns json language sql security definer set search_path = '' stable as $$
         'tmin_ts', (select (extract(epoch from ts)*1000)::bigint from r where temp is not null order by temp asc, ts desc limit 1),
         'hmax_ts', (select (extract(epoch from ts)*1000)::bigint from r where hum is not null order by hum desc, ts desc limit 1),
         'hmin_ts', (select (extract(epoch from ts)*1000)::bigint from r where hum is not null order by hum asc, ts desc limit 1),
-        'comfort', avg((temp between 20 and 26 and hum between 40 and 60)::int) * 100,
+        'comfort', avg((temp between 22 and 27 and hum between 40 and 55)::int) * 100,
         'dew', avg(243.12 * (ln(greatest(hum,1)/100.0) + 17.62*temp/(243.12+temp))
                    / (17.62 - (ln(greatest(hum,1)/100.0) + 17.62*temp/(243.12+temp))))
       ) from r),
