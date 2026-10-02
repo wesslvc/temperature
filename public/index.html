@@ -125,7 +125,7 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
   <section class="sec">
     <div class="sec-h">
       <div><h3>추이</h3><p class="cap" id="trendCap"></p></div>
-      <div class="legend"><span><i style="background:var(--t)"></i>온도 °C</span><span><i style="background:var(--h)"></i>습도 %</span><span><i class="band" style="background:var(--sub)"></i>최소–최대</span></div>
+      <div class="legend"><span><i style="background:var(--t)"></i>온도 °C</span><span><i style="background:var(--h)"></i>습도 %</span><span id="lgBand"><i class="band" style="background:var(--sub)"></i>최소–최대</span><span id="lgDot"><i style="background:none;border:1.5px solid var(--sub);width:7px;height:7px;border-radius:50%"></i>실측</span></div>
     </div>
     <div id="trend"></div>
   </section>
@@ -176,8 +176,32 @@ function feel(t, h){
   return `${ts} ${hs}.`;
 }
 
+/* ---------- 매끄러운 곡선: 단조 3차 보간(Fritsch–Carlson). 1차 미분이 연속이고 overshoot 없음 ---------- */
+function smooth(pts, move = true){
+  const n = pts.length; if(n === 0) return '';
+  const f = v => v.toFixed(1);
+  let d = (move ? 'M' : 'L') + f(pts[0][0]) + ',' + f(pts[0][1]);
+  if(n === 1) return d;
+  if(n === 2) return d + 'L' + f(pts[1][0]) + ',' + f(pts[1][1]);
+  const h = [], sl = [];
+  for(let i = 0; i < n-1; i++){ h[i] = pts[i+1][0]-pts[i][0]; sl[i] = h[i] ? (pts[i+1][1]-pts[i][1])/h[i] : 0; }
+  const m = new Array(n);
+  m[0] = sl[0]; m[n-1] = sl[n-2];
+  for(let i = 1; i < n-1; i++) m[i] = sl[i-1]*sl[i] <= 0 ? 0 : 2/(1/sl[i-1] + 1/sl[i]);
+  for(let i = 0; i < n-1; i++){
+    if(sl[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
+    const a = m[i]/sl[i], b = m[i+1]/sl[i], r = a*a + b*b;
+    if(r > 9){ const t = 3/Math.sqrt(r); m[i] = t*a*sl[i]; m[i+1] = t*b*sl[i]; }
+  }
+  for(let i = 0; i < n-1; i++){
+    const x0 = pts[i][0], y0 = pts[i][1], x1 = pts[i+1][0], y1 = pts[i+1][1];
+    d += `C${f(x0+h[i]/3)},${f(y0+m[i]*h[i]/3)} ${f(x1-h[i]/3)},${f(y1-m[i+1]*h[i]/3)} ${f(x1)},${f(y1)}`;
+  }
+  return d;
+}
+
 /* ---------- scatter: 온도 × 습도 ---------- */
-function scatter(el, pts, cur){
+function scatter(el, pts, cur, marks){
   const W = 460, H = 330, m = {l:38,r:10,t:8,b:30}, iw = W-m.l-m.r, ih = H-m.t-m.b;
   const [x0,x1,y0,y1] = [14,34,20,80];
   const X = t => m.l + (t-x0)/(x1-x0)*iw, Y = h => m.t + ih - (h-y0)/(y1-y0)*ih;
@@ -186,7 +210,7 @@ function scatter(el, pts, cur){
   for(let h=y0;h<=y1;h+=20) g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${Y(h)}" y2="${Y(h)}"/><text x="${m.l-8}" y="${Y(h)+4}" text-anchor="end">${h}%</text>`;
   g += `<rect x="${X(22)}" y="${Y(55)}" width="${X(27)-X(22)}" height="${Y(40)-Y(55)}" fill="var(--comfort)" stroke="var(--ok)" stroke-opacity=".5" stroke-dasharray="3 3"/>`;
   const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
-  const p = pts.filter(q => q.temp != null && q.hum != null);
+  const p = (marks && marks.length ? marks : pts).filter(q => q.temp != null && q.hum != null);
   p.forEach((q,i) => { const a = .12 + .5*i/Math.max(1,p.length-1);
     g += `<circle cx="${X(clamp(q.temp,x0,x1))}" cy="${Y(clamp(q.hum,y0,y1))}" r="2.6" fill="var(--ink)" fill-opacity="${a}"/>`; });
   if(cur && cur.temp != null){
@@ -197,7 +221,7 @@ function scatter(el, pts, cur){
 }
 
 /* ---------- 추이 (온도/습도 2단) ---------- */
-function trend(el, pts){
+function trend(el, pts, marks){
   if(pts.length < 2){ el.innerHTML = '<div class="empty">아직 그릴 만큼의 데이터가 없습니다. 수집이 시작되면 이곳에 나타납니다.</div>'; return; }
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
   const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:6,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:214,h:140,u:'%'}];
@@ -211,9 +235,14 @@ function trend(el, pts){
     const ticks = 4;
     for(let i=0;i<=ticks;i++){ const yy = P.y + P.h*i/ticks; g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${Math.round(hi-(hi-lo)*i/ticks)}${P.u}</text>`; }
     const v2 = pts.filter(p => p[P.k]!=null);
-    const band = 'M'+v2.map(p => X(p).toFixed(1)+','+P.Y(p[P.hi]).toFixed(1)).join('L')+'L'+[...v2].reverse().map(p => X(p).toFixed(1)+','+P.Y(p[P.lo]).toFixed(1)).join('L')+'Z';
-    const line = v2.map((p,i) => (i?'L':'M')+X(p).toFixed(1)+','+P.Y(p[P.k]).toFixed(1)).join('');
-    g += `<path d="${band}" fill="${P.s}"/><path d="${line}" fill="none" stroke="${P.c}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // 실측 지점이 보이는 범위(≤300회)에서는 실측값을 지나는 매끄러운 곡선으로, 그보다 촘촘한 범위에서는 보간 격자를 이어서 그린다
+    const real = (marks || []).filter(q => q[P.k] != null && q.ts > t0 && q.ts < t1);
+    const src = real.length ? [v2[0], ...real, v2.at(-1)] : v2;
+    const line = smooth(src.map(p => [X(p), P.Y(p[P.k])]));
+    let band = '';
+    if(!real.length){ const up = v2.map(p => [X(p), P.Y(p[P.hi])]), dn = v2.map(p => [X(p), P.Y(p[P.lo])]).reverse(); band = `<path d="${smooth(up) + smooth(dn, false)}Z" fill="${P.s}"/>`; }
+    g += `${band}<path d="${line}" fill="none" stroke="${P.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1).forEach(q => { g += `<circle cx="${(m.l+(q.ts-t0)/span*iw).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="3" fill="var(--bg)" stroke="${P.c}" stroke-width="1.5"/>`; });
   });
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : md(ts);
   const nt = W < 600 ? 3 : 6; for(let i=0;i<=nt;i++){ const ts = t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-4}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
@@ -277,7 +306,7 @@ function hourly(el, rows){
   let g = '';
   for(let i=0;i<=4;i++){ const yy = m.t+ih*i/4; g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${Math.round(th-(th-tl)*i/4)}°</text><text x="${W-m.r+6}" y="${yy+4}">${Math.round(hh-(hh-hl)*i/4)}%</text>`; }
   for(let h=0;h<24;h+=6) g += `<text x="${m.l+h/23*iw}" y="${H-8}" text-anchor="middle">${h}시</text>`;
-  const L = (k,Y) => rows.map((r,i) => (i?'L':'M')+X(r).toFixed(1)+','+Y(r[k]).toFixed(1)).join('');
+  const L = (k,Y) => smooth(rows.map(r => [X(r), Y(r[k])]));
   g += `<path d="${L('hum',YH)}" fill="none" stroke="var(--h)" stroke-width="1.8"/><path d="${L('temp',YT)}" fill="none" stroke="var(--t)" stroke-width="1.8"/>`;
   g += `<line id="vl" y1="${m.t}" y2="${m.t+ih}" stroke="var(--ink)" stroke-opacity=".35" opacity="0"/><rect id="hit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
@@ -293,7 +322,8 @@ function hourly(el, rows){
 function renderNow(cur, ref, st){
   if(!cur){ $('#now').innerHTML = `<div class="pair"><div><div class="num t" style="color:var(--faint)">––<small>°C</small></div><div class="lbl"><b>온도</b></div></div><div><div class="num h" style="color:var(--faint)">––<small>%</small></div><div class="lbl"><b>습도</b></div></div></div><p class="verdict" style="color:var(--sub)">첫 측정값을 기다리고 있습니다. 센서 연결이 끝나면 1분 안에 이곳에 표시됩니다.</p>`; return; }
   const dT = ref && ref.temp != null ? cur.temp - ref.temp : null, dH = ref && ref.hum != null ? cur.hum - ref.hum : null;
-  const dl = (v,u) => v == null ? '' : `<span class="delta">${Math.abs(v)<.05?'–':(v>0?'▲':'▼')} ${Math.abs(v).toFixed(u==='°'?1:0)}${u} <span style="color:var(--faint)">1시간 전 대비</span></span>`;
+  const gap = ref ? (() => { const m = (cur.ts-ref.ts)/60000; return m < 60 ? `${Math.max(1,Math.round(m))}분` : m < 1440 ? `${Math.round(m/60)}시간` : `${Math.round(m/1440)}일`; })() : '';
+  const dl = (v,u) => v == null ? '' : `<span class="delta">${Math.abs(v)<.05?'–':(v>0?'▲':'▼')} ${Math.abs(v).toFixed(u==='°'?1:0)}${u} <span style="color:var(--faint)">직전 측정(${gap} 전) 대비</span></span>`;
   const dp = dew(cur.temp, cur.hum), o = st.overall;
   $('#now').innerHTML = `
     <div class="pair">
@@ -323,13 +353,13 @@ function renderStrip(st){
 
 async function load(){
   try {
-    const [curR, hist, st, ref] = await Promise.all([get('/api/current'), get(`/api/history?range=${range}`), get(`/api/stats?range=${range}`), get('/api/history?range=1h')]);
+    const [curR, hist, st] = await Promise.all([get('/api/current'), get(`/api/history?range=${range}`), get(`/api/stats?range=${range}`)]);
     const cur = curR.devices[0] || null;
-    const refPt = ref.points && ref.points.length > 1 ? ref.points[0] : null;
-    renderNow(cur, refPt, st);
-    scatter($('#scatter'), hist.points, cur);
-    $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · ${bucketLabel(hist.bucketMs)} 단위 평균` : '';
-    trend($('#trend'), hist.points);
+    renderNow(cur, cur && cur.prev, st);
+    scatter($('#scatter'), hist.points, cur, hist.marks);
+    $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · 실측 ${hist.samples.toLocaleString()}회 · 측정값 사이는 직선으로 이어 계산` : '';
+    trend($('#trend'), hist.points, hist.marks);
+    const dense = !(hist.marks && hist.marks.length); $('#lgBand').style.display = dense ? '' : 'none'; $('#lgDot').style.display = dense ? 'none' : '';
     renderStrip(st);
     const useMonthly = (range === 'all' || range[0] === 'y') && st.monthly.length > 1;
     $('#dailyT').textContent = useMonthly ? '월별 온도 범위' : '일별 온도 범위';
