@@ -42,6 +42,9 @@ header{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
 .brand span{color:var(--sub);font-weight:400;margin-left:10px}
 .meta{display:flex;gap:22px;align-items:baseline;flex-wrap:wrap}
 .fresh{font-size:13px;color:var(--sub);display:flex;align-items:center;gap:7px}
+.hr{display:flex;align-items:center;gap:12px}
+.rbtn{font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:none;border:1px solid var(--rule);border-radius:8px;padding:6px 12px;cursor:pointer}
+.rbtn:disabled{opacity:.5}
 .fresh i{width:6px;height:6px;border-radius:50%;background:var(--faint)}
 .fresh.live i{background:var(--ok)}
 .fresh.stale i{background:#d99a2b}
@@ -208,7 +211,7 @@ footer{margin-top:40px;font-size:12px;color:var(--faint);display:flex;justify-co
 <div class="wrap">
   <header>
     <div class="brand">Orion Room<span>온습도 기록</span></div>
-    <div class="fresh" id="fresh"><i></i><span>불러오는 중</span></div>
+    <div class="hr"><div class="fresh" id="fresh"><i></i><span>불러오는 중</span></div><button id="refresh" class="rbtn">불러오기</button></div>
   </header>
   <div class="pick">
     <div class="pickL">
@@ -644,6 +647,12 @@ function renderStrip(st){
   ].join('');
 }
 
+$('#refresh').onclick = async () => {
+  const b = $('#refresh'); b.disabled = true; b.textContent = '불러오는 중…';
+  try { await fetch('/api/refresh', {method:'POST'}); } catch {}
+  await load(); loadHeat();
+  b.disabled = false; b.textContent = '불러오기';
+};
 async function load(){
   try {
     const specs = compareSpecs(range), sp = specs[Math.min(cmpIdx, specs.length-1)];
