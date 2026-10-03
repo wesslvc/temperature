@@ -14,7 +14,13 @@ export default async function handler(req, res) {
     const inserted = await rpc('roomtemp_ingest', {
       p_token: process.env.INGEST_TOKEN, p_temp: temp, p_hum: hum, p_measured_ms: measuredAt,
     });
-    res.json({ ok: true, inserted, temp, hum, measuredAt });
+    // 현재값(shadow)만으로는 보고가 누락될 수 있어, 클라우드 보고 기록의 최근 3시간도 함께 채운다 (ts 중복은 DB가 무시)
+    let filled = 0, fillError = null;
+    try {
+      const rows = await tuya.reportLogs(deviceId, Date.now() - 3 * 36e5, Date.now());
+      if (rows.length) filled = await rpc('roomtemp_ingest_bulk', { p_token: process.env.INGEST_TOKEN, p_rows: rows });
+    } catch (e) { fillError = e.message; console.error('fill', e.message); }
+    res.json({ ok: true, inserted, filled, fillError, temp, hum, measuredAt });
   } catch (e) {
     resetTuya();
     console.error(e.message);
