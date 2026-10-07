@@ -504,7 +504,7 @@ function heat(el, rows, metric){
   const B = BINS[metric], monthly = rows[0].d.length === 7;
   const days = [...new Set(rows.map(r => r.d))].sort(); const map = {};
   rows.forEach(r => map[r.d+'|'+r.h] = r[metric]);
-  const n = days.length, W = Math.max(320, el.clientWidth || 1112), m = {l:34, t:n > 20 ? 26 : 20, b:4}, cw = (W-m.l)/n, ch = 15, H = m.t + 24*ch + m.b, nums = cw >= 26 && n <= 31;
+  const n = days.length, W = Math.max(320, el.clientWidth || 1112), m = {l:34, t:n > 20 ? 26 : 20, b:4}, cw = (W-m.l)/n, ch = 19, H = m.t + 24*ch + m.b, nums = cw >= 15 && n <= 31, fs = cw >= 22 ? 11 : 9;
   let g = '';
   for(let h=0;h<24;h+=3) g += `<text x="${m.l-6}" y="${m.t+h*ch+ch/2+4}" text-anchor="end">${h}시</text>`;
   const lblStep = Math.ceil(n/(W < 600 ? 7 : 16));
@@ -515,7 +515,7 @@ function heat(el, rows, metric){
       if(v==null){ g += `<rect x="${x}" y="${y}" width="${cw-2}" height="${ch-2}" rx="2" fill="var(--rule)" fill-opacity=".35"/>`; continue; }
       const c = specColor(metric, v);
       g += `<rect data-d="${d}" data-h="${h}" data-v="${v}" x="${x}" y="${y}" width="${cw-2}" height="${ch-2}" rx="2" fill="${c}"/>`;
-      if(nums) g += `<text x="${x+(cw-2)/2}" y="${y+(ch-2)/2+4}" text-anchor="middle" style="fill:${lum(c) > .42 ? '#1d1c1a' : '#fff'};font-size:10px;font-weight:600;pointer-events:none">${metric==='temp' ? v.toFixed(0) : Math.round(v)}</text>`; }
+      if(nums) g += `<text x="${x+(cw-2)/2}" y="${y+(ch-2)/2+4}" text-anchor="middle" style="fill:${lum(c) > .42 ? '#1d1c1a' : '#fff'};font-size:${fs}px;font-weight:600;pointer-events:none">${metric==='temp' ? v.toFixed(0) : Math.round(v)}</text>`; }
   });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>${legendHtml(metric)}`;
   el.querySelectorAll('rect[data-v]').forEach(r => { const d = r.dataset.d; r.onmousemove = e => showTip(e, `<b>${monthly ? `${+d.slice(5)}월 평균` : `${md2(d)} (${wd(d)})`} ${r.dataset.h}시</b><br>${metric==='hum' ? n0(+r.dataset.v) : n1(+r.dataset.v)}${B.u}`); r.onmouseleave = hideTip; });
