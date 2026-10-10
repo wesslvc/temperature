@@ -92,6 +92,22 @@ export default async function handler(req, res) {
       const body = (await r.text()).replace(/\s+/g, ' ').slice(0, 500);
       return res.json({ status: r.status, location: r.headers.get('location'), body, clientIdTail: id.slice(-6) });
     }
+    if (a === 'recreate') {
+      const pat = await cfgGet('st_pat'), old = await cfgGet('st_app_id');
+      let deleted = null;
+      if (old) { try { await stCall(`/apps/${old}`, pat, { method: 'DELETE' }); deleted = old; } catch (e) { deleted = 'fail: ' + e.message.slice(0, 120); } }
+      const name = 'orionroom' + Math.random().toString(36).slice(2, 8);
+      const app = await stCall('/apps', pat, { method: 'POST', body: JSON.stringify({
+        appName: name, displayName: 'Orion Room', description: 'Room temperature logger', singleInstance: true,
+        appType: 'API_ONLY', classifications: ['CONNECTED_SERVICE'], apiOnly: {},
+        oauth: { clientName: 'Orion Room', scope: ['r:devices:*', 'r:locations:*'], redirectUris: [REDIRECT] },
+      }) });
+      const appId = app.app?.appId;
+      if (!appId || !app.oauthClientId) return res.status(502).json({ error: 'create failed', keys: Object.keys(app || {}), deleted });
+      await cfgSet('st_app_id', appId); await cfgSet('st_client_id', app.oauthClientId); await cfgSet('st_client_secret', app.oauthClientSecret);
+      const oauth = await stCall(`/apps/${appId}/oauth`, pat, { method: 'PUT', body: JSON.stringify({ clientName: 'Orion Room', scope: ['r:devices:*', 'r:locations:*'], redirectUris: [REDIRECT] }) });
+      return res.json({ ok: true, deleted, appId, oauth: { scope: oauth.scope, redirectUris: oauth.redirectUris, clientName: oauth.clientName } });
+    }
     if (a === 'status') return res.json({ device: await cfgGet('st_device'), oauth: !!(await cfgGet('st_tokens')), app: !!(await cfgGet('st_client_id')) });
     res.status(400).json({ error: 'unknown action' });
   } catch (e) { console.error(e.message); res.status(500).json({ error: e.message }); }
