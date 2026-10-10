@@ -1,4 +1,5 @@
 import { cfgGet, cfgSet, stCall, accessToken, REDIRECT } from './_st.js';
+import { rpc } from './_db.js';
 
 // 일회성 설정용 (Bearer INGEST_TOKEN 필요): ?a=devices | createapp | link | status
 export default async function handler(req, res) {
@@ -41,6 +42,34 @@ export default async function handler(req, res) {
       const id = await cfgGet('st_client_id');
       const q = new URLSearchParams({ client_id: id, response_type: 'code', redirect_uri: REDIRECT, scope: 'r:devices:* r:locations:*', state });
       return res.json({ url: `https://api.smartthings.com/oauth/authorize?${q}` });
+    }
+    if (a === 'history') {
+      // SmartThings 이벤트 기록으로 빠진 구간 채우기 (?a=history&hours=24)
+      const tok = await accessToken(), id = await cfgGet('st_device');
+      const dev = await stCall(`/v1/devices/${id}`, tok);
+      const since = Date.now() - (Number(req.query.hours) || 24) * 36e5;
+      const ev = [];
+      let before = null;
+      for (let page = 0; page < 10; page++) {
+        const q = new URLSearchParams({ locationId: dev.locationId, deviceId: id, limit: '300' });
+        if (before) q.set('pagingBeforeEpoch', String(before));
+        const r = await stCall(`/v1/history/devices?${q}`, tok);
+        const items = r.items || [];
+        for (const e of items) if (e.epoch >= since && (e.attribute === 'temperature' || e.attribute === 'humidity')) ev.push({ ts: e.epoch, attr: e.attribute, v: Number(e.value) });
+        if (!items.length || items.at(-1).epoch < since || !r._links?.previous) break;
+        before = items.at(-1).epoch;
+      }
+      ev.sort((x, y) => x.ts - y.ts);
+      const rows = []; let temp = null, hum = null, last = -1e12;
+      for (const e of ev) {
+        if (e.attr === 'temperature') temp = e.v; else hum = e.v;
+        if (temp == null || hum == null) continue;
+        if (e.ts - last <= 2000 && rows.length) { rows.at(-1).temp = temp; rows.at(-1).hum = hum; } else rows.push({ ts: e.ts, temp, hum });
+        last = e.ts;
+      }
+      let inserted = 0;
+      if (rows.length) inserted = await rpc('roomtemp_ingest_bulk', { p_token: process.env.INGEST_TOKEN, p_rows: rows });
+      return res.json({ ok: true, events: ev.length, rows: rows.length, inserted });
     }
     if (a === 'status') return res.json({ device: await cfgGet('st_device'), oauth: !!(await cfgGet('st_tokens')), app: !!(await cfgGet('st_client_id')) });
     res.status(400).json({ error: 'unknown action' });
