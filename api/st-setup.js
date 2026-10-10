@@ -76,6 +76,15 @@ export default async function handler(req, res) {
       const app = await stCall(`/apps/${appId}`, pat), oauth = await stCall(`/apps/${appId}/oauth`, pat).catch((e) => ({ error: e.message }));
       return res.json({ app: { appType: app.appType, classifications: app.classifications, singleInstance: app.singleInstance, apiOnly: app.apiOnly, keys: Object.keys(app) }, oauth });
     }
+    if (a === 'setoauth') {
+      const pat = await cfgGet('st_pat'), appId = await cfgGet('st_app_id');
+      const out = await stCall(`/apps/${appId}/oauth`, pat, { method: 'PUT', body: JSON.stringify({
+        clientName: 'Orion Room', scope: ['r:devices:*', 'r:locations:*'], redirectUris: [REDIRECT],
+      }) });
+      const sameId = out.oauthClientId === (await cfgGet('st_client_id'));
+      if (out.oauthClientId && out.oauthClientSecret && !sameId) { await cfgSet('st_client_id', out.oauthClientId); await cfgSet('st_client_secret', out.oauthClientSecret); }
+      return res.json({ ok: true, keys: Object.keys(out), sameId, after: await stCall(`/apps/${appId}/oauth`, pat) });
+    }
     if (a === 'status') return res.json({ device: await cfgGet('st_device'), oauth: !!(await cfgGet('st_tokens')), app: !!(await cfgGet('st_client_id')) });
     res.status(400).json({ error: 'unknown action' });
   } catch (e) { console.error(e.message); res.status(500).json({ error: e.message }); }
