@@ -1,4 +1,5 @@
 import { rpc } from './_db.js';
+import { cfgGet, readSensor } from './_st.js';
 import { resetTuya, sharedTuya } from './_tuya.js';
 
 // 화면의 "불러오기" 버튼용: 토큰 없이 호출되므로 남용을 막기 위해 15초 쿨다운을 둔다.
@@ -8,6 +9,13 @@ export default async function handler(req, res) {
   if (Date.now() - last < 15000) return res.json({ ok: true, skipped: true });
   last = Date.now();
   try {
+    // SmartThings가 설정돼 있으면 Tuya는 쓰지 않는다
+    if (await cfgGet('st_device')) {
+      const { temp, hum, measuredAt } = await readSensor();
+      if ((temp == null && hum == null) || !measuredAt) throw new Error('SmartThings에서 값을 읽지 못했습니다.');
+      const inserted = await rpc('roomtemp_ingest', { p_token: process.env.INGEST_TOKEN, p_temp: temp, p_hum: hum, p_measured_ms: measuredAt });
+      return res.json({ ok: true, source: 'smartthings', inserted, temp, hum, measuredAt });
+    }
     const { tuya, deviceId } = await sharedTuya();
     const { temp, hum, measuredAt } = await tuya.readDevice(deviceId);
     let inserted = 0, filled = 0;

@@ -1,4 +1,5 @@
 import { rpc } from './_db.js';
+import { cfgGet, readSensor } from './_st.js';
 import { resetTuya, sharedTuya } from './_tuya.js';
 
 export default async function handler(req, res) {
@@ -6,6 +7,13 @@ export default async function handler(req, res) {
   if (!process.env.INGEST_TOKEN || given !== process.env.INGEST_TOKEN) return res.status(401).json({ error: 'unauthorized' });
 
   try {
+    // SmartThings가 설정돼 있으면 Tuya는 쓰지 않는다
+    if (await cfgGet('st_device')) {
+      const { temp, hum, measuredAt } = await readSensor();
+      if ((temp == null && hum == null) || !measuredAt) throw new Error('SmartThings에서 값을 읽지 못했습니다.');
+      const inserted = await rpc('roomtemp_ingest', { p_token: process.env.INGEST_TOKEN, p_temp: temp, p_hum: hum, p_measured_ms: measuredAt });
+      return res.json({ ok: true, source: 'smartthings', inserted, temp, hum, measuredAt });
+    }
     const { tuya, deviceId } = await sharedTuya();
     const { temp, hum, measuredAt } = await tuya.readDevice(deviceId);
     if (temp == null && hum == null) throw new Error('온도/습도 값을 읽지 못했습니다.');
