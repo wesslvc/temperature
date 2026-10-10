@@ -1,5 +1,6 @@
 import { cfgGet, cfgSet, stCall, accessToken, REDIRECT } from './_st.js';
 import { rpc } from './_db.js';
+import { sharedTuya, resetTuya } from './_tuya.js';
 
 // 일회성 설정용 (Bearer INGEST_TOKEN 필요): ?a=devices | createapp | link | status
 export default async function handler(req, res) {
@@ -107,6 +108,10 @@ export default async function handler(req, res) {
       await cfgSet('st_app_id', appId); await cfgSet('st_client_id', app.oauthClientId); await cfgSet('st_client_secret', app.oauthClientSecret);
       const oauth = await stCall(`/apps/${appId}/oauth`, pat, { method: 'PUT', body: JSON.stringify({ clientName: 'Orion Room', scope: ['r:devices:*', 'r:locations:*'], redirectUris: [REDIRECT] }) });
       return res.json({ ok: true, deleted, appId, oauth: { scope: oauth.scope, redirectUris: oauth.redirectUris, clientName: oauth.clientName } });
+    }
+    if (a === 'tuyatest') {
+      try { const { tuya, deviceId } = await sharedTuya(); const r = await tuya.readDevice(deviceId); return res.json({ ok: true, ...r }); }
+      catch (e) { resetTuya(); return res.json({ ok: false, error: e.message }); }
     }
     if (a === 'status') return res.json({ device: await cfgGet('st_device'), oauth: !!(await cfgGet('st_tokens')), app: !!(await cfgGet('st_client_id')) });
     res.status(400).json({ error: 'unknown action' });
