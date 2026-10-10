@@ -85,6 +85,13 @@ export default async function handler(req, res) {
       if (out.oauthClientId && out.oauthClientSecret && !sameId) { await cfgSet('st_client_id', out.oauthClientId); await cfgSet('st_client_secret', out.oauthClientSecret); }
       return res.json({ ok: true, keys: Object.keys(out), sameId, after: await stCall(`/apps/${appId}/oauth`, pat) });
     }
+    if (a === 'probe') {
+      const id = await cfgGet('st_client_id');
+      const q = new URLSearchParams({ client_id: id, response_type: 'code', redirect_uri: REDIRECT, scope: 'r:devices:* r:locations:*', state: 'probe' });
+      const r = await fetch(`https://api.smartthings.com/oauth/authorize?${q}`, { redirect: 'manual' });
+      const body = (await r.text()).replace(/\s+/g, ' ').slice(0, 500);
+      return res.json({ status: r.status, location: r.headers.get('location'), body, clientIdTail: id.slice(-6) });
+    }
     if (a === 'status') return res.json({ device: await cfgGet('st_device'), oauth: !!(await cfgGet('st_tokens')), app: !!(await cfgGet('st_client_id')) });
     res.status(400).json({ error: 'unknown action' });
   } catch (e) { console.error(e.message); res.status(500).json({ error: e.message }); }
