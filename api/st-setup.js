@@ -71,6 +71,11 @@ export default async function handler(req, res) {
       if (rows.length) inserted = await rpc('roomtemp_ingest_bulk', { p_token: process.env.INGEST_TOKEN, p_rows: rows });
       return res.json({ ok: true, events: ev.length, rows: rows.length, inserted });
     }
+    if (a === 'appinfo') {
+      const pat = await cfgGet('st_pat'), appId = await cfgGet('st_app_id');
+      const app = await stCall(`/apps/${appId}`, pat), oauth = await stCall(`/apps/${appId}/oauth`, pat).catch((e) => ({ error: e.message }));
+      return res.json({ app: { appType: app.appType, classifications: app.classifications, singleInstance: app.singleInstance, apiOnly: app.apiOnly, keys: Object.keys(app) }, oauth });
+    }
     if (a === 'status') return res.json({ device: await cfgGet('st_device'), oauth: !!(await cfgGet('st_tokens')), app: !!(await cfgGet('st_client_id')) });
     res.status(400).json({ error: 'unknown action' });
   } catch (e) { console.error(e.message); res.status(500).json({ error: e.message }); }
