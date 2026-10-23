@@ -122,7 +122,11 @@ button.pill.on{background:var(--ink);color:var(--bg)}
 .detail .pair3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:14px}
 .detail .pc{min-width:0}.detail .num{font-size:56px}.detail .lbl{display:flex;flex-direction:column;gap:2px;align-items:flex-start;margin-top:10px}.detail .delta{font-size:13px;font-weight:600}
 .c-hot{color:var(--hot)}.c-cold{color:var(--cold)}.c-wet{color:var(--wet)}.c-dry{color:var(--dry)}
-.delta .yd{font-weight:500;color:var(--sub);margin-left:6px}.delta .yd b{font-weight:600}
+.chips{display:inline-flex;flex-wrap:wrap;gap:5px;margin-left:8px;vertical-align:middle}
+.chip2{display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 5px;border-radius:999px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;background:color-mix(in srgb,currentColor 11%,transparent)}
+.chip2 svg{width:13px;height:13px;flex:none;stroke:var(--sub);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.lg{display:inline-flex;align-items:center;gap:4px;margin-left:10px;vertical-align:middle}.lg svg{width:13px;height:13px;stroke:var(--sub);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-left:6px}.lg svg:first-child{margin-left:0}
+.chip2.z{color:var(--sub);font-weight:500;background:none;border:1px solid var(--rule)}
 .detail .dg>div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
 .detail .dg b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 .detail .dg small{color:var(--sub);font-size:12px}
@@ -612,11 +616,13 @@ function renderNow(cur, ref, st, cmp, yd){
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `비교 구간(${fmtW(sp.from)} – ${fmtW(sp.to)})에 기록이 없습니다`}</span></div>` : '';
   if(now){
     const gap = ref ? fmtGap((cur.ts-ref.ts)/60000) : '';
-    const sp1 = (v, u, kind, dec) => v == null ? '' : Math.abs(v) < .05 ? '–' : `<span class="${chgCls(kind, v, .05)}">${chgTxt(v, u, dec)}</span>`;
+    // 말 대신 아이콘으로 구분: 시계(되감기) = 직전 측정 대비, 달력 = 어제 같은 시각 대비
+    const IC = { prev: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>', day: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>' };
+    const chip = (v, u, kind, dec, ic, tip) => v == null ? '' : Math.abs(v) < .05 ? `<span class="chip2 z" title="${tip}" aria-label="${tip}">${IC[ic]}–</span>` : `<span class="chip2 ${chgCls(kind, v, .05)}" title="${tip}" aria-label="${tip}">${IC[ic]}${chgTxt(v, u, dec)}</span>`;
     const dd = (k, u, kind, dec) => {
       const a = ref && ref[k] != null ? cur[k] - ref[k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
-      return `<span class="delta">${sp1(a, u, kind, dec)}${b == null ? '' : `<span class="yd">어제 ${sp1(b, u, kind, dec)}</span>`}</span>`; };
-    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정${ref ? ` · 변화는 직전 측정(${gap} 전) 대비` : ''}${yd ? ' · 어제는 같은 시각 대비' : ''}</div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
+      return `<div class="chips">${chip(a, u, kind, dec, 'prev', '직전 측정 대비')}${chip(b, u, kind, dec, 'day', '어제 같은 시각 대비')}</div>`; };
+    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${ref ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}24시간 전` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
       <p class="verdict">${feel(cur.temp, cur.hum)}</p>
       <div class="k" style="margin-top:22px">최근 24시간</div>${matrix}`;
     $('#rates').innerHTML = ratesHtml(o, null);
