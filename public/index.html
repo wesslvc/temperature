@@ -451,28 +451,32 @@ function renderDetail(d){
 /* ---------- scatter: 온도 × 습도 ---------- */
 function scatter(el, pts, cur, marks){
   const W = 460, H = 330, m = {l:38,r:10,t:8,b:30}, iw = W-m.l-m.r, ih = H-m.t-m.b;
-  const [x0,x1,y0,y1] = [14,34,20,80];
+  // 축 범위는 점이 잘리지 않는 만큼만 (남는 구간 없이)
+  const p = (marks && marks.length ? marks : pts).filter(q => q.temp != null && q.hum != null);
+  const tv = p.map(q => q.temp).concat(cur && cur.temp != null ? [cur.temp] : []), hv = p.map(q => q.hum).concat(cur && cur.hum != null ? [cur.hum] : []);
+  const ext = (v, minSpan, padF, padMin) => { if(!v.length) return [0, minSpan]; let lo = Math.min(...v), hi = Math.max(...v); const sp = Math.max(hi - lo, minSpan), pad = Math.max(sp * padF, padMin); const c = (lo + hi) / 2; lo = Math.min(lo, c - sp/2) - pad; hi = Math.max(hi, c + sp/2) + pad; return [lo, hi]; };
+  const sx = niceScale(...ext(tv, 3, .06, .3)), sy = niceScale(...ext(hv, 8, .06, 1));
+  const [x0, x1, y0, y1] = [sx.lo, sx.hi, Math.max(0, sy.lo), Math.min(100, sy.hi)];
   const X = t => m.l + (t-x0)/(x1-x0)*iw, Y = h => m.t + ih - (h-y0)/(y1-y0)*ih;
   let g = '';
-  for(let t=x0;t<=x1;t+=4) g += `<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${m.t+ih}"/><text x="${X(t)}" y="${H-10}" text-anchor="middle">${t}°</text>`;
-  for(let h=y0;h<=y1;h+=20) g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${Y(h)}" y2="${Y(h)}"/><text x="${m.l-8}" y="${Y(h)+4}" text-anchor="end">${h}%</text>`;
+  sx.ticks.forEach(t => { g += `<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${m.t+ih}"/><text x="${X(t)}" y="${H-10}" text-anchor="middle">${tickLabel(t, sx.step)}°</text>`; });
+  sy.ticks.filter(h => h >= y0 && h <= y1).forEach(h => { g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${Y(h)}" y2="${Y(h)}"/><text x="${m.l-8}" y="${Y(h)+4}" text-anchor="end">${tickLabel(h, sy.step)}%</text>`; });
   const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
   const COL = { w:'var(--sw)', m:'var(--sm)', s:'var(--ss)' };
   // 조회 중인 계절의 쾌적 박스만 표시 (겹치는 영역은 아주 연한 빗금)
   g += `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--ink)" stroke-opacity=".13" stroke-width="1.2"/></pattern></defs>`;
-  const boxes = SEASONS.map(k => ({ k, ...SEASON_BOX[k] }));
+  // 표시 범위와 겹치는 박스만 그리고, 잘린 변에는 테두리를 그리지 않는다
+  const boxes = SEASONS.map(k => ({ k, ...SEASON_BOX[k] })).filter(bx => bx.t[1] > x0 && bx.t[0] < x1 && bx.h[1] > y0 && bx.h[0] < y1);
   boxes.forEach(bx => {
-    const hy0 = Math.max(bx.h[0], y0), hy1 = Math.min(bx.h[1], y1), xa = X(bx.t[0]), xb = X(bx.t[1]), ya = Y(hy1), yb = Y(hy0), col = COL[bx.k];
+    const ta = Math.max(bx.t[0], x0), tb = Math.min(bx.t[1], x1), hy0 = Math.max(bx.h[0], y0), hy1 = Math.min(bx.h[1], y1), xa = X(ta), xb = X(tb), ya = Y(hy1), yb = Y(hy0), col = COL[bx.k];
     g += `<rect x="${xa}" y="${ya}" width="${xb-xa}" height="${yb-ya}" style="fill:color-mix(in srgb,${col} 13%,transparent)"/>`;
-    // 위·아래가 열려 있는 범위(겨울 습도 이상 / 여름 습도 이하)는 닫힌 변에만 테두리
-    const top = bx.h[1] < y1 ? `M${xa},${ya}H${xb}` : '', bot = bx.h[0] > y0 ? `M${xa},${yb}H${xb}` : '';
-    g += `<path d="M${xa},${ya}V${yb}M${xb},${ya}V${yb}${top}${bot}" fill="none" stroke="${col}" stroke-width="1.6" stroke-dasharray="${SEASONS.length > 1 ? '' : '4 3'}" stroke-opacity=".85"/>`;
+    const e = [bx.t[0] >= x0 ? `M${xa},${ya}V${yb}` : '', bx.t[1] <= x1 ? `M${xb},${ya}V${yb}` : '', bx.h[1] <= y1 && bx.h[1] < 100 ? `M${xa},${ya}H${xb}` : '', bx.h[0] >= y0 && bx.h[0] > 0 ? `M${xa},${yb}H${xb}` : ''].join('');
+    g += `<path d="${e}" fill="none" stroke="${col}" stroke-width="1.6" stroke-dasharray="${SEASONS.length > 1 ? '' : '4 3'}" stroke-opacity=".85"/>`;
   });
   for(let i = 0; i < boxes.length; i++) for(let j = i+1; j < boxes.length; j++){
     const A = boxes[i], B = boxes[j], t0 = Math.max(A.t[0], B.t[0]), t1 = Math.min(A.t[1], B.t[1]), h0 = Math.max(A.h[0], B.h[0], y0), h1 = Math.min(A.h[1], B.h[1], y1);
     if(t0 < t1 && h0 < h1) g += `<rect x="${X(t0)}" y="${Y(h1)}" width="${X(t1)-X(t0)}" height="${Y(h0)-Y(h1)}" fill="url(#hatch)"/>`;
   }
-  const p = (marks && marks.length ? marks : pts).filter(q => q.temp != null && q.hum != null);
   // 점은 측정 시점의 계절 색으로 (박스보다 진하게), 최근일수록 진하게
   p.forEach((q,i) => { const a = .25 + .65*i/Math.max(1,p.length-1);
     g += `<circle cx="${X(clamp(q.temp,x0,x1))}" cy="${Y(clamp(q.hum,y0,y1))}" r="2.8" style="fill:${COL[comfortAt(q.ts).key]}" fill-opacity="${a}"/>`; });
@@ -481,6 +485,7 @@ function scatter(el, pts, cur, marks){
     g += `<circle cx="${cx}" cy="${cy}" r="11" fill="none" stroke="var(--ink)" stroke-opacity=".25"/><circle cx="${cx}" cy="${cy}" r="5.5" fill="var(--ink)"/>`;
   }
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  return boxes.map(bx => bx.k);
 }
 
 /* ---------- 추이 (온도/습도 2단) ---------- */
@@ -741,8 +746,8 @@ function renderAll(){
   SEASONS = seasonsFor(range, cpts, cur);
   MULTI = MULTI || SEASONS.length > 1;
   renderNow(cur, cur && cur.prev, st, cmp, yd);
-  $('#scCap').innerHTML = SEASONS.map(k => `<span class="sg"><i style="background:var(--s${k})"></i>${SEASON_BOX[k].name} ${SEASON_BOX[k].t[0]}–${SEASON_BOX[k].t[1]}°C · ${k === 'w' ? '40% 이상' : k === 's' ? '50% 이하' : '40–55%'}</span>`).join('') + (SEASONS.length > 1 ? '<span class="sg"><i class="hx"></i>겹치는 범위</span>' : '') + `<span class="sg">큰 점 = ${now ? '현재' : '구간 평균'}</span>`;
-  scatter($('#scatter'), hist.points, now ? cur : (o.temp == null ? null : {temp:o.temp, hum:o.hum}), hist.marks);
+  const vis = scatter($('#scatter'), hist.points, now ? cur : (o.temp == null ? null : {temp:o.temp, hum:o.hum}), hist.marks);
+  $('#scCap').innerHTML = vis.map(k => `<span class="sg"><i style="background:var(--s${k})"></i>${SEASON_BOX[k].name} ${SEASON_BOX[k].t[0]}–${SEASON_BOX[k].t[1]}°C · ${k === 'w' ? '40% 이상' : k === 's' ? '50% 이하' : '40–55%'}</span>`).join('') + (vis.length > 1 ? '<span class="sg"><i class="hx"></i>겹치는 범위</span>' : '') + `<span class="sg">큰 점 = ${now ? '현재' : '구간 평균'}</span>`;
   if(panel === 'trend'){
     $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · 실측 ${hist.samples.toLocaleString()}회` : '';
     trend($('#trend'), hist.points, hist.marks);
