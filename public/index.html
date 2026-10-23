@@ -353,13 +353,30 @@ const get = (u) => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); re
 const fmtGap = (min) => min < 60 ? `${Math.max(1,Math.round(min))}분` : min < 1440 ? `${Math.floor(min/60)}시간${Math.round(min%60) ? ' ' + Math.round(min%60) + '분' : ''}` : `${(min/1440).toFixed(1)}일`;
 const dew = (t, h) => { const g = Math.log(Math.max(h,1)/100) + 17.62*t/(243.12+t); return 243.12*g/(17.62-g); };
 // 온도·습도를 단계별 표현으로 (쾌적 범위 안에서도 '살짝 따뜻한 편', '매우 적절' 등으로 구분)
-const TEMP_STEPS = [[18,'매우 춥고','매우 춥습니다','매우 추움'],[20.5,'춥고','춥습니다','추움'],[22.5,'조금 춥고','조금 춥습니다','조금 추움'],[23.5,'살짝 춥고','살짝 춥습니다','살짝 추움'],
-  [26.5,'매우 적절하고','매우 적절합니다','매우 적절'],[28,'살짝 따뜻한 편이고','살짝 따뜻한 편입니다','살짝 따뜻한 편'],[30,'따뜻하고','따뜻합니다','따뜻함'],[32,'덥고','덥습니다','더움'],[Infinity,'매우 덥고','매우 덥습니다','매우 더움']];
-const HUM_STEPS = [[30,'매우 건조하고','매우 건조합니다','매우 건조'],[40,'건조하고','건조합니다','건조'],[43,'살짝 건조한 편이고','살짝 건조한 편입니다','살짝 건조한 편'],
-  [52,'매우 적절하고','매우 적절합니다','매우 적절'],[55,'살짝 습한 편이고','살짝 습한 편입니다','살짝 습한 편'],[65,'습하고','습합니다','습함'],[Infinity,'매우 습하고','매우 습합니다','매우 습함']];
-const tempWord = (t) => TEMP_STEPS.find(x => t < x[0]) || TEMP_STEPS.at(-1);
-const humWord = (h) => HUM_STEPS.find(x => h < x[0]) || HUM_STEPS.at(-1);
-function feel(t, h){ return `온도는 ${tempWord(t)[1]} 습도는 ${humWord(h)[2]}.`; }
+// 가변최적기온제도 (한국 시간 기준 월): 12~2월 23–25°C·습도 40% 이상 / 3~5·9~11월 26–28°C·40–55% / 6~8월 27–29°C·50% 이하
+function comfortAt(ts){
+  const m = new Date((ts || Date.now()) + 9*36e5).getUTCMonth() + 1;
+  if(m === 12 || m <= 2) return { m, season:'겨울', t:[23,25], h:[40,100], hTxt:'40% 이상' };
+  if(m >= 6 && m <= 8)   return { m, season:'여름', t:[27,29], h:[0,50],   hTxt:'50% 이하' };
+  return { m, season: m <= 5 ? '봄' : '가을', t:[26,28], h:[40,55], hTxt:'40–55%' };
+}
+const comfortTxt = (c) => `${c.t[0]}–${c.t[1]}°C · ${c.hTxt}`;
+const inComfort = (c, t, h) => ({ t: t >= c.t[0] && t <= c.t[1], h: h >= c.h[0] && h <= c.h[1] });
+let CTX = comfortAt(Date.now()), MULTI = false;
+// 쾌적 범위를 기준으로 상대적인 단계 표현 (범위 안에서도 '살짝 따뜻한 편', '매우 적절' 등으로 구분)
+function tempWord(t, c = CTX){
+  const [lo, hi] = c.t, w = hi - lo;
+  const S = [[lo-4.5,'매우 춥고','매우 춥습니다','매우 추움'],[lo-2,'춥고','춥습니다','추움'],[lo,'조금 춥고','조금 춥습니다','조금 추움'],[lo+.2*w,'살짝 춥고','살짝 춥습니다','살짝 추움'],
+    [hi-.27*w,'매우 적절하고','매우 적절합니다','매우 적절'],[hi+1e-9,'살짝 따뜻한 편이고','살짝 따뜻한 편입니다','살짝 따뜻한 편'],[hi+2,'따뜻하고','따뜻합니다','따뜻함'],[hi+4,'덥고','덥습니다','더움'],[Infinity,'매우 덥고','매우 덥습니다','매우 더움']];
+  return S.find(x => t < x[0]);
+}
+function humWord(h, c = CTX){
+  const [lo, hi] = c.h;
+  const S = [[lo-10,'매우 건조하고','매우 건조합니다','매우 건조'],[lo,'건조하고','건조합니다','건조'],[lo+3,'살짝 건조한 편이고','살짝 건조한 편입니다','살짝 건조한 편'],
+    [hi-3,'매우 적절하고','매우 적절합니다','매우 적절'],[hi+1e-9,'살짝 습한 편이고','살짝 습한 편입니다','살짝 습한 편'],[hi+10,'습하고','습합니다','습함'],[Infinity,'매우 습하고','매우 습합니다','매우 습함']];
+  return S.find(x => h < x[0]);
+}
+function feel(t, h, c = CTX){ return `온도는 ${tempWord(t, c)[1]} 습도는 ${humWord(h, c)[2]}.`; }
 
 function niceScale(a, b){
   const span = Math.max(b - a, .5);
@@ -409,14 +426,14 @@ function renderDetail(d){
   const lastChg = Math.max(0, ...[d.prev_t, d.prev_h].filter(Boolean).map(x => x.ts)), gap = lastChg ? fmtGap((d.ts-lastChg)/60000) : '';
   const dd = (v, u, dec, kind) => v == null ? '<span class="delta">&nbsp;</span>' : Math.abs(v) < (dec ? .05 : .5) ? '<span class="delta">– 변화 없음</span>' : `<span class="delta ${chgCls(kind, v, 0)}">${chgTxt(v, u, dec)}</span>`;
   const num = (cls, c, val, unit, label, delta) => `<div class="pc"><div class="num ${cls} mono" style="color:${c.ink}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
-  const inT = d.temp >= 22.5 && d.temp <= 28, inH = d.hum >= 40 && d.hum <= 55;
+  const cz = comfortAt(d.ts), ok = inComfort(cz, d.temp, d.hum), inT = ok.t, inH = ok.h;
   const vsAvg = avgT == null ? '' : `구간 평균 ${n1(avgT)}° 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `<b class="${chgCls('temp', d.temp-avgT, .05)}">${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°</b>`}`;
   el.style.display = '';
   el.innerHTML = `<div class="dh"><span class="k">선택한 시점 · ${when(d.ts)} 측정</span><button id="dClose">닫기</button></div>
     <div class="k" style="margin-top:2px">${p ? (lastChg ? `변화는 값이 달라지기 직전 측정(${when(lastChg)}, ${gap} 전) 대비` : '이전 측정과 같은 값입니다') : '기록상 첫 측정입니다'}</div>
     <div class="pair3">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(d.prev_t ? d.temp-d.prev_t.temp : null, '°', 1, 'temp'))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(d.prev_h ? d.hum-d.prev_h.hum : null, '%p', 0, 'hum'))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(pdp != null ? dp-pdp : null, '°', 1, 'dew'))}</div>
-    <p class="verdict">${feel(d.temp, d.hum)}</p>
-    <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (22.5–28°C · 40–55%)${vsAvg ? ' · ' + vsAvg : ''}</div>`;
+    <p class="verdict">${feel(d.temp, d.hum, cz)}</p>
+    <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (${cz.m}월 기준 ${comfortTxt(cz)})${vsAvg ? ' · ' + vsAvg : ''}</div>`;
   $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
 }
 
@@ -428,7 +445,8 @@ function scatter(el, pts, cur, marks){
   let g = '';
   for(let t=x0;t<=x1;t+=4) g += `<line class="gl" x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${m.t+ih}"/><text x="${X(t)}" y="${H-10}" text-anchor="middle">${t}°</text>`;
   for(let h=y0;h<=y1;h+=20) g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${Y(h)}" y2="${Y(h)}"/><text x="${m.l-8}" y="${Y(h)+4}" text-anchor="end">${h}%</text>`;
-  g += `<rect x="${X(22.5)}" y="${Y(55)}" width="${X(28)-X(22.5)}" height="${Y(40)-Y(55)}" fill="var(--comfort)" stroke="var(--ok)" stroke-opacity=".5" stroke-dasharray="3 3"/>`;
+  const cb = CTX, hy0 = Math.max(cb.h[0], y0), hy1 = Math.min(cb.h[1], y1);
+  g += `<rect x="${X(cb.t[0])}" y="${Y(hy1)}" width="${X(cb.t[1])-X(cb.t[0])}" height="${Y(hy0)-Y(hy1)}" fill="var(--comfort)" stroke="var(--ok)" stroke-opacity=".5" stroke-dasharray="3 3"/>`;
   const clamp = (v,a,b) => Math.min(b,Math.max(a,v));
   const p = (marks && marks.length ? marks : pts).filter(q => q.temp != null && q.hum != null);
   p.forEach((q,i) => { const a = .12 + .5*i/Math.max(1,p.length-1);
@@ -587,10 +605,10 @@ function hourly(el, rows){
 
 /* ---------- 히어로 / 요약 ---------- */
 // 쾌적 진입률: 선택 구간에서 쾌적 범위 안에 머문 시간 비율 (사잇값 보간 기준)
-function ratesHtml(o, base){
+function ratesHtml(o, base, cz = CTX, multi = false){
   const d = (k) => !base || base[k] == null || o[k] == null ? '' : (() => { const x = o[k] - base[k]; return Math.abs(x) < .5 ? '– 변화 없음' : `${x > 0 ? '▲' : '▼'} ${Math.abs(x).toFixed(0)}%p`; })();
   const r = (label, k, sub) => `<div class="rate"><span class="k">${label}</span><b>${o[k] == null ? '–' : n0(o[k])}%</b><div class="bar2"><i style="width:${o[k] == null ? 0 : Math.min(100, o[k])}%"></i></div><small>${sub}${d(k) ? '<br>' + d(k) : ''}</small></div>`;
-  return `<div class="rates">${r('쾌적 온도 진입률', 'comfort_t', '22.5–28°C')}${r('쾌적 습도 진입률', 'comfort_h', '40–55%')}${r('둘 다 진입률', 'comfort', '온도·습도 동시')}</div>`;
+  return `<div class="rates">${r('쾌적 온도 진입률', 'comfort_t', multi ? '계절별 기준' : `${cz.t[0]}–${cz.t[1]}°C`)}${r('쾌적 습도 진입률', 'comfort_h', multi ? '계절별 기준' : cz.hTxt)}${r('둘 다 진입률', 'comfort', '온도·습도 동시')}</div>`;
 }
 function renderNow(cur, ref, st, cmp, yd){
   $('#rates').innerHTML = '';
@@ -627,12 +645,12 @@ function renderNow(cur, ref, st, cmp, yd){
     $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${lastChg ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}${md(yd.ts)} ${hhmm(yd.ts)}` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
       <p class="verdict">${feel(cur.temp, cur.hum)}</p>
       <div class="k" style="margin-top:22px">최근 24시간</div>${matrix}`;
-    $('#rates').innerHTML = ratesHtml(o, null);
+    $('#rates').innerHTML = ratesHtml(o, null, CTX, MULTI);
     return;
   }
   $('#now').innerHTML = `<div class="k">${rangeLabel(range)} · 구간 통계</div>${bar}${matrix}
     <p class="verdict">구간 평균 기준으로 ${feel(o.temp, o.hum)}</p>`;
-  $('#rates').innerHTML = ratesHtml(o, base);
+  $('#rates').innerHTML = ratesHtml(o, base, CTX, MULTI);
   document.querySelectorAll('.cmpbar button').forEach(bn => bn.onclick = () => { cmpIdx = +bn.dataset.i; load(); });
 }
 
@@ -691,8 +709,12 @@ async function load(){
 function renderAll(){
   if(!cache) return;
   const { cur, hist, st, cmp, yd } = cache, now = range === '24h', o = st.overall;
+  // 쾌적 범위는 가변최적기온제도에 따라 월별로 다름: 현재는 최신 측정 월, 구간은 구간 끝 월 기준
+  const cpts = hist.points, c0 = cpts.length ? comfortAt(cpts[0].ts) : null;
+  CTX = comfortAt(now && cur ? cur.ts : (cpts.length ? cpts.at(-1).ts : Date.now()));
+  MULTI = !!c0 && (c0.t[0] !== CTX.t[0] || c0.h[0] !== CTX.h[0] || c0.h[1] !== CTX.h[1]);
   renderNow(cur, cur && cur.prev, st, cmp, yd);
-  $('#scCap').textContent = '초록 = 쾌적 범위 (22.5–28°C · 40–55%) · 큰 점 = ' + (now ? '현재' : '구간 평균');
+  $('#scCap').textContent = `초록 = 쾌적 범위 (${CTX.m}월 기준 ${comfortTxt(CTX)}${MULTI ? ' · 구간 안에서 계절별로 다름' : ''}) · 큰 점 = ` + (now ? '현재' : '구간 평균');
   scatter($('#scatter'), hist.points, now ? cur : (o.temp == null ? null : {temp:o.temp, hum:o.hum}), hist.marks);
   if(panel === 'trend'){
     $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · 실측 ${hist.samples.toLocaleString()}회` : '';
