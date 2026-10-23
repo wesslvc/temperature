@@ -20,12 +20,14 @@
 :root{
   --bg:#f3f0e9; --panel:#faf8f3; --ink:#1d1c1a; --sub:#77736a; --faint:#a9a498; --rule:#dcd7ca;
   --t:#c2410c; --h:#1e6a8c; --ok:#4d7c3a;
+  --hot:#d23b2f; --cold:#2f86d6; --wet:#1e5fb8; --dry:#b7791f;
   --d:#7b5ea7; --d-soft:rgba(123,94,167,.13);
   --t-soft:rgba(194,65,12,.13); --h-soft:rgba(30,106,140,.13); --comfort:rgba(77,124,58,.12);
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#121211; --panel:#191917; --ink:#ece9e1; --sub:#928e83; --faint:#5c5951; --rule:#2c2b27;
   --t:#f08a52; --h:#6cb4d6; --ok:#98c27c;
+  --hot:#ff7d6e; --cold:#7fb8ff; --wet:#6ea4ff; --dry:#e9b44c;
   --d:#b9a1e6; --d-soft:rgba(185,161,230,.16);
   --t-soft:rgba(240,138,82,.16); --h-soft:rgba(108,180,214,.16); --comfort:rgba(152,194,124,.1);
 }}
@@ -119,7 +121,8 @@ button.pill.on{background:var(--ink);color:var(--bg)}
 .detail .dh button{border:0;background:none;color:var(--sub);cursor:pointer;font:inherit;font-size:12px;text-decoration:underline}
 .detail .pair3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:14px}
 .detail .pc{min-width:0}.detail .num{font-size:56px}.detail .lbl{display:flex;flex-direction:column;gap:2px;align-items:flex-start;margin-top:10px}.detail .delta{font-size:13px;font-weight:600}
-.pair .delta{display:block}.pair .delta em{font-style:normal;font-weight:400;color:var(--sub);margin-left:4px}
+.c-hot{color:var(--hot)}.c-cold{color:var(--cold)}.c-wet{color:var(--wet)}.c-dry{color:var(--dry)}
+.delta .yd{font-weight:500;color:var(--sub);margin-left:6px}.delta .yd b{font-weight:600}
 .detail .dg>div{padding:10px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
 .detail .dg b{display:block;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 .detail .dg small{color:var(--sub);font-size:12px}
@@ -394,17 +397,20 @@ async function selectPoint(ts){
     selTs = d.ts; if(lastTrend) trend(...lastTrend); renderDetail(d);
   } catch {}
 }
+// 증감 색: 더워지면 적색, 추워지면 청색 / 습해지면(이슬점 포함) 짙은 청색, 건조해지면 황색
+const chgCls = (kind, v, eps) => v == null || Math.abs(v) < eps ? '' : kind === 'temp' ? (v > 0 ? 'c-hot' : 'c-cold') : (v > 0 ? 'c-wet' : 'c-dry');
+const chgTxt = (v, u, dec) => `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(dec)}${u}`;
 function renderDetail(d){
   const el = $('#detail'), p = d.prev, dp = dew(d.temp, d.hum), pdp = p ? dew(p.temp, p.hum) : null, avgT = lastStats && lastStats.overall.temp;
   const gap = p ? fmtGap((d.ts-p.ts)/60000) : '';
-  const dd = (v, u, dec) => v == null ? '<span class="delta">&nbsp;</span>' : `<span class="delta">${Math.abs(v) < (dec ? .05 : .5) ? '– 변화 없음' : `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(dec)}${u}`}</span>`;
+  const dd = (v, u, dec, kind) => v == null ? '<span class="delta">&nbsp;</span>' : Math.abs(v) < (dec ? .05 : .5) ? '<span class="delta">– 변화 없음</span>' : `<span class="delta ${chgCls(kind, v, 0)}">${chgTxt(v, u, dec)}</span>`;
   const num = (cls, c, val, unit, label, delta) => `<div class="pc"><div class="num ${cls} mono" style="color:${c.ink}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
   const inT = d.temp >= 22.5 && d.temp <= 28, inH = d.hum >= 40 && d.hum <= 55;
-  const vsAvg = avgT == null ? '' : `구간 평균 ${n1(avgT)}° 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°`}`;
+  const vsAvg = avgT == null ? '' : `구간 평균 ${n1(avgT)}° 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `<b class="${chgCls('temp', d.temp-avgT, .05)}">${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°</b>`}`;
   el.style.display = '';
   el.innerHTML = `<div class="dh"><span class="k">선택한 시점 · ${when(d.ts)} 측정</span><button id="dClose">닫기</button></div>
     <div class="k" style="margin-top:2px">${p ? `변화는 직전 측정(${when(p.ts)}, ${gap} 전) 대비` : '기록상 첫 측정입니다'}</div>
-    <div class="pair3">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(p ? d.temp-p.temp : null, '°', 1))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(p ? d.hum-p.hum : null, '%p', 0))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(p ? dp-pdp : null, '°', 1))}</div>
+    <div class="pair3">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(p ? d.temp-p.temp : null, '°', 1, 'temp'))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(p ? d.hum-p.hum : null, '%p', 0, 'hum'))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(p ? dp-pdp : null, '°', 1, 'dew'))}</div>
     <p class="verdict">${feel(d.temp, d.hum)}</p>
     <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (22.5–28°C · 40–55%)${vsAvg ? ' · ' + vsAvg : ''}</div>`;
   $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
@@ -595,7 +601,8 @@ function renderNow(cur, ref, st, cmp, yd){
   const base = sp && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
   // 최저·최고·평균을 한 표로 (온도 / 습도 / 이슬점 3행 × 3열)
   const dl = (k, u, dec) => { if(!base || base[k] == null || o[k] == null) return ''; const d = o[k] - base[k];
-    return `<div class="dl">${Math.abs(d) < (dec ? .05 : .5) ? '– 변화 없음' : `${d > 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(dec)}${u}`}</div>`; };
+    const kind = k[0] === 't' ? 'temp' : k[0] === 'h' ? 'hum' : 'dew';
+    return Math.abs(d) < (dec ? .05 : .5) ? '<div class="dl">– 변화 없음</div>' : `<div class="dl ${chgCls(kind, d, 0)}">${chgTxt(d, u, dec)}</div>`; };
   const mc = (M, k, tsk, u, du, dec, fmt) => { const c = colorOf(M, o[k]); return `<div class="mc"><b style="${c ? `color:${c.ink};border-color:${c.fill}` : ''}">${fmt(o[k])}<em>${u}</em></b><small>${tsk ? tm(o[tsk]) : '&nbsp;'}</small>${dl(k, du, dec)}</div>`; };
   const row = (M, label, unit, kmin, kmax, kavg, du, dec, fmt) => `<div class="ml">${label}</div>${mc(M,kmin,kmin+'_ts',unit,du,dec,fmt)}${mc(M,kmax,kmax+'_ts',unit,du,dec,fmt)}${mc(M,kavg,null,unit,du,dec,fmt)}`;
   const matrix = `<div class="mx"><div></div><div class="mh">최저</div><div class="mh">최고</div><div class="mh">평균</div>
@@ -605,9 +612,11 @@ function renderNow(cur, ref, st, cmp, yd){
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `비교 구간(${fmtW(sp.from)} – ${fmtW(sp.to)})에 기록이 없습니다`}</span></div>` : '';
   if(now){
     const gap = ref ? fmtGap((cur.ts-ref.ts)/60000) : '';
-    const one = (v, u, lab) => v == null ? '' : `<span class="delta">${Math.abs(v) < .05 ? '–' : (v > 0 ? '▲' : '▼')} ${Math.abs(v).toFixed(u === '°' ? 1 : 0)}${u} <em>${lab}</em></span>`;
-    const dd = (k, u) => one(ref && ref[k] != null ? cur[k] - ref[k] : null, u, '직전') + one(yd && yd[k] != null ? cur[k] - yd[k] : null, u, '어제 같은 시각');
-    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정${ref ? ` · 직전 측정은 ${gap} 전` : ''}${yd ? ' · 어제 같은 시각은 앞뒤 측정값을 이은 값' : ''}</div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°')], ['습도', dd('hum','%')]) + `
+    const sp1 = (v, u, kind, dec) => v == null ? '' : Math.abs(v) < .05 ? '–' : `<span class="${chgCls(kind, v, .05)}">${chgTxt(v, u, dec)}</span>`;
+    const dd = (k, u, kind, dec) => {
+      const a = ref && ref[k] != null ? cur[k] - ref[k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
+      return `<span class="delta">${sp1(a, u, kind, dec)}${b == null ? '' : `<span class="yd">어제 ${sp1(b, u, kind, dec)}</span>`}</span>`; };
+    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정${ref ? ` · 변화는 직전 측정(${gap} 전) 대비` : ''}${yd ? ' · 어제는 같은 시각 대비' : ''}</div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
       <p class="verdict">${feel(cur.temp, cur.hum)}</p>
       <div class="k" style="margin-top:22px">최근 24시간</div>${matrix}`;
     $('#rates').innerHTML = ratesHtml(o, null);
