@@ -1,0 +1,4 @@
+-- 가변최적기온제도 (적용된 마이그레이션 roomtemp_seasonal_comfort 의 요약)
+-- 12~2월: 23–25°C, 습도 40% 이상 / 3~5·9~11월: 26–28°C, 40–55% / 6~8월: 27–29°C, 50% 이하 (한국 시간 기준 월)
+-- roomtemp._comfort_t(ts, temp), roomtemp._comfort_h(ts, hum) 를 만들고 roomtemp_stats 의 comfort·comfort_t·comfort_h 를 표본별 계절 기준으로 계산하도록 변경.
+-- roomtemp_current / roomtemp_point 는 prev_t, prev_h, prev_d(값이 달라지기 직전 측정)를 함께 반환.
