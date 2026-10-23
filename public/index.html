@@ -405,16 +405,16 @@ async function selectPoint(ts){
 const chgCls = (kind, v, eps) => v == null || Math.abs(v) < eps ? '' : kind === 'temp' ? (v > 0 ? 'c-hot' : 'c-cold') : (v > 0 ? 'c-wet' : 'c-dry');
 const chgTxt = (v, u, dec) => `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(dec)}${u}`;
 function renderDetail(d){
-  const el = $('#detail'), p = d.prev, dp = dew(d.temp, d.hum), pdp = p ? dew(p.temp, p.hum) : null, avgT = lastStats && lastStats.overall.temp;
-  const gap = p ? fmtGap((d.ts-p.ts)/60000) : '';
+  const el = $('#detail'), p = d.prev, dp = dew(d.temp, d.hum), pdp = d.prev_d ? d.prev_d.dew : null, avgT = lastStats && lastStats.overall.temp;
+  const lastChg = Math.max(0, ...[d.prev_t, d.prev_h].filter(Boolean).map(x => x.ts)), gap = lastChg ? fmtGap((d.ts-lastChg)/60000) : '';
   const dd = (v, u, dec, kind) => v == null ? '<span class="delta">&nbsp;</span>' : Math.abs(v) < (dec ? .05 : .5) ? '<span class="delta">– 변화 없음</span>' : `<span class="delta ${chgCls(kind, v, 0)}">${chgTxt(v, u, dec)}</span>`;
   const num = (cls, c, val, unit, label, delta) => `<div class="pc"><div class="num ${cls} mono" style="color:${c.ink}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
   const inT = d.temp >= 22.5 && d.temp <= 28, inH = d.hum >= 40 && d.hum <= 55;
   const vsAvg = avgT == null ? '' : `구간 평균 ${n1(avgT)}° 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `<b class="${chgCls('temp', d.temp-avgT, .05)}">${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°</b>`}`;
   el.style.display = '';
   el.innerHTML = `<div class="dh"><span class="k">선택한 시점 · ${when(d.ts)} 측정</span><button id="dClose">닫기</button></div>
-    <div class="k" style="margin-top:2px">${p ? `변화는 직전 측정(${when(p.ts)}, ${gap} 전) 대비` : '기록상 첫 측정입니다'}</div>
-    <div class="pair3">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(p ? d.temp-p.temp : null, '°', 1, 'temp'))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(p ? d.hum-p.hum : null, '%p', 0, 'hum'))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(p ? dp-pdp : null, '°', 1, 'dew'))}</div>
+    <div class="k" style="margin-top:2px">${p ? (lastChg ? `변화는 값이 달라지기 직전 측정(${when(lastChg)}, ${gap} 전) 대비` : '이전 측정과 같은 값입니다') : '기록상 첫 측정입니다'}</div>
+    <div class="pair3">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(d.prev_t ? d.temp-d.prev_t.temp : null, '°', 1, 'temp'))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(d.prev_h ? d.hum-d.prev_h.hum : null, '%p', 0, 'hum'))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(pdp != null ? dp-pdp : null, '°', 1, 'dew'))}</div>
     <p class="verdict">${feel(d.temp, d.hum)}</p>
     <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (22.5–28°C · 40–55%)${vsAvg ? ' · ' + vsAvg : ''}</div>`;
   $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
@@ -615,14 +615,16 @@ function renderNow(cur, ref, st, cmp, yd){
   const bar = specs.length ? `<div class="cmpbar"><span>비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `비교 구간(${fmtW(sp.from)} – ${fmtW(sp.to)})에 기록이 없습니다`}</span></div>` : '';
   if(now){
-    const gap = ref ? fmtGap((cur.ts-ref.ts)/60000) : '';
+    // 직전 = 그 값이 실제로 달라지기 직전의 측정 (몇 초 간격으로 따로 온 같은 값은 건너뜀)
+    const pr = { temp: cur.prev_t, hum: cur.prev_h }, lastChg = Math.max(0, ...[cur.prev_t, cur.prev_h].filter(Boolean).map(x => x.ts));
+    const gap = lastChg ? fmtGap((cur.ts-lastChg)/60000) : '';
     // 말 대신 아이콘으로 구분: 시계(되감기) = 직전 측정 대비, 달력 = 어제 같은 시각 대비
     const IC = { prev: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>', day: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>' };
     const chip = (v, u, kind, dec, ic, tip) => v == null ? '' : Math.abs(v) < .05 ? `<span class="chip2 z" title="${tip}" aria-label="${tip}">${IC[ic]}–</span>` : `<span class="chip2 ${chgCls(kind, v, .05)}" title="${tip}" aria-label="${tip}">${IC[ic]}${chgTxt(v, u, dec)}</span>`;
     const dd = (k, u, kind, dec) => {
-      const a = ref && ref[k] != null ? cur[k] - ref[k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
-      return `<div class="chips">${chip(a, u, kind, dec, 'prev', '직전 측정 대비')}${chip(b, u, kind, dec, 'day', '어제 같은 시각 대비')}</div>`; };
-    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${ref ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}${md(yd.ts)} ${hhmm(yd.ts)}` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
+      const a = pr[k] && pr[k][k] != null ? cur[k] - pr[k][k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
+      return `<div class="chips">${chip(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${chip(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}</div>`; };
+    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${lastChg ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}${md(yd.ts)} ${hhmm(yd.ts)}` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
       <p class="verdict">${feel(cur.temp, cur.hum)}</p>
       <div class="k" style="margin-top:22px">최근 24시간</div>${matrix}`;
     $('#rates').innerHTML = ratesHtml(o, null);

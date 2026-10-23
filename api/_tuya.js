@@ -164,14 +164,14 @@ export class Tuya {
     events.sort((a, b) => a.ts - b.ts);
     const ts = await this.scaleFor(id, tCode);
     const hs = await this.scaleFor(id, hCode);
-    // 같은 순간(±2초)에 온 온도/습도를 한 행으로 합친다. 한쪽만 바뀐 보고는 직전 값을 유지한 채 기록한다.
+    // 같은 순간(±10초)에 온 온도/습도를 한 행으로 합친다. 한쪽만 바뀐 보고는 직전 값을 유지한 채 기록한다.
     const rows = [];
     let temp = null, hum = null, lastTs = -1e12;
     for (const e of events) {
       if (e.code === tCode) { temp = e.v / 10 ** ts; if (ts === 0 && Math.abs(temp) > 80) temp /= 10; }
       else if (e.code === hCode) hum = e.v / 10 ** hs;
       if (temp == null || hum == null) continue;
-      if (e.ts - lastTs <= 2000 && rows.length) { rows[rows.length - 1].temp = temp; rows[rows.length - 1].hum = hum; }
+      if (e.ts - lastTs <= 10000 && rows.length) { rows[rows.length - 1].temp = temp; rows[rows.length - 1].hum = hum; }
       else rows.push({ ts: e.ts, temp, hum });
       lastTs = e.ts;
     }
