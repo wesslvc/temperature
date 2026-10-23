@@ -20,14 +20,14 @@
 :root{
   --bg:#f3f0e9; --panel:#faf8f3; --ink:#1d1c1a; --sub:#77736a; --faint:#a9a498; --rule:#dcd7ca;
   --t:#c2410c; --h:#1e6a8c; --ok:#4d7c3a;
-  --hot:#d23b2f; --cold:#2f86d6; --wet:#1e5fb8; --dry:#b7791f;
+  --hot:#c43a3a; --cold:#3c78b0; --wet:#2f8f74; --dry:#b9772f;
   --d:#7b5ea7; --d-soft:rgba(123,94,167,.13);
   --t-soft:rgba(194,65,12,.13); --h-soft:rgba(30,106,140,.13); --comfort:rgba(77,124,58,.12);
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#121211; --panel:#191917; --ink:#ece9e1; --sub:#928e83; --faint:#5c5951; --rule:#2c2b27;
   --t:#f08a52; --h:#6cb4d6; --ok:#98c27c;
-  --hot:#ff7d6e; --cold:#7fb8ff; --wet:#6ea4ff; --dry:#e9b44c;
+  --hot:#f0805f; --cold:#7db3d3; --wet:#82c4ad; --dry:#e0b36a;
   --d:#b9a1e6; --d-soft:rgba(185,161,230,.16);
   --t-soft:rgba(240,138,82,.16); --h-soft:rgba(108,180,214,.16); --comfort:rgba(152,194,124,.1);
 }}
@@ -401,7 +401,7 @@ async function selectPoint(ts){
     selTs = d.ts; if(lastTrend) trend(...lastTrend); renderDetail(d);
   } catch {}
 }
-// 증감 색: 더워지면 적색, 추워지면 청색 / 습해지면(이슬점 포함) 짙은 청색, 건조해지면 황색
+// 증감 색: 온도·습도 색 체계와 같은 계열 — 더워지면 적색, 추워지면 청색 / 습해지면(이슬점 포함) 민트, 건조해지면 황색
 const chgCls = (kind, v, eps) => v == null || Math.abs(v) < eps ? '' : kind === 'temp' ? (v > 0 ? 'c-hot' : 'c-cold') : (v > 0 ? 'c-wet' : 'c-dry');
 const chgTxt = (v, u, dec) => `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(dec)}${u}`;
 function renderDetail(d){
