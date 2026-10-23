@@ -622,7 +622,7 @@ function renderNow(cur, ref, st, cmp, yd){
     const dd = (k, u, kind, dec) => {
       const a = ref && ref[k] != null ? cur[k] - ref[k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
       return `<div class="chips">${chip(a, u, kind, dec, 'prev', '직전 측정 대비')}${chip(b, u, kind, dec, 'day', '어제 같은 시각 대비')}</div>`; };
-    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${ref ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}24시간 전` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
+    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${ref ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}${md(yd.ts)} ${hhmm(yd.ts)}` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
       <p class="verdict">${feel(cur.temp, cur.hum)}</p>
       <div class="k" style="margin-top:22px">최근 24시간</div>${matrix}`;
     $('#rates').innerHTML = ratesHtml(o, null);
@@ -675,7 +675,7 @@ async function load(){
     const [curR, hist, st, cmp] = await Promise.all([get('/api/current'), get(`/api/history?range=${range}`), get(`/api/stats?range=${range}`), sp ? get(`/api/stats?range=${sp.range}`).catch(() => null) : null]);
     const cur = curR.devices[0] || null;
     let yd = null;
-    if(range === '24h' && cur){ try { yd = await get(`/api/at?ts=${cur.ts - 864e5}`); } catch {} }
+    if(range === '24h' && cur){ try { yd = await get(`/api/point?ts=${cur.ts - 864e5}`); if(yd && Math.abs(yd.ts - (cur.ts - 864e5)) > 6*36e5) yd = null; } catch {} }
     cache = { cur, hist, st, cmp, yd }; lastStats = st;
     renderAll();
     // 센서가 실제로 보고한 시각만 표시 (화면을 불러온 시각이 아님)
