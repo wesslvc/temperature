@@ -351,28 +351,7 @@ button.dl-row:hover{background:var(--sunk)}
 .cmpbar>span:first-child{display:none}
 #hmCap{margin:0 0 10px;color:var(--faint)}
 .rangeT{margin:4px 0 22px;padding-bottom:18px;border-bottom:1px solid var(--hair)}
-/* ---------- 쾌적 표현 ---------- */
-.hm-s{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.hm-s .st{font-weight:700}.hm-s .st.ok{color:var(--ok)}
-.hm-s .st.c-cold{color:var(--cold)}.hm-s .st.c-hot{color:var(--hot)}.hm-s .st.c-dry{color:var(--dry)}.hm-s .st.c-wet{color:var(--wet)}
-.hm-s em{font-size:12.5px;font-weight:500;color:var(--faint)}.hm-s em::before{content:none!important}
-.g3{position:relative;height:42px;margin-top:22px}
-.g3-t{position:absolute;left:0;right:0;top:9px;height:2px;border-radius:1px;background:var(--sunk-2)}
-.g3-z{position:absolute;top:5px;height:10px;border-radius:5px;background:color-mix(in srgb,var(--ok) 22%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ok) 55%,transparent)}
-.g3-z.ol{border-top-left-radius:0;border-bottom-left-radius:0;-webkit-mask:linear-gradient(90deg,transparent,#000 30%);mask:linear-gradient(90deg,transparent,#000 30%)}
-.g3-z.oh{border-top-right-radius:0;border-bottom-right-radius:0;-webkit-mask:linear-gradient(270deg,transparent,#000 30%);mask:linear-gradient(270deg,transparent,#000 30%)}
-.g3-l{position:absolute;top:22px;transform:translateX(-50%);font-size:11.5px;font-weight:600;color:var(--ok);opacity:.85;font-variant-numeric:tabular-nums;white-space:nowrap}
-.g3-gap{position:absolute;top:9.5px;height:0;border-top:1.5px dashed var(--sub);opacity:.7}
-.g3-d{position:absolute;top:-12px;transform:translateX(-50%);font-size:11.5px;font-weight:650;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
-.g3-m{position:absolute;top:2px;width:16px;height:16px;margin-left:-8px;border-radius:50%;box-shadow:0 0 0 2px var(--ink),0 0 0 5px var(--panel)}
-@media(max-width:560px){.hm-s em{display:block;width:100%;margin-top:0}}
-svg .cz{fill:var(--ok);fill-opacity:.055}
-svg .cz-sw{fill:var(--ok);fill-opacity:.35;stroke:var(--ok);stroke-opacity:.7}
-svg .cz-e{stroke:var(--ok);stroke-opacity:.45;stroke-width:1}
-svg text.cz-l{fill:var(--ok)!important;fill-opacity:.9;font-size:11px!important;font-weight:650}
-.cs-pd.up{fill:var(--ok)!important}.cs-pd.dn{fill:var(--faint)!important}
-.cs-pd{font-size:11px!important}
-
+.cs-pd{font-size:10px!important}
 /* ---------- 디테일 보정 ---------- */
 .cs-l{fill:var(--sub)!important;font-size:12px!important;font-weight:650}
 #scatter svg{max-height:none}
@@ -698,13 +677,13 @@ function vGrad(metric, lo, hi, yLo, yHi, op = 1, fade = false){
 function comfortStrip(el, pts, o, base){
   const P = pts.filter(p => p.temp != null && p.hum != null);
   if(P.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
-  const W = Math.max(300, el.clientWidth || 520), m = {l:44,r:W < 480 ? 104 : 124}, iw = W-m.l-m.r, t0 = P[0].ts, t1 = P.at(-1).ts, span = t1-t0 || 1;
+  const W = Math.max(300, el.clientWidth || 520), m = {l:44,r:W < 480 ? 50 : 70}, iw = W-m.l-m.r, t0 = P[0].ts, t1 = P.at(-1).ts, span = t1-t0 || 1;
   const X = ts => m.l + (ts-t0)/span*iw;
-  const rows = [{k:'temp',name:'온도',y:6,rk:'comfort_t'},{k:'hum',name:'습도',y:38,rk:'comfort_h'},{k:'both',name:'둘 다',y:70,rk:'comfort'}], RH = 10, H = 70+RH+30;
+  const rows = [{k:'temp',name:'온도',y:8,rk:'comfort_t'},{k:'hum',name:'습도',y:40,rk:'comfort_h'},{k:'both',name:'둘 다',y:72,rk:'comfort'}], RH = 8, H = 72+RH+32;
   let g = '';
   rows.forEach((R, ri) => { g += `<clipPath id="cs${ri}"><rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="4"/></clipPath><text class="cs-l" x="0" y="${R.y+RH/2+4}">${R.name}</text>`;
-    if(o && o[R.rk] != null){ const d = base && base[R.rk] != null ? o[R.rk] - base[R.rk] : null; g += `<text class="cs-p" x="${W}" y="${R.y+RH/2+5.5}" text-anchor="end">${Math.round(o[R.rk])}%</text>`;
-      if(d != null && Math.abs(d) >= .5) g += `<text class="cs-pd ${d > 0 ? 'up' : 'dn'}" x="${W-46}" y="${R.y+RH/2+4.5}" text-anchor="end">${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(0)}%p</text>`; } });
+    if(o && o[R.rk] != null){ const d = base && base[R.rk] != null ? o[R.rk] - base[R.rk] : null; g += `<text class="cs-p" x="${W}" y="${R.y+RH/2+5}" text-anchor="end">${Math.round(o[R.rk])}%</text>`;
+      if(d != null && Math.abs(d) >= .5) g += `<text class="cs-pd" x="${W}" y="${R.y+RH/2+19}" text-anchor="end">${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(0)}%p</text>`; } });
   // 상태별로 이어진 덩어리: 온도 = 낮음(청)·쾌적(초록)·높음(적), 습도 = 건조(황)·쾌적·습함(민트), 둘 다 = 쾌적만
   const COLS = { temp: { lo:'var(--cold)', hi:'var(--hot)' }, hum: { lo:'var(--dry)', hi:'var(--wet)' } };
   const state = (M, p) => { const c = comfortAt(p.ts), r = M === 'temp' ? c.t : c.h, v = p[M]; return v < r[0] ? 'lo' : v > r[1] ? 'hi' : 'ok'; };
@@ -712,11 +691,9 @@ function comfortStrip(el, pts, o, base){
     P.forEach((p, i) => { const k = fn(p), x = X(p.ts);
       if(!cur || cur.k !== k){ if(cur) cur.x2 = x; cur = { k, x1: x, x2: x }; out.push(cur); } });
     if(cur) cur.x2 = m.l + iw; return out; };
-  const seen = new Set();
-  const fill = (M, k) => { seen.add(k === 'ok' ? 'ok' : M + k); return fill0(M, k); };
-  const fill0 = (M, k) => k === 'ok' ? 'var(--ok)' : k === 'none' ? 'transparent' : COLS[M][k];
+  const fill = (M, k) => k === 'ok' ? 'var(--ok)' : k === 'none' ? 'transparent' : COLS[M][k];
   const draw = (ri, M, runs) => runs.map((u, i) => { if(u.k === 'none') return ''; const g0 = i ? 1.5 : 0, g1 = i < runs.length-1 ? 1.5 : 0, w = Math.max(u.x2-u.x1-g0-g1, 2);
-    return `<rect x="${(u.x1+g0).toFixed(1)}" y="${rows[ri].y}" width="${w.toFixed(1)}" height="${RH}" rx="${Math.min(4, w/2).toFixed(1)}" fill="${fill(M, u.k)}" fill-opacity="${u.k === 'ok' ? .95 : .55}"/>`; }).join('');
+    return `<rect x="${(u.x1+g0).toFixed(1)}" y="${rows[ri].y}" width="${w.toFixed(1)}" height="${RH}" rx="${Math.min(4, w/2).toFixed(1)}" fill="${fill(M, u.k)}" fill-opacity="${u.k === 'ok' ? .95 : .8}"/>`; }).join('');
   rows.forEach((R, ri) => { g += `<rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="4" fill="var(--sunk)"/>`; });
   g += `<g clip-path="url(#cs0)">${draw(0, 'temp', runsOf(p => state('temp', p)))}</g><g clip-path="url(#cs1)">${draw(1, 'hum', runsOf(p => state('hum', p)))}</g>`;
   g += `<g clip-path="url(#cs2)">${draw(2, 'temp', runsOf(p => state('temp', p) === 'ok' && state('hum', p) === 'ok' ? 'ok' : 'none'))}</g>`;
@@ -731,7 +708,6 @@ function comfortStrip(el, pts, o, base){
     const c = comfortAt(b.ts); vl.setAttribute('x1', X(b.ts)); vl.setAttribute('x2', X(b.ts)); vl.setAttribute('opacity', .7);
     showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° · ${st('temp', b.temp, c)}<br>습도 ${n0(b.hum)}% · ${st('hum', b.hum, c)}`); };
   hit.onmouseleave = () => { vl.setAttribute('opacity', 0); hideTip(); };
-  return seen;
 }
 
 /* ---------- scatter: 온도 × 습도 ---------- */
@@ -774,32 +750,6 @@ function scatter(el, pts, cur, marks){
   return boxes.map(bx => bx.k);
 }
 
-/* ---------- 추이 그래프의 쾌적 범위: 계절이 바뀌면 그 시점부터 기준도 바뀐다. 범위가 화면 밖이면 가장자리에 방향만 표시 ---------- */
-function comfortBand(P, pts, lo, hi, XT, xa, xb){
-  const key = P.k === 'temp' ? 't' : 'h', runs = []; let cur = null;
-  pts.forEach(p => { const k = comfortAt(p.ts).key; if(!cur || cur.k !== k){ if(cur) cur.t1 = p.ts; cur = { k, t0: p.ts, t1: p.ts }; runs.push(cur); } });
-  if(cur) cur.t1 = pts.at(-1).ts;
-  let g = '', lab = '';
-  const fmt = (r) => P.k === 'temp' ? `${r[0]}–${r[1]}°` : r[0] <= 0 ? `${r[1]}% 이하` : r[1] >= 100 ? `${r[0]}% 이상` : `${r[0]}–${r[1]}%`;
-  runs.forEach((R, i) => {
-    const r = SEASON_BOX[R.k][key], x1 = i === 0 ? xa : XT(R.t0), x2 = i === runs.length - 1 ? xb : XT(R.t1), w = Math.max(x2 - x1, 0);
-    const last = i === runs.length - 1, lx = (last ? x2 - 6 : x1 + 6), anc = last ? 'end' : 'start';
-    if(r[0] >= hi || r[1] <= lo){ // 화면 밖
-      const up = r[0] >= hi, yy = up ? P.y + 2 : P.y + P.h - 4;
-      g += `<line x1="${x1}" x2="${x2}" y1="${up ? P.y : P.y + P.h}" y2="${up ? P.y : P.y + P.h}" class="cz-e" stroke-dasharray="2 4"/>`;
-      if(last) lab = `쾌적 ${fmt(r)} ${up ? '↑' : '↓'}`;
-      return; }
-    const a = Math.max(r[0], lo), b = Math.min(r[1], hi), yt = P.Y(b), yb = P.Y(a);
-    g += `<rect x="${x1}" y="${yt}" width="${w}" height="${yb - yt}" class="cz"/>`;
-    if(r[1] < hi) g += `<line x1="${x1}" x2="${x2}" y1="${yt}" y2="${yt}" class="cz-e"/>`;
-    if(r[0] > lo) g += `<line x1="${x1}" x2="${x2}" y1="${yb}" y2="${yb}" class="cz-e"/>`;
-    if(last) lab = `쾌적 ${fmt(r)}`;
-  });
-  // 라벨은 그래프 안이 아니라 패널 제목 줄 오른쪽에 (선과 겹치지 않게)
-  if(lab) g += `<rect x="${xb - 7}" y="${P.y - 25}" width="7" height="7" rx="2" class="cz-sw"/><text class="cz-l" x="${xb - 12}" y="${P.y - 18}" text-anchor="end">${lab}</text>`;
-  return g;
-}
-
 /* ---------- 추이 (온도/습도 2단) ---------- */
 function trend(el, pts, marks){
   lastTrend = [el, pts, marks];
@@ -816,7 +766,6 @@ function trend(el, pts, marks){
     const tks = sc.ticks.length > 4 ? sc.ticks.filter((_, i) => i % 2 === 0) : sc.ticks;
     tks.forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
     const ga = vGrad(P.k, lo, hi, P.Y(lo), P.Y(hi), .38, true), gb = vGrad(P.k, lo, hi, P.Y(lo), P.Y(hi), .22); g += `<defs>${ga.def}${gb.def}</defs>`; P.c = 'var(--ink)'; P.s = `url(#${gb.id})`; P.a = `url(#${ga.id})`;
-    if(P.k !== 'dew') g += comfortBand(P, pts, lo, hi, XT, m.l, W - m.r);
     const v2 = pts.filter(p => p[P.k]!=null);
     // 실측 지점이 보이는 범위(≤300회)에서는 실측값을 지나는 매끄러운 곡선으로, 그보다 촘촘한 범위에서는 보간 격자를 이어서 그린다
     const real = (marks || []).filter(q => q[P.k] != null && q.ts > t0 && q.ts < t1);
@@ -1042,17 +991,15 @@ function renderNow(cur, ref, st, cmp, yd, hist){
     const d1 = (v, u, kind, dec, ic, tip) => v == null ? '' : `<span class="hd" title="${tip}" aria-label="${tip}">${IC[ic]}${Math.abs(v) < .05 ? '<b class="z">–</b>' : `<b class="${chgCls(kind, v, .05)}">${chgTxt(v, u, dec)}</b>`}</span>`;
     const deltas = (k, u, kind, dec) => { const a = pr[k] && pr[k][k] != null ? cur[k] - pr[k][k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
       return `<div class="hds">${d1(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${d1(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}</div>`; };
-    // 상태 한 단어 + 기준 범위. 쾌적까지 거리는 아래 눈금자에 표시
-    const status = (M, v) => { const rr = M === 'temp' ? CTX.t : CTX.h, rt = M === 'temp' ? `${rr[0]}–${rr[1]}°` : CTX.hTxt;
-      const cls = v < rr[0] ? (M === 'temp' ? 'c-cold' : 'c-dry') : v > rr[1] ? (M === 'temp' ? 'c-hot' : 'c-wet') : 'ok';
-      const w = cls === 'ok' ? '쾌적' : (M === 'temp' ? tempWord(v)[3] : humWord(v)[3]);
-      return `<b class="st ${cls}">${w}</b><em>${CTX.season} 기준 ${rt}</em>`; };
+    const status = (M, v) => { const rr = M === 'temp' ? CTX.t : CTX.h, f = M === 'temp' ? (x) => x.toFixed(1) + '°' : (x) => Math.round(x) + '%p';
+      const w = M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
+      return v < rr[0] ? `${w} <em>쾌적까지 +${f(rr[0]-v)}</em>` : v > rr[1] ? `${w} <em>쾌적까지 −${f(v-rr[1])}</em>` : `${w} <em class="ok">쾌적 범위</em>`; };
     const metric = (M, name, v, fmt, unit, dec, du) => `<div class="hm" style="--c:${specColor(M, v)}">
         <div class="hm-n">${name}</div>
         <div class="hm-v">${fmt(v)}<small>${unit}</small></div>
         <div class="hm-s">${status(M, v)}</div>
         ${deltas(M, du, M, dec)}
-        ${gauge3(M, v)}</div>`;
+        ${gauge2(M, v)}</div>`;
     const dp = dew(cur.temp, cur.hum);
     $('#now').innerHTML = `<div class="hero2" style="--ct:${specColor('temp', cur.temp)};--ch:${specColor('hum', cur.hum)}">
         <div class="h2-top"><span>${mdLong(cur.ts)} ${hhmm(cur.ts)}</span><span class="h2-dew">이슬점 <b>${n1(dp)}°</b></span></div>
@@ -1067,24 +1014,6 @@ function renderNow(cur, ref, st, cmp, yd, hist){
   document.querySelectorAll('.cmpbar button').forEach(bn => bn.onclick = () => { cmpIdx = +bn.dataset.i; load(); });
 }
 
-// 쾌적 눈금자: 현재값과 쾌적 범위가 함께 보이는 좁은 구간만 확대. 범위 밖이면 경계까지 점선 + 거리
-function gauge3(M, v){
-  const rr = M === 'temp' ? CTX.t : CTX.h, oLo = rr[0] <= 0, oHi = rr[1] >= 100, hum = M === 'hum';
-  if(v == null) return '';
-  let a = Math.min(v, oLo ? v : rr[0]), b = Math.max(v, oHi ? v : rr[1]);
-  const pad = Math.max((b - a) * .28, hum ? 6 : 1.2); a -= pad; b += pad;
-  const need = hum ? 30 : 6; if(b - a < need){ const c = (a + b) / 2; a = c - need / 2; b = c + need / 2; }
-  const P = (x) => Math.max(0, Math.min(100, (x - a) / (b - a) * 100)), fmt = (x) => hum ? `${Math.round(x)}%` : `${+x.toFixed(1)}°`;
-  const zl = oLo ? 0 : P(rr[0]), zr = oHi ? 100 : P(rr[1]), mv = P(v);
-  let h = `<i class="g3-t"></i><i class="g3-z${oLo ? ' ol' : ''}${oHi ? ' oh' : ''}" style="left:${zl}%;width:${zr - zl}%"></i>`;
-  if(!oLo) h += `<span class="g3-l" style="left:${zl}%">${fmt(rr[0])}</span>`;
-  if(!oHi) h += `<span class="g3-l" style="left:${zr}%">${fmt(rr[1])}</span>`;
-  const out = v < rr[0] ? rr[0] : v > rr[1] ? rr[1] : null;
-  if(out != null){ const e = P(out), l = Math.min(e, mv), w = Math.abs(e - mv), d = out - v;
-    h += `<i class="g3-gap" style="left:${l}%;width:${w}%"></i><span class="g3-d" style="left:${l + w / 2}%">${d > 0 ? '+' : '−'}${hum ? Math.round(Math.abs(d)) + '%p' : Math.abs(d).toFixed(1) + '°'}</span>`; }
-  h += `<i class="g3-m" style="left:${mv}%;background:${specColor(M, v)}"></i>`;
-  return `<div class="g3">${h}</div>`;
-}
 // 쾌적 구간만 밝게 켜진 얇은 스펙트럼 선 + 현재 위치
 function gauge2(M, v){
   const st = BINS[M].stops, a = st[0][0], b = st.at(-1)[0], P = (x) => Math.max(0, Math.min(100, (x - a) / (b - a) * 100));
@@ -1175,9 +1104,8 @@ function renderAll(){
   MULTI = MULTI || SEASONS.length > 1;
   renderNow(cur, cur && cur.prev, st, cmp, yd, hist);
   const cspec = now ? null : compareSpecs(range)[Math.min(cmpIdx, Math.max(0, compareSpecs(range).length-1))], cbase = cspec && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
-  const seen = comfortStrip($('#scatter'), hist.points, o, cbase) || new Set();
-  const LG = [['ok','var(--ok)','쾌적'],['templo','var(--cold)','추움'],['temphi','var(--hot)','더움'],['humlo','var(--dry)','건조'],['humhi','var(--wet)','습함']];
-  $('#scCap').innerHTML = LG.filter(x => seen.has(x[0])).map(x => `<span class="sg"><i style="background:${x[1]}"></i>${x[2]}</span>`).join('') + `<span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
+  comfortStrip($('#scatter'), hist.points, o, cbase);
+  $('#scCap').innerHTML = `<span class="sg"><i style="background:var(--cold)"></i>추움</span><span class="sg"><i style="background:var(--hot)"></i>더움</span><span class="sg"><i style="background:var(--dry)"></i>건조</span><span class="sg"><i style="background:var(--wet)"></i>습함</span><span class="sg"><i style="background:var(--ok)"></i>쾌적</span><span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
   if(panel === 'trend'){
     $('#trendCap').textContent = '';
     trend($('#trend'), hist.points, hist.marks);
