@@ -516,6 +516,15 @@ svg text.cc-h{fill:var(--faint)!important;font-size:10px!important}
 .cd.o{background:none}
 .cd.e{background:transparent;box-shadow:inset 0 0 0 1px var(--hair)}.cd.e b{color:var(--faint);opacity:.6}
 @media(max-width:560px){.ccs{gap:4px 10px}svg text.cc-p{font-size:34px!important}svg text.cc-n{font-size:14px!important}.cd{aspect-ratio:1}.cd span{font-size:12.5px;right:5px}.cd b{left:5px;top:4px;font-size:10px}}
+
+/* 붙인 격자 + 얇은 테두리 */
+svg .hm-grid{fill:none;stroke:var(--bg);stroke-opacity:.55;stroke-width:1}
+svg .hm-frame{stroke:var(--rule);stroke-width:1}
+svg .cc-seg{stroke:var(--bg);stroke-width:1.2;stroke-linejoin:round}
+.cal-g{gap:0;border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.cal-g .cd{border-radius:0;box-shadow:none;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.cal-g .cd:nth-child(7n){border-right:none}
+.cal-g .cd.e{box-shadow:none}
 </style>
 </head>
 <body>
@@ -798,9 +807,9 @@ function comfortClock(el, pts, o, base){
   const arc = (cx, cy, r0, r1, a0, a1) => { const p = (r, a) => [cx + r*Math.sin(a), cy - r*Math.cos(a)], [x0,y0] = p(r1,a0), [x1,y1] = p(r1,a1), [x2,y2] = p(r0,a1), [x3,y3] = p(r0,a0);
     return `M${x0.toFixed(2)},${y0.toFixed(2)}A${r1},${r1} 0 0 1 ${x1.toFixed(2)},${y1.toFixed(2)}L${x2.toFixed(2)},${y2.toFixed(2)}A${r0},${r0} 0 0 0 ${x3.toFixed(2)},${y3.toFixed(2)}Z`; };
   const clock = (k, name, rk) => {
-    const S = 168, c = S/2, r1 = 70, r0 = 52, gap = .022; let g = '';
+    const S = 168, c = S/2, r1 = 70, r0 = 52, gap = 0; let g = '';
     for(let h = 0; h < 24; h++){ const [a, n] = H[k][h], a0 = h/24*2*Math.PI + gap, a1 = (h+1)/24*2*Math.PI - gap, sh = n ? a/n : null;
-      g += `<path d="${arc(c, c, r0, r1, a0, a1)}" fill="${sh == null ? 'var(--sunk)' : 'var(--ink)'}" fill-opacity="${sh == null ? 1 : (.07 + .88*sh).toFixed(3)}"><title>${h}시 · ${sh == null ? '기록 없음' : `쾌적 ${Math.round(sh*100)}%`}</title></path>`; }
+      g += `<path d="${arc(c, c, r0, r1, a0, a1)}" fill="${sh == null ? 'var(--sunk)' : 'var(--ink)'}" fill-opacity="${sh == null ? 1 : (.07 + .88*sh).toFixed(3)}" class="cc-seg"><title>${h}시 · ${sh == null ? '기록 없음' : `쾌적 ${Math.round(sh*100)}%`}</title></path>`; }
     [0,6,12,18].forEach(h => { const a = h/24*2*Math.PI, x = c + 79*Math.sin(a), y = c - 79*Math.cos(a); g += `<text class="cc-h" x="${x.toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="middle">${h}</text>`; });
     if(live){ const a = (nowH+.5)/24*2*Math.PI; g += `<circle cx="${(c + 46*Math.sin(a)).toFixed(1)}" cy="${(c - 46*Math.cos(a)).toFixed(1)}" r="2.2" fill="var(--ink)"/>`; }
     const v = o && o[rk] != null ? Math.round(o[rk]) : null, d = base && base[rk] != null && v != null ? o[rk] - base[rk] : null;
@@ -961,6 +970,9 @@ function heat(el, rows, metric){
   const cs = []; days.forEach((d, i) => { for(let h = 0; h < 24; h++){ const v = map[d+'|'+h]; if(v == null) continue;
     cs.push(`<rect x="${(m.l+i*cw).toFixed(2)}" y="${m.t+h*ch}" width="${(cw+.5).toFixed(2)}" height="${ch+.5}" fill="${specColor(metric, v)}"/>`); } });
   g += `<g clip-path="url(#hmClip)" shape-rendering="crispEdges">${cs.join('')}</g>`;
+  // 칸은 붙이되 얇은 격자선으로 구분
+  let gl = ''; for(let i = 1; i < n; i++){ const x = (m.l+i*cw).toFixed(2); gl += `M${x},${m.t}V${m.t+ih}`; } for(let h = 1; h < 24; h++){ gl += `M${m.l},${m.t+h*ch}H${W}`; }
+  g += `<path d="${gl}" clip-path="url(#hmClip)" class="hm-grid"/><rect x="${m.l+.5}" y="${m.t+.5}" width="${iw-1}" height="${ih-1}" rx="8" fill="none" class="hm-frame"/>`;
   g += `<line id="hmV" y1="${m.t}" y2="${m.t+ih}" stroke="var(--ink)" stroke-opacity=".5" opacity="0"/><line id="hmH" x1="${m.l}" x2="${W}" stroke="var(--ink)" stroke-opacity=".5" opacity="0"/><rect id="hmHit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>${legendHtml(metric)}`;
   const svg = el.firstChild, hit = svg.querySelector('#hmHit'), vl = svg.querySelector('#hmV'), hl = svg.querySelector('#hmH');
