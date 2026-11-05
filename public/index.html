@@ -227,6 +227,21 @@ table.tb td.t{color:var(--t)} table.tb td.h{color:var(--h)}
 .empty{padding:48px 12px;text-align:center;color:var(--sub);font-size:14px}
 footer{margin-top:48px;font-size:12px;color:var(--faint);text-align:center;line-height:1.8}
 
+
+/* ---------- 디테일 보정 ---------- */
+.num,.num.t,.num.h,.detail .num{color:var(--ink);font-variant-numeric:normal;font-feature-settings:normal}
+.num small{color:var(--faint)}
+.mx .mc b,.strip b,.rate b,.tile .v,.facts div b{font-variant-numeric:normal;font-feature-settings:normal}
+.mx .mc b{color:var(--ink)}
+.nowk{margin-bottom:12px}
+.rt{font-size:clamp(28px,4.4vw,40px);font-weight:800;letter-spacing:-.045em;line-height:1.05;margin:2px 0 4px;word-break:keep-all}
+.subh{font-size:15px;font-weight:750;letter-spacing:-.02em;margin:30px 0 2px}
+.plab text{fill:var(--ink);font-size:12px;font-weight:650;paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.chip{display:inline-flex;align-items:center;gap:7px;min-width:0;padding:0;border-radius:0;font-weight:500;color:var(--ink)}
+.chip i{width:8px;height:8px;border-radius:2px;flex:none}
+.chip.ex{font-weight:750;box-shadow:none}
+table.tb td{padding:11px 10px}
+.cmpbar span:last-child{color:var(--faint)}
 @media(max-width:860px){
   .hero{grid-template-columns:1fr;gap:20px}
   .strip{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:16px}
@@ -290,7 +305,7 @@ footer{margin-top:48px;font-size:12px;color:var(--faint);text-align:center;line-
   <div class="panel" id="p-trend">
     <div class="sec-h">
       <p class="cap" id="trendCap"></p>
-      <div class="legend"><span><i style="background:var(--t)"></i>온도</span><span><i style="background:var(--h)"></i>습도</span><span><i style="background:var(--d)"></i>이슬점</span><span id="lgBand"><i class="band" style="background:var(--sub)"></i>최소–최대</span><span id="lgDot"><i style="background:none;border:1.5px solid var(--sub);width:7px;height:7px;border-radius:50%"></i>실측</span></div>
+      <div class="legend"><span id="lgBand"><i class="band" style="background:var(--sub)"></i>최소–최대</span><span id="lgDot"><i style="background:none;border:1.5px solid var(--sub);width:7px;height:7px;border-radius:50%"></i>실측</span></div>
     </div>
     <div id="trend"></div>
     <div id="detail" class="detail" style="display:none"></div>
@@ -380,6 +395,7 @@ const n1 = (v) => v == null ? '–' : v.toFixed(1);
 const n0 = (v) => v == null ? '–' : Math.round(v);
 const hhmm = (ts) => new Date(ts).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit',hour12:false});
 const md = (ts) => { const d = new Date(ts); return `${d.getMonth()+1}/${d.getDate()}`; };
+const mdLong = (ts) => { const d = new Date(ts); return `${d.getMonth()+1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일`; };
 const when = (ts) => ts ? `${md(ts)} ${hhmm(ts)}` : '';
 const tip = $('#tip');
 const showTip = (e, h) => { if(matchMedia('(hover: none)').matches) return; tip.innerHTML = h; tip.style.opacity = 1; const w = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, innerWidth - w - 8) + 'px'; tip.style.top = e.clientY + 16 + 'px'; };
@@ -470,7 +486,7 @@ function renderDetail(d){
   const el = $('#detail'), p = d.prev, dp = dew(d.temp, d.hum), pdp = d.prev_d ? d.prev_d.dew : null, avgT = lastStats && lastStats.overall.temp;
   const lastChg = Math.max(0, ...[d.prev_t, d.prev_h].filter(Boolean).map(x => x.ts)), gap = lastChg ? fmtGap((d.ts-lastChg)/60000) : '';
   const dd = (v, u, dec, kind) => v == null ? '<span class="delta">&nbsp;</span>' : Math.abs(v) < (dec ? .05 : .5) ? '<span class="delta">– 변화 없음</span>' : `<span class="delta ${chgCls(kind, v, 0)}">${chgTxt(v, u, dec)}</span>`;
-  const num = (cls, c, val, unit, label, delta) => `<div class="pc"><div class="num ${cls} mono" style="color:${c.ink}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
+  const num = (cls, c, val, unit, label, delta) => `<div class="pc"><div class="num ${cls}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
   const cz = comfortAt(d.ts), ok = inComfort(cz, d.temp, d.hum), inT = ok.t, inH = ok.h;
   const vsAvg = avgT == null ? '' : `구간 평균 ${n1(avgT)}° 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `<b class="${chgCls('temp', d.temp-avgT, .05)}">${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°</b>`}`;
   el.style.display = '';
@@ -505,7 +521,7 @@ function scatter(el, pts, cur, marks){
     const ta = Math.max(bx.t[0], x0), tb = Math.min(bx.t[1], x1), hy0 = Math.max(bx.h[0], y0), hy1 = Math.min(bx.h[1], y1), xa = X(ta), xb = X(tb), ya = Y(hy1), yb = Y(hy0), col = COL[bx.k];
     g += `<rect x="${xa}" y="${ya}" width="${xb-xa}" height="${yb-ya}" style="fill:color-mix(in srgb,${col} 13%,transparent)"/>`;
     const e = [bx.t[0] >= x0 ? `M${xa},${ya}V${yb}` : '', bx.t[1] <= x1 ? `M${xb},${ya}V${yb}` : '', bx.h[1] <= y1 && bx.h[1] < 100 ? `M${xa},${ya}H${xb}` : '', bx.h[0] >= y0 && bx.h[0] > 0 ? `M${xa},${yb}H${xb}` : ''].join('');
-    g += `<path d="${e}" fill="none" stroke="${col}" stroke-width="1.6" stroke-dasharray="${SEASONS.length > 1 ? '' : '4 3'}" stroke-opacity=".85"/>`;
+    g += `<path d="${e}" fill="none" stroke="${col}" stroke-width="1.6" stroke-opacity=".7"/>`;
   });
   for(let i = 0; i < boxes.length; i++) for(let j = i+1; j < boxes.length; j++){
     const A = boxes[i], B = boxes[j], t0 = Math.max(A.t[0], B.t[0]), t1 = Math.min(A.t[1], B.t[1]), h0 = Math.max(A.h[0], B.h[0], y0), h1 = Math.min(A.h[1], B.h[1], y1);
@@ -527,8 +543,8 @@ function trend(el, pts, marks){
   lastTrend = [el, pts, marks];
   if(pts.length < 2){ el.innerHTML = '<div class="empty">아직 그릴 만큼의 데이터가 없습니다. 수집이 시작되면 이곳에 나타납니다.</div>'; return; }
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
-  const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:6,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:214,h:140,u:'%'},{k:'dew',lo:'dmin',hi:'dmax',c:'var(--d)',s:'var(--d-soft)',y:388,h:116,u:'°'}];
-  const H = 388+116+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
+  const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:34,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:252,h:140,u:'%'},{k:'dew',lo:'dmin',hi:'dmax',c:'var(--d)',s:'var(--d-soft)',y:436,h:116,u:'°'}];
+  const BOT = 436+116, H = BOT+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
   const REV = false, XT = ts => m.l + (REV ? t1-ts : ts-t0)/span*iw, X = p => XT(p.ts), ord = a => REV ? a.slice().reverse() : a;
   let g = '';
   panels.forEach(P => {
@@ -544,12 +560,15 @@ function trend(el, pts, marks){
     let band = '';
     if(!real.length){ const up = ord(v2).map(p => [X(p), P.Y(p[P.hi])]), dn = ord(v2).map(p => [X(p), P.Y(p[P.lo])]).reverse(); band = `<path d="${smooth(up) + smooth(dn, false)}Z" fill="${P.s}"/>`; }
     g += `${band}<path d="${line}" fill="none" stroke="${P.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1).forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="3" fill="var(--bg)" stroke="${P.c}" stroke-width="1.5"/>`; });
+    P.label = `<g class="plab"><circle cx="${m.l-36}" cy="${P.y-20}" r="3.5" fill="${P.c}"/><text x="${m.l-28}" y="${P.y-16}">${{temp:'온도',hum:'습도',dew:'이슬점'}[P.k]}</text></g>`;
+    const mk = (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1), mr = mk.length > 80 ? 2 : mk.length > 40 ? 2.5 : 3;
+    mk.forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="${mr}" fill="var(--bg)" stroke="${P.c}" stroke-width="1.5"/>`; });
   });
-  const fmt = ts => span < 2*864e5 ? hhmm(ts) : md(ts);
+  panels.forEach(P => { g += P.label; });
+  const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
   const nt = W < 600 ? 3 : 6; for(let i=0;i<=nt;i++){ const ts = REV ? t1-span*i/nt : t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-4}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
-  if(selTs && selTs >= t0 && selTs <= t1){ const sx = XT(selTs).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="6" y2="${388+116}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
-  g += `<g id="cur" opacity="0"><line y1="6" y2="${388+116}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4" fill="var(--t)"/><circle id="d2" r="4" fill="var(--h)"/><circle id="d3" r="4" fill="var(--d)"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
+  if(selTs && selTs >= t0 && selTs <= t1){ const sx = XT(selTs).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="20" y2="${BOT}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
+  g += `<g id="cur" opacity="0"><line y1="20" y2="${BOT}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4" fill="var(--t)"/><circle id="d2" r="4" fill="var(--h)"/><circle id="d3" r="4" fill="var(--d)"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#cur'), hit = svg.querySelector('#hit');
   hit.onmousemove = e => {
@@ -632,11 +651,11 @@ function rangeChart(el, rows, u, M){
   const Y = v => m.t+ih-(v-lo)/(hi-lo)*ih, bw = iw/rows.length; let g = '';
   sc.ticks.forEach(v => { const yy = Y(v); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${tickLabel(v, sc.step)}${K.u}</text>`; });
   const step = Math.ceil(rows.length/6), labels = rows.length <= 14;
-  rows.forEach((r,i) => { const x = m.l+i*bw+bw*.2, w = bw*.6, c = colorOf(M, r[K.av]), cx = x+w/2;
-    g += `<rect data-i="${i}" x="${x}" y="${Y(r[K.hi])}" width="${w}" height="${Math.max(3,Y(r[K.lo])-Y(r[K.hi]))}" rx="2" fill="${c.fill}" fill-opacity=".3" style="cursor:pointer"/>`;
-    if(u !== 'd' && r[K.alo] != null) g += `<rect x="${x+w*.18}" y="${Y(r[K.ahi])}" width="${w*.64}" height="${Math.max(2,Y(r[K.alo])-Y(r[K.ahi]))}" rx="2" fill="${c.fill}" fill-opacity=".85" pointer-events="none"/>`;
-    g += `<line x1="${x-2}" x2="${x+w+2}" y1="${Y(r[K.av])}" y2="${Y(r[K.av])}" stroke="${c.ink}" stroke-width="2.5" pointer-events="none"/>`;
-    if(labels){ g += `<text x="${cx}" y="${Y(r[K.hi])-4}" text-anchor="middle" style="font-weight:600;fill:var(--ink)">${K.fmt(r[K.hi])}</text><text x="${cx}" y="${Y(r[K.lo])+12}" text-anchor="middle" style="font-weight:600;fill:var(--ink)">${K.fmt(r[K.lo])}</text>`; }
+  rows.forEach((r,i) => { const w = Math.min(bw*.46, 34), x = m.l+i*bw+(bw-w)/2, c = colorOf(M, r[K.av]), cx = x+w/2;
+    g += `<rect data-i="${i}" x="${x}" y="${Y(r[K.hi])}" width="${w}" height="${Math.max(4,Y(r[K.lo])-Y(r[K.hi]))}" rx="${Math.min(4, w/2)}" fill="${c.fill}" fill-opacity=".42" style="cursor:pointer"/>`;
+    if(u !== 'd' && r[K.alo] != null) g += `<rect x="${x+w*.18}" y="${Y(r[K.ahi])}" width="${w*.64}" height="${Math.max(2,Y(r[K.alo])-Y(r[K.ahi]))}" rx="${Math.min(3, w*.32)}" fill="${c.fill}" fill-opacity=".9" pointer-events="none"/>`;
+    g += `<line x1="${x-3}" x2="${x+w+3}" y1="${Y(r[K.av])}" y2="${Y(r[K.av])}" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" pointer-events="none"/>`;
+    if(labels){ g += `<text x="${cx}" y="${Y(r[K.hi])-4}" text-anchor="middle" style="font-weight:600;fill:var(--sub)">${K.fmt(r[K.hi])}</text><text x="${cx}" y="${Y(r[K.lo])+13}" text-anchor="middle" style="font-weight:600;fill:var(--sub)">${K.fmt(r[K.lo])}</text>`; }
     if(i%step===0) g += `<text x="${cx}" y="${H-8}" text-anchor="middle">${rowLabel(u, r.d, false)}</text>`; });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   el.querySelectorAll('rect[data-i]').forEach(r => { const d = rows[r.dataset.i], w = UW[u];
@@ -647,24 +666,29 @@ function rangeChart(el, rows, u, M){
 /* ---------- 하루 패턴 ---------- */
 function hourly(el, rows){
   if(rows.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
-  const W = Math.max(320, el.clientWidth || 1112), H = 240, m = {l:36,r:36,t:8,b:26}, iw = W-m.l-m.r, ih = H-m.t-m.b;
-  const ext = k => { const v = rows.map(r => r[k]), lo = Math.min(...v), hi = Math.max(...v), p = Math.max((hi-lo)*.25,.3); return niceScale(lo-p, hi+p); };
-  const sT = ext('temp'), sH = ext('hum'), tl = sT.lo, th = sT.hi, hl = sH.lo, hh = sH.hi;
-  const X = r => m.l + r.h/23*iw, YT = v => m.t+ih-(v-tl)/(th-tl)*ih, YH = v => m.t+ih-(v-hl)/(hh-hl)*ih;
-  let g = '';
-  sT.ticks.forEach(v => { const yy = YT(v); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${tickLabel(v, sT.step)}°</text>`; });
-  sH.ticks.forEach(v => { g += `<text x="${W-m.r+6}" y="${YH(v)+4}">${tickLabel(v, sH.step)}%</text>`; });
-  for(let h=0;h<24;h+=6) g += `<text x="${m.l+h/23*iw}" y="${H-8}" text-anchor="middle">${h}시</text>`;
-  const L = (k,Y) => smooth(rows.map(r => [X(r), Y(r[k])]));
-  g += `<path d="${L('hum',YH)}" fill="none" stroke="var(--h)" stroke-width="1.8"/><path d="${L('temp',YT)}" fill="none" stroke="var(--t)" stroke-width="1.8"/>`;
-  g += `<line id="vl" y1="${m.t}" y2="${m.t+ih}" stroke="var(--ink)" stroke-opacity=".35" opacity="0"/><rect id="hit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
+  // 축 하나에 한 지표만: 온도·습도·이슬점을 같은 시간축 위에 위아래로 나눠 그린다
+  const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
+  const panels = [{k:'temp',c:'var(--t)',y:34,h:120,u:'°',name:'온도'},{k:'hum',c:'var(--h)',y:192,h:100,u:'%',name:'습도'},{k:'dew',c:'var(--d)',y:332,h:90,u:'°',name:'이슬점'}].filter(P => rows.some(r => r[P.k] != null));
+  const last = panels.at(-1), H = last.y + last.h + 28;
+  const X = r => m.l + r.h/23*iw;
+  let g = '', labs = '';
+  panels.forEach(P => {
+    const v = rows.map(r => r[P.k]).filter(x => x != null), lo0 = Math.min(...v), hi0 = Math.max(...v), pad = Math.max((hi0-lo0)*.2, .3), sc = niceScale(lo0-pad, hi0+pad);
+    P.Y = val => P.y + P.h - (val-sc.lo)/(sc.hi-sc.lo)*P.h;
+    sc.ticks.forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
+    g += `<path d="${smooth(rows.filter(r => r[P.k] != null).map(r => [X(r), P.Y(r[P.k])]))}" fill="none" stroke="${P.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    labs += `<g class="plab"><circle cx="${m.l-36}" cy="${P.y-20}" r="3.5" fill="${P.c}"/><text x="${m.l-28}" y="${P.y-16}">${P.name}</text></g>`;
+  });
+  for(let h=0;h<24;h+=(W < 600 ? 6 : 3)) g += `<text x="${X({h})}" y="${H-6}" text-anchor="${h===0?'start':'middle'}">${h}시</text>`;
+  g += labs + `<g id="cur" opacity="0"><line y1="20" y2="${last.y+last.h}" stroke="var(--ink)" stroke-opacity=".35"/>${panels.map(P => `<circle data-k="${P.k}" r="4" fill="${P.c}" stroke="var(--panel)" stroke-width="2"/>`).join('')}</g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
-  const svg = el.firstChild, vl = svg.querySelector('#vl');
+  const svg = el.firstChild, cur = svg.querySelector('#cur');
   svg.querySelector('#hit').onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W;
     let b = rows[0]; for(const q of rows) if(Math.abs(X(q)-px) < Math.abs(X(b)-px)) b = q;
-    vl.setAttribute('x1',X(b)); vl.setAttribute('x2',X(b)); vl.setAttribute('opacity',1);
-    showTip(e, `<b>${b.h}시</b><br>온도 ${n1(b.temp)}°<br>습도 ${n0(b.hum)}%`); };
-  svg.querySelector('#hit').onmouseleave = () => { vl.setAttribute('opacity',0); hideTip(); };
+    cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b)); cur.firstChild.setAttribute('x2', X(b));
+    panels.forEach(P => { const c = cur.querySelector(`[data-k="${P.k}"]`); if(b[P.k] != null){ c.setAttribute('cx', X(b)); c.setAttribute('cy', P.Y(b[P.k])); } });
+    showTip(e, `<b>${b.h}시 평균</b><br>온도 ${n1(b.temp)}°<br>습도 ${n0(b.hum)}%` + (b.dew != null ? `<br>이슬점 ${n1(b.dew)}°` : '')); };
+  svg.querySelector('#hit').onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); };
 }
 
 /* ---------- 히어로 / 요약 ---------- */
@@ -678,10 +702,10 @@ function renderNow(cur, ref, st, cmp, yd){
   $('#rates').innerHTML = '';
   const o = st.overall, now = range === '24h';
   const big = (t, h, tl, hl) => { const ct = colorOf('temp', t), ch = colorOf('hum', h); return `<div class="pair">
-      <div><div class="num t mono" ${ct ? `style="color:${ct.ink}"` : ''}>${n1(t)}<small>°C</small></div>${ct ? `<i class="sw" style="background:${ct.fill}"></i>` : ''}<div class="lbl"><b>${tl[0]}</b>${tl[1]}</div></div>
-      <div><div class="num h mono" ${ch ? `style="color:${ch.ink}"` : ''}>${n0(h)}<small>%</small></div>${ch ? `<i class="sw" style="background:${ch.fill}"></i>` : ''}<div class="lbl"><b>${hl[0]}</b>${hl[1]}</div></div></div>`; };
+      <div><div class="num t">${n1(t)}<small>°C</small></div>${ct ? `<i class="sw" style="background:${ct.fill}"></i>` : ''}<div class="lbl"><b>${tl[0]}</b>${tl[1]}</div></div>
+      <div><div class="num h">${n0(h)}<small>%</small></div>${ch ? `<i class="sw" style="background:${ch.fill}"></i>` : ''}<div class="lbl"><b>${hl[0]}</b>${hl[1]}</div></div></div>`; };
   const tm = (ts) => !ts ? '' : range[0]==='d' ? hhmm(ts) : when(ts);
-  if(now && !cur){ $('#now').innerHTML = big(null,null,['온도',''],['습도','']).replace(/class="num (t|h) mono"/g,'class="num $1 mono" style="color:var(--faint)"') + `<p class="verdict" style="color:var(--sub)">첫 측정값을 기다리고 있습니다. 센서 연결이 끝나면 1분 안에 이곳에 표시됩니다.</p>`; return; }
+  if(now && !cur){ $('#now').innerHTML = big(null,null,['온도',''],['습도','']).replace(/class="num (t|h)"/g,'class="num $1" style="color:var(--faint)"') + `<p class="verdict" style="color:var(--sub)">첫 측정값을 기다리고 있습니다. 센서 연결이 끝나면 1분 안에 이곳에 표시됩니다.</p>`; return; }
   if(!now && (o.temp == null)){ $('#now').innerHTML = `<div class="k">${rangeLabel(range)}</div><p class="verdict" style="margin-top:14px;color:var(--sub)">이 기간에는 측정 기록이 없습니다.</p>`; return; }
   const specs = now ? [] : compareSpecs(range), sp = specs[Math.min(cmpIdx, specs.length-1)];
   const base = sp && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
@@ -689,13 +713,13 @@ function renderNow(cur, ref, st, cmp, yd){
   const dl = (k, u, dec) => { if(!base || base[k] == null || o[k] == null) return ''; const d = o[k] - base[k];
     const kind = k[0] === 't' ? 'temp' : k[0] === 'h' ? 'hum' : 'dew';
     return Math.abs(d) < (dec ? .05 : .5) ? '<div class="dl">– 변화 없음</div>' : `<div class="dl ${chgCls(kind, d, 0)}">${chgTxt(d, u, dec)}</div>`; };
-  const mc = (M, k, tsk, u, du, dec, fmt) => { const c = colorOf(M, o[k]); return `<div class="mc"><b style="${c ? `color:${c.ink};border-color:${c.fill}` : ''}">${fmt(o[k])}<em>${u}</em></b><small>${tsk ? tm(o[tsk]) : '&nbsp;'}</small>${dl(k, du, dec)}</div>`; };
+  const mc = (M, k, tsk, u, du, dec, fmt) => { const c = colorOf(M, o[k]); return `<div class="mc"><b style="${c ? `border-color:${c.fill}` : ''}">${fmt(o[k])}<em>${u}</em></b><small>${tsk ? tm(o[tsk]) : '&nbsp;'}</small>${dl(k, du, dec)}</div>`; };
   const row = (M, label, unit, kmin, kmax, kavg, du, dec, fmt) => `<div class="ml">${label}</div>${mc(M,kmin,kmin+'_ts',unit,du,dec,fmt)}${mc(M,kmax,kmax+'_ts',unit,du,dec,fmt)}${mc(M,kavg,null,unit,du,dec,fmt)}`;
   const matrix = `<div class="mx"><div></div><div class="mh">최저</div><div class="mh">최고</div><div class="mh">평균</div>
       ${row('temp','온도','°C','tmin','tmax','temp','°',1,n1)}${row('hum','습도','%','hmin','hmax','hum','%p',0,n0)}${row('dew','이슬점','°C','dmin','dmax','dew','°',1,n1)}</div>`;
   const fmtW = (ms) => `${md(ms)} ${hhmm(ms)}`;
   const bar = specs.length ? `<div class="cmpbar"><span>비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
-      <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `비교 구간(${fmtW(sp.from)} – ${fmtW(sp.to)})에 기록이 없습니다`}</span></div>` : '';
+      <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `${fmtW(sp.from)} – ${fmtW(sp.to)} · 비교할 기록 없음`}</span></div>` : '';
   if(now){
     // 직전 = 그 값이 실제로 달라지기 직전의 측정 (몇 초 간격으로 따로 온 같은 값은 건너뜀)
     const pr = { temp: cur.prev_t, hum: cur.prev_h }, lastChg = Math.max(0, ...[cur.prev_t, cur.prev_h].filter(Boolean).map(x => x.ts));
@@ -706,13 +730,13 @@ function renderNow(cur, ref, st, cmp, yd){
     const dd = (k, u, kind, dec) => {
       const a = pr[k] && pr[k][k] != null ? cur[k] - pr[k][k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
       return `<div class="chips">${chip(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${chip(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}</div>`; };
-    $('#now').innerHTML = `<div class="k" style="margin-bottom:10px">지금 · ${md(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${lastChg ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}${md(yd.ts)} ${hhmm(yd.ts)}` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
+    $('#now').innerHTML = `<div class="k nowk">${mdLong(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${lastChg ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}${md(yd.ts)} ${hhmm(yd.ts)}` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
       <p class="verdict">${feel(cur.temp, cur.hum)}</p>
-      <div class="k" style="margin-top:22px">최근 24시간</div>${matrix}`;
+      <h3 class="subh">최근 24시간</h3>${matrix}`;
     $('#rates').innerHTML = ratesHtml(o, null, CTX, MULTI);
     return;
   }
-  $('#now').innerHTML = `<div class="k">${rangeLabel(range)} · 구간 통계</div>${bar}${matrix}
+  $('#now').innerHTML = `<h2 class="rt">${rangeLabel(range)}</h2><div class="k">구간 통계</div>${bar}${matrix}
     <p class="verdict">구간 평균 기준으로 ${feel(o.temp, o.hum)}</p>`;
   $('#rates').innerHTML = ratesHtml(o, base, CTX, MULTI);
   document.querySelectorAll('.cmpbar button').forEach(bn => bn.onclick = () => { cmpIdx = +bn.dataset.i; load(); });
@@ -726,7 +750,7 @@ function table(el, rows, u, M){
   const head = multi ? `<th>${w}최저</th><th>일 최저 평균</th><th>평균</th><th>일 최고 평균</th><th>${w}최고</th>` : `<th>최저</th><th>평균</th><th>최고</th>`;
   // 값마다 히트맵과 같은 색 단계로 칩 표시
   const cell = (v, bold) => { if(v == null) return '<td>–</td>'; const c = colorOf(M, v);
-    return `<td><span class="chip${bold ? ' ex' : ''}" style="background:${c.fill}38;color:${c.ink}">${K.fmt(v)}${K.u}</span></td>`; };
+    return `<td><span class="chip${bold ? ' ex' : ''}"><i style="background:${c.fill}"></i>${K.fmt(v)}${K.u}</span></td>`; };
   el.innerHTML = `<table class="tb"><thead><tr><th>${u==='d'?'날짜':u==='w'?'주':'월'}</th>${head}</tr></thead><tbody>${
     [...rows].reverse().map(r => `<tr class="go" data-r="${rowRange(u, r.d)}"><td>${rowLabel(u, r.d, true)}</td>${
       multi ? cell(r[K.lo], r[K.lo]===lo) + cell(r[K.alo]) + cell(r[K.av], true) + cell(r[K.ahi]) + cell(r[K.hi], r[K.hi]===hi)
