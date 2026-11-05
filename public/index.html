@@ -494,6 +494,28 @@ svg text.cs-l{fill:var(--sub)!important;font-size:13px!important;font-weight:650
   .sc-v{font-size:42px}
   .panel.on{margin-left:0;margin-right:0;padding:18px 0 0}
 }
+
+/* 쾌적 시간: 시계 + 달력 */
+.ccs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 28px;margin-top:14px;max-width:760px}
+.cc{width:100%;height:auto;display:block}
+svg text.cc-p{fill:var(--ink)!important;font-size:30px!important;font-weight:750;letter-spacing:-.04em}
+svg text.cc-p tspan.cc-u{font-size:14px;font-weight:600;fill:var(--faint)}
+svg text.cc-n{fill:var(--sub)!important;font-size:12.5px!important;font-weight:650}
+svg text.cc-d{fill:var(--faint)!important;font-size:11px!important;font-weight:600}
+svg text.cc-h{fill:var(--faint)!important;font-size:10px!important}
+.cal{margin-top:30px;max-width:760px}
+.cal-h{display:flex;align-items:baseline;gap:10px;font-size:14px;font-weight:700}
+.cal-h em{font-style:normal;font-size:12px;font-weight:500;color:var(--faint)}
+.cal-w,.cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-w{margin:12px 0 6px}.cal-w span{font-size:11px;color:var(--faint);text-align:left;padding-left:8px}
+.cd{position:relative;display:block;aspect-ratio:1.5;border-radius:8px;background:color-mix(in srgb,var(--ink) calc(var(--a)*100%),var(--sunk));font-style:normal;overflow:hidden}
+.cd b{position:absolute;left:8px;top:6px;font-size:11.5px;font-weight:650;color:var(--sub)}
+.cd span{position:absolute;right:8px;bottom:5px;font-size:15px;font-weight:750;letter-spacing:-.03em;color:var(--ink)}
+.cd span::after{content:'%';font-size:10px;font-weight:600;color:var(--faint);margin-left:1px}
+.cd.hi b,.cd.hi span,.cd.hi span::after{color:var(--bg)}
+.cd.o{background:none}
+.cd.e{background:transparent;box-shadow:inset 0 0 0 1px var(--hair)}.cd.e b{color:var(--faint);opacity:.6}
+@media(max-width:560px){.ccs{gap:4px 10px}svg text.cc-p{font-size:34px!important}svg text.cc-n{font-size:14px!important}.cd{aspect-ratio:1}.cd span{font-size:12.5px;right:5px}.cd b{left:5px;top:4px;font-size:10px}}
 </style>
 </head>
 <body>
@@ -758,6 +780,48 @@ function comfortStrip(el, pts, o, base){
     const c = comfortAt(b.ts); vl.setAttribute('x1', X(b.ts)); vl.setAttribute('x2', X(b.ts)); vl.setAttribute('opacity', .7);
     showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° · ${st('temp', b.temp, c)}<br>습도 ${n0(b.hum)}% · ${st('hum', b.hum, c)}`); };
   hit.onmouseleave = () => { vl.setAttribute('opacity', 0); hideTip(); };
+}
+
+/* ---------- 쾌적 시간: 24시간 시계(시각별 쾌적 비율) + 날짜 달력 ---------- */
+function comfortClock(el, pts, o, base){
+  const P = pts.filter(p => p.temp != null && p.hum != null);
+  if(P.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
+  const ok = (M, p) => { const c = comfortAt(p.ts), r = M === 'temp' ? c.t : c.h; return p[M] >= r[0] && p[M] <= r[1]; };
+  const test = { temp: p => ok('temp', p), hum: p => ok('hum', p), both: p => ok('temp', p) && ok('hum', p) };
+  const hr = (ts) => new Date(ts + KST).getUTCHours();
+  // 시각별 비율
+  const H = { temp: Array.from({length:24}, () => [0,0]), hum: Array.from({length:24}, () => [0,0]), both: Array.from({length:24}, () => [0,0]) };
+  const D = {};
+  P.forEach(p => { const h = hr(p.ts), d = kstDate(p.ts); D[d] = D[d] || { temp:[0,0], hum:[0,0], both:[0,0] };
+    for(const k in test){ const v = test[k](p) ? 1 : 0; H[k][h][0] += v; H[k][h][1]++; D[d][k][0] += v; D[d][k][1]++; } });
+  const nowH = hr(Date.now()), live = Date.now() - P.at(-1).ts < 3*36e5;
+  const arc = (cx, cy, r0, r1, a0, a1) => { const p = (r, a) => [cx + r*Math.sin(a), cy - r*Math.cos(a)], [x0,y0] = p(r1,a0), [x1,y1] = p(r1,a1), [x2,y2] = p(r0,a1), [x3,y3] = p(r0,a0);
+    return `M${x0.toFixed(2)},${y0.toFixed(2)}A${r1},${r1} 0 0 1 ${x1.toFixed(2)},${y1.toFixed(2)}L${x2.toFixed(2)},${y2.toFixed(2)}A${r0},${r0} 0 0 0 ${x3.toFixed(2)},${y3.toFixed(2)}Z`; };
+  const clock = (k, name, rk) => {
+    const S = 168, c = S/2, r1 = 70, r0 = 52, gap = .022; let g = '';
+    for(let h = 0; h < 24; h++){ const [a, n] = H[k][h], a0 = h/24*2*Math.PI + gap, a1 = (h+1)/24*2*Math.PI - gap, sh = n ? a/n : null;
+      g += `<path d="${arc(c, c, r0, r1, a0, a1)}" fill="${sh == null ? 'var(--sunk)' : 'var(--ink)'}" fill-opacity="${sh == null ? 1 : (.07 + .88*sh).toFixed(3)}"><title>${h}시 · ${sh == null ? '기록 없음' : `쾌적 ${Math.round(sh*100)}%`}</title></path>`; }
+    [0,6,12,18].forEach(h => { const a = h/24*2*Math.PI, x = c + 79*Math.sin(a), y = c - 79*Math.cos(a); g += `<text class="cc-h" x="${x.toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="middle">${h}</text>`; });
+    if(live){ const a = (nowH+.5)/24*2*Math.PI; g += `<circle cx="${(c + 46*Math.sin(a)).toFixed(1)}" cy="${(c - 46*Math.cos(a)).toFixed(1)}" r="2.2" fill="var(--ink)"/>`; }
+    const v = o && o[rk] != null ? Math.round(o[rk]) : null, d = base && base[rk] != null && v != null ? o[rk] - base[rk] : null;
+    g += `<text class="cc-p" x="${c}" y="${c+6}" text-anchor="middle">${v == null ? '–' : v}<tspan class="cc-u">${v == null ? '' : '%'}</tspan></text>`;
+    g += `<text class="cc-n" x="${c}" y="${c+26}" text-anchor="middle">${name}</text>`;
+    if(d != null && Math.abs(d) >= .5) g += `<text class="cc-d" x="${c}" y="${c-26}" text-anchor="middle">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%p</text>`;
+    return `<svg class="cc" viewBox="-6 -6 ${S+12} ${S+12}">${g}</svg>`; };
+  let html = `<div class="ccs">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
+  // 날짜 달력: 하루 중 온·습도가 모두 쾌적했던 시간 비율
+  const days = Object.keys(D).sort();
+  if(days.length >= 3){
+    const show = days.slice(-62), first = mondayOf(show[0]), last = show.at(-1);
+    let cells = ''; for(let d = first; d <= last; d = addDays(d, 1)){
+      const x = D[d], inR = d >= show[0];
+      if(!inR){ cells += '<i class="cd o"></i>'; continue; }
+      if(!x){ cells += `<i class="cd e"><b>${+d.slice(8)}</b></i>`; continue; }
+      const sh = x.both[0]/x.both[1], pc = (q) => Math.round(q[0]/q[1]*100);
+      cells += `<i class="cd${sh > .55 ? ' hi' : ''}" style="--a:${(.06 + .9*sh).toFixed(3)}" title="${md2(d)} (${wd(d)}) · 둘 다 ${pc(x.both)}% · 온도 ${pc(x.temp)}% · 습도 ${pc(x.hum)}%"><b>${+d.slice(8) === 1 || d === show[0] ? `${+d.slice(5,7)}/${+d.slice(8)}` : +d.slice(8)}</b><span>${pc(x.both)}</span></i>`; }
+    html += `<div class="cal"><div class="cal-h"><span>날짜별</span><em>온·습도 모두 쾌적했던 시간 비율</em></div><div class="cal-w">${'월화수목금토일'.split('').map(w => `<span>${w}</span>`).join('')}</div><div class="cal-g">${cells}</div></div>`;
+  }
+  el.innerHTML = html;
 }
 
 /* ---------- scatter: 온도 × 습도 ---------- */
@@ -1157,7 +1221,7 @@ function renderAll(){
   MULTI = MULTI || SEASONS.length > 1;
   renderNow(cur, cur && cur.prev, st, cmp, yd, hist);
   const cspec = now ? null : compareSpecs(range)[Math.min(cmpIdx, Math.max(0, compareSpecs(range).length-1))], cbase = cspec && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
-  comfortStrip($('#scatter'), hist.points, o, cbase);
+  comfortClock($('#scatter'), hist.points, o, cbase);
   $('#scCap').innerHTML = `<span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
   if(panel === 'trend'){
     $('#trendCap').textContent = '';
