@@ -253,6 +253,54 @@ footer{margin-top:48px;font-size:12px;color:var(--faint);text-align:center;line-
   .mt-dew .g-t{grid-row:2;align-self:end}
   .sg.crit{margin-left:0;width:100%}
 }
+
+/* ========== 다시 다듬은 현재 화면 ========== */
+.hero2{position:relative;isolation:isolate;overflow:hidden;padding:22px 24px 22px;border-radius:26px;background:var(--panel);border:1px solid var(--hair)}
+.hero2::before{content:'';position:absolute;inset:0;z-index:-1;background:radial-gradient(70% 120% at 0% 0%,color-mix(in srgb,var(--ct) 22%,transparent),transparent 70%),radial-gradient(70% 120% at 100% 0%,color-mix(in srgb,var(--ch) 20%,transparent),transparent 70%)}
+.h2-top{display:flex;justify-content:space-between;gap:12px;font-size:13px;font-weight:500;color:var(--sub)}
+.h2-dew b{color:var(--ink);font-weight:650}
+.h2-main{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 28px;margin-top:18px}
+.h2-sep{background:var(--hair)}
+.hm{min-width:0}
+.hm-n{font-size:14px;font-weight:600;color:var(--sub)}
+.hm-v{display:flex;align-items:flex-start;margin-top:6px;font-size:clamp(56px,8.4vw,96px);font-weight:750;letter-spacing:-.06em;line-height:.9;color:var(--ink)}
+.hm-v small{font-size:.26em;font-weight:500;letter-spacing:0;color:var(--sub);margin:.34em 0 0 .16em}
+.hm-s{margin-top:14px;font-size:15px;font-weight:650;letter-spacing:-.02em}
+.hm-s em{font-style:normal;font-weight:500;color:var(--sub)}
+.hm-s em.ok{color:var(--ok)}
+.hm-s em::before{content:' · '}
+.hds{display:flex;gap:14px;margin-top:8px;font-size:13px}
+.hd{display:inline-flex;align-items:center;gap:5px;color:var(--faint)}
+.hd svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hd b{font-weight:650;font-variant-numeric:tabular-nums}
+.hd b.z{color:var(--faint)}
+.g2{position:relative;height:14px;margin-top:18px}
+.g2-t{position:absolute;left:0;right:0;top:6px;height:2px;border-radius:1px;opacity:.28}
+.g2-z{position:absolute;top:5px;height:4px;border-radius:2px;background-repeat:no-repeat}
+.g2-m{position:absolute;top:0;width:3px;height:14px;margin-left:-1.5px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 3px var(--panel)}
+.h2-verdict{margin-top:20px;padding-top:16px;border-top:1px solid var(--hair);font-size:15px;font-weight:600;letter-spacing:-.015em;color:var(--ink)}
+.scs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
+.sc{min-width:0;padding:16px 16px 0;border-radius:20px;background:var(--panel);border:1px solid var(--hair);overflow:hidden;display:flex;flex-direction:column}
+.sc-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;font-weight:600;color:var(--sub)}
+.sc-h .dl{margin:0}
+.sc-v{display:flex;align-items:flex-start;margin-top:8px;font-size:40px;font-weight:750;letter-spacing:-.05em;line-height:1}
+.sc-v small{font-size:15px;font-weight:500;color:var(--sub);margin:4px 0 0 2px;letter-spacing:0}
+.sc-r{display:flex;justify-content:space-between;gap:8px;margin-top:12px;font-size:12px;color:var(--faint);flex-wrap:wrap}
+.sc-r b{color:var(--sub);font-weight:650}
+.sc-r em{font-style:normal}
+.sp{display:block;width:calc(100% + 32px);height:48px;margin:12px -16px 0}
+.subh{font-size:16px;font-weight:750;letter-spacing:-.02em;margin:34px 0 4px}
+@media(max-width:720px){
+  .hero2{padding:18px 16px 18px;border-radius:22px}
+  .h2-main{gap:0 16px}
+  .hm-v{font-size:clamp(46px,13vw,64px)}
+  .hm-s{font-size:13.5px}.hm-s em{display:block;margin-top:2px}.hm-s em::before{content:none}
+  .hds{flex-direction:column;gap:4px}
+  .scs{grid-template-columns:1fr;gap:10px}
+  .sc{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"h sp" "v sp" "r r";column-gap:14px;padding:14px 16px 12px}
+  .sc-h{grid-area:h}.sc-v{grid-area:v;font-size:34px}.sc-r{grid-area:r;margin-top:8px}
+  .sc .sp{grid-area:sp;width:100%;margin:0;align-self:center;height:44px}
+}
 /* ---------- 디테일 보정 ---------- */
 .cs-l{fill:var(--sub)!important;font-size:12px!important;font-weight:650}
 #scatter svg{max-height:none}
@@ -593,9 +641,9 @@ function comfortStrip(el, pts){
   if(P.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
   const W = Math.max(300, el.clientWidth || 520), m = {l:40,r:2}, iw = W-m.l-m.r, t0 = P[0].ts, t1 = P.at(-1).ts, span = t1-t0 || 1;
   const X = ts => m.l + (ts-t0)/span*iw;
-  const rows = [{k:'temp',name:'온도',y:4},{k:'hum',name:'습도',y:44},{k:'both',name:'둘 다',y:84}], RH = 18, H = 84+RH+30;
+  const rows = [{k:'temp',name:'온도',y:6},{k:'hum',name:'습도',y:34},{k:'both',name:'둘 다',y:62}], RH = 10, H = 62+RH+30;
   let g = '';
-  rows.forEach((R, ri) => { g += `<clipPath id="cs${ri}"><rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="6"/></clipPath><text class="cs-l" x="0" y="${R.y+RH/2+4}">${R.name}</text>`; });
+  rows.forEach((R, ri) => { g += `<clipPath id="cs${ri}"><rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="5"/></clipPath><text class="cs-l" x="0" y="${R.y+RH/2+4}">${R.name}</text>`; });
   // 상태별로 이어진 덩어리: 온도 = 낮음(청)·쾌적(초록)·높음(적), 습도 = 건조(황)·쾌적·습함(민트), 둘 다 = 쾌적만
   const COLS = { temp: { lo:'var(--cold)', hi:'var(--hot)' }, hum: { lo:'var(--dry)', hi:'var(--wet)' } };
   const state = (M, p) => { const c = comfortAt(p.ts), r = M === 'temp' ? c.t : c.h, v = p[M]; return v < r[0] ? 'lo' : v > r[1] ? 'hi' : 'ok'; };
@@ -605,12 +653,12 @@ function comfortStrip(el, pts){
     if(cur) cur.x2 = m.l + iw; return out; };
   const fill = (M, k) => k === 'ok' ? 'var(--ok)' : k === 'none' ? 'transparent' : COLS[M][k];
   const draw = (ri, M, runs) => runs.map(u => u.k === 'none' ? '' : `<rect x="${u.x1.toFixed(1)}" y="${rows[ri].y}" width="${Math.max(u.x2-u.x1, 1.5).toFixed(1)}" height="${RH}" fill="${fill(M, u.k)}" fill-opacity="${u.k === 'ok' ? .9 : .75}"/>`).join('');
-  rows.forEach((R, ri) => { g += `<rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="6" fill="var(--sunk)"/>`; });
+  rows.forEach((R, ri) => { g += `<rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="5" fill="var(--sunk)"/>`; });
   g += `<g clip-path="url(#cs0)">${draw(0, 'temp', runsOf(p => state('temp', p)))}</g><g clip-path="url(#cs1)">${draw(1, 'hum', runsOf(p => state('hum', p)))}</g>`;
   g += `<g clip-path="url(#cs2)">${draw(2, 'temp', runsOf(p => state('temp', p) === 'ok' && state('hum', p) === 'ok' ? 'ok' : 'none'))}</g>`;
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
   const nt = W < 480 ? 2 : 4; for(let i=0;i<=nt;i++){ const ts = t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-6}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
-  g += `<line id="csv" y1="0" y2="${84+RH+4}" stroke="var(--ink)" stroke-width="1.5" opacity="0"/><rect id="cshit" x="${m.l}" y="0" width="${iw}" height="${84+RH+6}" fill="transparent"/>`;
+  g += `<line id="csv" y1="0" y2="${62+RH+6}" stroke="var(--ink)" stroke-width="1.5" opacity="0"/><rect id="cshit" x="${m.l}" y="0" width="${iw}" height="${62+RH+8}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, vl = svg.querySelector('#csv'), hit = svg.querySelector('#cshit');
   const st = (M, v, c) => { const r = M === 'temp' ? c.t : c.h; return v < r[0] ? '낮음' : v > r[1] ? '높음' : '쾌적'; };
@@ -829,7 +877,7 @@ function ratesHtml(o, base, cz = CTX, multi = false){
   const r = (label, k, sub) => `<div class="rate"><span class="k">${label}</span><b>${o[k] == null ? '–' : n0(o[k])}%</b><div class="bar2"><i style="width:${o[k] == null ? 0 : Math.min(100, o[k])}%"></i></div><small>${sub}${d(k) ? '<br>' + d(k) : ''}</small></div>`;
   return `<div class="rates">${r('온도 진입률', 'comfort_t', multi ? '계절별 기준' : `${cz.t[0]}–${cz.t[1]}°C`)}${r('습도 진입률', 'comfort_h', multi ? '계절별 기준' : cz.hTxt)}${r('둘 다 진입률', 'comfort', '온도·습도 동시')}</div>`;
 }
-function renderNow(cur, ref, st, cmp, yd){
+function renderNow(cur, ref, st, cmp, yd, hist){
   $('#rates').innerHTML = '';
   const o = st.overall, now = range === '24h';
   // 스펙트럼 위치(0~100%)와 그라데이션: 색은 '어디쯤인가'를 보여주는 데만 쓴다
@@ -879,26 +927,65 @@ function renderNow(cur, ref, st, cmp, yd){
   const fmtW = (ms) => `${md(ms)} ${hhmm(ms)}`;
   const bar = specs.length ? `<div class="cmpbar"><span>비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `${fmtW(sp.from)} – ${fmtW(sp.to)} · 비교할 기록 없음`}</span></div>` : '';
+  const pts = (hist && hist.points) || [];
+  // 지표 카드: 평균을 크게, 최저·최고는 한 줄, 아래에 구간 흐름(작은 선 그래프)
+  const card = (M, name, kmin, kmax, kavg, u, du, dec, fmt) => {
+    if(o[kavg] == null) return '';
+    return `<div class="sc">
+      <div class="sc-h"><span>${name}</span>${dl(kavg, du, dec)}</div>
+      <div class="sc-v">${fmt(o[kavg])}<small>${u}</small></div>
+      <div class="sc-r"><span>최저 <b>${fmt(o[kmin])}${u}</b> <em>${tm(o[kmin+'_ts'])}</em></span><span>최고 <b>${fmt(o[kmax])}${u}</b> <em>${tm(o[kmax+'_ts'])}</em></span></div>
+      ${spark(M, pts)}</div>`; };
+  const cards = `<div class="scs">${card('temp','온도','tmin','tmax','temp','°','°',1,n1)}${card('hum','습도','hmin','hmax','hum','%','%p',0,n0)}${card('dew','이슬점','dmin','dmax','dew','°','°',1,n1)}</div>`;
   if(now){
     // 직전 = 그 값이 실제로 달라지기 직전의 측정 (몇 초 간격으로 따로 온 같은 값은 건너뜀)
-    const pr = { temp: cur.prev_t, hum: cur.prev_h }, lastChg = Math.max(0, ...[cur.prev_t, cur.prev_h].filter(Boolean).map(x => x.ts));
-    const gap = lastChg ? fmtGap((cur.ts-lastChg)/60000) : '';
-    // 말 대신 아이콘으로 구분: 시계(되감기) = 직전 측정 대비, 달력 = 어제 같은 시각 대비
+    const pr = { temp: cur.prev_t, hum: cur.prev_h };
+    // 말 대신 아이콘: 시계(되감기) = 직전 측정 대비, 달력 = 어제 같은 시각 대비
     const IC = { prev: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>', day: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>' };
-    const chip = (v, u, kind, dec, ic, tip) => v == null ? '' : Math.abs(v) < .05 ? `<span class="chip2 z" title="${tip}" aria-label="${tip}">${IC[ic]}–</span>` : `<span class="chip2 ${chgCls(kind, v, .05)}" title="${tip}" aria-label="${tip}">${IC[ic]}${chgTxt(v, u, dec)}</span>`;
-    const dd = (k, u, kind, dec) => {
-      const a = pr[k] && pr[k][k] != null ? cur[k] - pr[k][k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
-      return `<div class="chips">${chip(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${chip(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}</div>`; };
-    $('#now').innerHTML = `<div class="k nowk">${mdLong(cur.ts)} ${hhmm(cur.ts)} 측정<span class="lg">${lastChg ? `${IC.prev}${gap} 전` : ''}${yd ? `${IC.day}${md(yd.ts)} ${hhmm(yd.ts)}` : ''}</span></div>` + big(cur.temp, cur.hum, ['온도', dd('temp','°','temp',1)], ['습도', dd('hum','%','hum',0)]) + `
-      <p class="verdict">${feel(cur.temp, cur.hum)}</p>
-      <h3 class="subh">최근 24시간</h3>${matrix}`;
+    const d1 = (v, u, kind, dec, ic, tip) => v == null ? '' : `<span class="hd" title="${tip}" aria-label="${tip}">${IC[ic]}${Math.abs(v) < .05 ? '<b class="z">–</b>' : `<b class="${chgCls(kind, v, .05)}">${chgTxt(v, u, dec)}</b>`}</span>`;
+    const deltas = (k, u, kind, dec) => { const a = pr[k] && pr[k][k] != null ? cur[k] - pr[k][k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
+      return `<div class="hds">${d1(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${d1(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}</div>`; };
+    const status = (M, v) => { const rr = M === 'temp' ? CTX.t : CTX.h, f = M === 'temp' ? (x) => x.toFixed(1) + '°' : (x) => Math.round(x) + '%p';
+      const w = M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
+      return v < rr[0] ? `${w} <em>쾌적까지 +${f(rr[0]-v)}</em>` : v > rr[1] ? `${w} <em>쾌적까지 −${f(v-rr[1])}</em>` : `${w} <em class="ok">쾌적 범위</em>`; };
+    const metric = (M, name, v, fmt, unit, dec, du) => `<div class="hm" style="--c:${specColor(M, v)}">
+        <div class="hm-n">${name}</div>
+        <div class="hm-v">${fmt(v)}<small>${unit}</small></div>
+        <div class="hm-s">${status(M, v)}</div>
+        ${deltas(M, du, M, dec)}
+        ${gauge2(M, v)}</div>`;
+    const dp = dew(cur.temp, cur.hum);
+    $('#now').innerHTML = `<div class="hero2" style="--ct:${specColor('temp', cur.temp)};--ch:${specColor('hum', cur.hum)}">
+        <div class="h2-top"><span>${mdLong(cur.ts)} ${hhmm(cur.ts)}</span><span class="h2-dew">이슬점 <b>${n1(dp)}°</b></span></div>
+        <div class="h2-main">${metric('temp', '온도', cur.temp, n1, '°C', 1, '°')}<div class="h2-sep"></div>${metric('hum', '습도', cur.hum, n0, '%', 0, '%')}</div>
+        <p class="h2-verdict">${feel(cur.temp, cur.hum)}</p></div>
+      <h3 class="subh">최근 24시간</h3>${cards}`;
     $('#rates').innerHTML = ratesHtml(o, null, CTX, MULTI);
     return;
   }
-  $('#now').innerHTML = `<h2 class="rt">${rangeLabel(range)}</h2><div class="k">구간 통계</div>${bar}${matrix}
+  $('#now').innerHTML = `<h2 class="rt">${rangeLabel(range)}</h2>${bar}${cards}
     <p class="verdict">구간 평균 기준으로 ${feel(o.temp, o.hum)}</p>`;
   $('#rates').innerHTML = ratesHtml(o, base, CTX, MULTI);
   document.querySelectorAll('.cmpbar button').forEach(bn => bn.onclick = () => { cmpIdx = +bn.dataset.i; load(); });
+}
+
+// 쾌적 구간만 밝게 켜진 얇은 스펙트럼 선 + 현재 위치
+function gauge2(M, v){
+  const st = BINS[M].stops, a = st[0][0], b = st.at(-1)[0], P = (x) => Math.max(0, Math.min(100, (x - a) / (b - a) * 100));
+  const grad = `linear-gradient(90deg,${st.map(([x, c]) => `${c} ${P(x).toFixed(1)}%`).join(',')})`;
+  const rr = M === 'temp' ? CTX.t : M === 'hum' ? CTX.h : null;
+  const zone = rr ? (() => { const l = P(rr[0]), w = P(Math.min(rr[1], b)) - l; return w > 0 ? `<i class="g2-z" style="left:${l}%;width:${w}%;background:${grad};background-size:${(100 / w * 100).toFixed(1)}% 100%;background-position:${(l / (100 - w || 1) * 100).toFixed(1)}% 0"></i>` : ''; })() : '';
+  return `<div class="g2"><i class="g2-t" style="background:${grad}"></i>${zone}${v == null ? '' : `<i class="g2-m" style="left:${P(v)}%"></i>`}</div>`;
+}
+// 구간 흐름 작은 선 그래프: 또렷한 선 + 값 색 영역
+function spark(M, pts){
+  const v = pts.filter(p => p[M] != null);
+  if(v.length < 2) return '';
+  const W = 300, H = 48, t0 = v[0].ts, t1 = v.at(-1).ts || 1, lo0 = Math.min(...v.map(p => p[M])), hi0 = Math.max(...v.map(p => p[M])), pad = Math.max((hi0 - lo0) * .15, M === 'hum' ? 1 : .2), lo = lo0 - pad, hi = hi0 + pad;
+  const X = (ts) => (ts - t0) / ((t1 - t0) || 1) * W, Y = (x) => H - 2 - (x - lo) / (hi - lo) * (H - 6);
+  const step = Math.max(1, Math.ceil(v.length / 120)), q = v.filter((_, i) => i % step === 0 || i === v.length - 1);
+  const ln = smooth(q.map(p => [X(p.ts), Y(p[M])])), gd = vGrad(M, lo, hi, Y(lo), Y(hi), .45, true);
+  return `<svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs>${gd.def}</defs><path d="${ln}L${W},${H}L0,${H}Z" fill="url(#${gd.id})"/><path d="${ln}" fill="none" stroke="var(--ink)" stroke-opacity=".85" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`;
 }
 
 /* ---------- 일/월 요약 표 ---------- */
@@ -963,7 +1050,7 @@ function renderAll(){
   MULTI = !!c0 && (c0.t[0] !== CTX.t[0] || c0.h[0] !== CTX.h[0] || c0.h[1] !== CTX.h[1]);
   SEASONS = seasonsFor(range, cpts, cur);
   MULTI = MULTI || SEASONS.length > 1;
-  renderNow(cur, cur && cur.prev, st, cmp, yd);
+  renderNow(cur, cur && cur.prev, st, cmp, yd, hist);
   comfortStrip($('#scatter'), hist.points);
   $('#scCap').innerHTML = `<span class="sg"><i style="background:var(--cold)"></i>추움</span><span class="sg"><i style="background:var(--hot)"></i>더움</span><span class="sg"><i style="background:var(--dry)"></i>건조</span><span class="sg"><i style="background:var(--wet)"></i>습함</span><span class="sg"><i style="background:var(--ok)"></i>쾌적</span><span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
   if(panel === 'trend'){
