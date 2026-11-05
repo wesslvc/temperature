@@ -15,6 +15,8 @@
 <meta name="apple-mobile-web-app-title" content="온습도">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* ==========================================================================
@@ -444,6 +446,56 @@ table.tb td{padding:11px 10px}
   .strip b{font-size:21px}
   .mx .mc b{font-size:21px}.mx .ml small{display:none}.mx>div{padding-right:8px}
 }
+
+/* ==========================================================================
+   타이포그래피 중심: 크고 시원한 숫자(좁은 폭 그로테스크), 상자 대신 헤어라인, 무채색
+   ========================================================================== */
+:root{--disp:"Archivo","Pretendard Variable",Pretendard,sans-serif}
+.en{display:block;font-family:var(--disp);font-style:normal;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;font-variation-settings:"wdth" 100}
+.hm-v,.sc-v,.rt,.dl-av{font-family:var(--disp);font-variation-settings:"wdth" 68;font-feature-settings:"tnum" 0,"lnum"}
+svg text.cs-p{font-family:var(--disp);font-variation-settings:"wdth" 68}
+/* 현재 */
+.hero2{padding:14px 0 34px;border-radius:0;background:none;border:none;border-bottom:1px solid var(--rule);overflow:visible}
+.hero2::before{display:none}
+.h2-top{font-family:var(--disp);font-size:13px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--faint);font-variation-settings:"wdth" 100}
+.h2-top b{color:var(--ink)}
+.h2-main{margin-top:26px;gap:0 40px}
+.h2-sep{background:var(--rule)}
+.hm-n{font-size:14px;font-weight:650;color:var(--sub)}
+.hm-v{font-size:clamp(112px,16.5vw,196px);font-weight:800;letter-spacing:-.025em;line-height:.8;margin-top:14px}
+.hm-v small{font-family:"Pretendard Variable",Pretendard,sans-serif;font-size:.15em;font-weight:600;color:var(--faint);margin:.35em 0 0 .12em;letter-spacing:0}
+.hm-s{margin-top:22px;font-size:17px}
+/* 지표 카드 → 상자 없이 헤어라인 열 */
+.subh{font-family:var(--disp);font-size:12px!important;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:34px 0 0!important;font-variation-settings:"wdth" 100}
+.scs{gap:0 32px;margin-top:14px}
+.sc{padding:16px 0 0;border-radius:0;background:none;border:none;border-top:1px solid var(--rule);overflow:visible}
+.sc-h{font-size:14px;color:var(--sub)}
+.sc-v{font-size:clamp(64px,7.4vw,88px);font-weight:800;letter-spacing:-.02em;line-height:.85;margin-top:12px}
+.sc-v small{font-family:"Pretendard Variable",Pretendard,sans-serif;font-size:18px!important;color:var(--faint)}
+.sc-r{margin-top:14px}
+.sc .sp{margin:10px 0 0!important;width:100%!important;display:block}
+/* 쾌적 시간 */
+.scatter{background:none!important;border:none!important;border-radius:0!important;padding:0!important;margin-top:46px!important}
+.scatter h3{font-size:clamp(30px,4.2vw,44px)!important;font-weight:800;letter-spacing:-.045em;line-height:1}
+#scCap{margin:10px 0 6px!important}
+svg text.cs-p{fill:var(--ink)!important;font-size:30px!important;font-weight:800;letter-spacing:-.01em}
+svg text.cs-p tspan.cs-u{font-size:15px;font-weight:600;fill:var(--faint)}
+svg text.cs-pd{fill:var(--faint)!important;font-size:12px!important;font-weight:600}
+svg text.cs-l{fill:var(--sub)!important;font-size:13px!important;font-weight:650}
+/* 기간 제목 */
+.rt{font-size:clamp(48px,8vw,96px);font-weight:800;letter-spacing:-.02em;line-height:.9;margin:18px 0 10px}
+/* 아래 섹션 */
+.secnav{margin-top:60px;gap:30px}
+.secnav button{font-size:17px;font-weight:700}
+.panel.on{background:none;border:none;border-radius:0;padding:22px 0 0}
+@media(max-width:560px){
+  .h2-main{gap:0 20px}
+  .hm-v{font-size:clamp(64px,19vw,96px)}
+  .scs{grid-template-columns:1fr;gap:0}
+  .sc{padding-top:14px;margin-bottom:22px}
+  .sc-v{font-size:64px}
+  .panel.on{margin-left:0;margin-right:0;padding:18px 0 0}
+}
 </style>
 </head>
 <body>
@@ -677,13 +729,13 @@ function vGrad(metric, lo, hi, yLo, yHi, op = 1, fade = false){
 function comfortStrip(el, pts, o, base){
   const P = pts.filter(p => p.temp != null && p.hum != null);
   if(P.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
-  const W = Math.max(300, el.clientWidth || 520), m = {l:44,r:W < 480 ? 50 : 70}, iw = W-m.l-m.r, t0 = P[0].ts, t1 = P.at(-1).ts, span = t1-t0 || 1;
+  const W = Math.max(300, el.clientWidth || 520), m = {l:44,r:W < 480 ? 96 : 150}, iw = W-m.l-m.r, t0 = P[0].ts, t1 = P.at(-1).ts, span = t1-t0 || 1;
   const X = ts => m.l + (ts-t0)/span*iw;
-  const rows = [{k:'temp',name:'온도',y:8,rk:'comfort_t'},{k:'hum',name:'습도',y:40,rk:'comfort_h'},{k:'both',name:'둘 다',y:72,rk:'comfort'}], RH = 8, H = 72+RH+32;
+  const rows = [{k:'temp',name:'온도',y:14,rk:'comfort_t'},{k:'hum',name:'습도',y:62,rk:'comfort_h'},{k:'both',name:'둘 다',y:110,rk:'comfort'}], RH = 4, H = 110+RH+34;
   let g = '';
-  rows.forEach((R, ri) => { g += `<clipPath id="cs${ri}"><rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="4"/></clipPath><text class="cs-l" x="0" y="${R.y+RH/2+4}">${R.name}</text>`;
-    if(o && o[R.rk] != null){ const d = base && base[R.rk] != null ? o[R.rk] - base[R.rk] : null; g += `<text class="cs-p" x="${W}" y="${R.y+RH/2+5}" text-anchor="end">${Math.round(o[R.rk])}%</text>`;
-      if(d != null && Math.abs(d) >= .5) g += `<text class="cs-pd" x="${W}" y="${R.y+RH/2+19}" text-anchor="end">${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(0)}%p</text>`; } });
+  rows.forEach((R, ri) => { g += `<clipPath id="cs${ri}"><rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}"/></clipPath><text class="cs-l" x="0" y="${R.y+RH/2+4}">${R.name}</text>`;
+    if(o && o[R.rk] != null){ const d = base && base[R.rk] != null ? o[R.rk] - base[R.rk] : null; g += `<text class="cs-p" x="${W}" y="${R.y+RH/2+12}" text-anchor="end">${Math.round(o[R.rk])}<tspan class="cs-u">%</tspan></text>`;
+      if(d != null && Math.abs(d) >= .5 && W >= 480) g += `<text class="cs-pd" x="${W-78}" y="${R.y+RH/2+5}" text-anchor="end">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%p</text>`; } });
   // 상태별로 이어진 덩어리: 온도 = 낮음(청)·쾌적(초록)·높음(적), 습도 = 건조(황)·쾌적·습함(민트), 둘 다 = 쾌적만
   const COLS = { temp: { lo:'var(--cold)', hi:'var(--hot)' }, hum: { lo:'var(--dry)', hi:'var(--wet)' } };
   const state = (M, p) => { const c = comfortAt(p.ts), r = M === 'temp' ? c.t : c.h, v = p[M]; return v < r[0] ? 'lo' : v > r[1] ? 'hi' : 'ok'; };
@@ -691,15 +743,15 @@ function comfortStrip(el, pts, o, base){
     P.forEach((p, i) => { const k = fn(p), x = X(p.ts);
       if(!cur || cur.k !== k){ if(cur) cur.x2 = x; cur = { k, x1: x, x2: x }; out.push(cur); } });
     if(cur) cur.x2 = m.l + iw; return out; };
-  const fill = (M, k) => k === 'ok' ? 'var(--ok)' : 'transparent';
-  const draw = (ri, M, runs) => runs.map((u, i) => { if(u.k === 'none') return ''; const g0 = i ? 1.5 : 0, g1 = i < runs.length-1 ? 1.5 : 0, w = Math.max(u.x2-u.x1-g0-g1, 2);
-    return `<rect x="${(u.x1+g0).toFixed(1)}" y="${rows[ri].y}" width="${w.toFixed(1)}" height="${RH}" rx="${Math.min(4, w/2).toFixed(1)}" fill="${fill(M, u.k)}" fill-opacity="${u.k === 'ok' ? .95 : .8}"/>`; }).join('');
-  rows.forEach((R, ri) => { g += `<rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="4" fill="var(--sunk)"/>`; });
+  const fill = (M, k) => k === 'ok' ? 'var(--ink)' : 'transparent';
+  const draw = (ri, M, runs) => runs.map((u, i) => { if(u.k === 'none') return ''; const g0 = 0, g1 = 0, w = Math.max(u.x2-u.x1-g0-g1, 2);
+    return `<rect x="${(u.x1+g0).toFixed(1)}" y="${rows[ri].y}" width="${w.toFixed(1)}" height="${RH}" rx="1" fill="${fill(M, u.k)}" fill-opacity=".92"/>`; }).join('');
+  rows.forEach((R, ri) => { g += `<rect x="${m.l}" y="${R.y+RH/2-.5}" width="${iw}" height="1" fill="var(--rule)"/>`; });
   g += `<g clip-path="url(#cs0)">${draw(0, 'temp', runsOf(p => state('temp', p)))}</g><g clip-path="url(#cs1)">${draw(1, 'hum', runsOf(p => state('hum', p)))}</g>`;
   g += `<g clip-path="url(#cs2)">${draw(2, 'temp', runsOf(p => state('temp', p) === 'ok' && state('hum', p) === 'ok' ? 'ok' : 'none'))}</g>`;
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
   const nt = W < 480 ? 2 : 4; for(let i=0;i<=nt;i++){ const ts = t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-6}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
-  g += `<line id="csv" y1="0" y2="${72+RH+6}" stroke="var(--ink)" stroke-width="1.5" opacity="0"/><rect id="cshit" x="${m.l}" y="0" width="${iw}" height="${72+RH+8}" fill="transparent"/>`;
+  g += `<line id="csv" y1="0" y2="${110+RH+6}" stroke="var(--ink)" stroke-width="1" opacity="0"/><rect id="cshit" x="${m.l}" y="0" width="${iw}" height="${110+RH+8}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, vl = svg.querySelector('#csv'), hit = svg.querySelector('#cshit');
   const st = (M, v, c) => { const r = M === 'temp' ? c.t : c.h; return v < r[0] ? '낮음' : v > r[1] ? '높음' : '쾌적'; };
@@ -978,7 +1030,7 @@ function renderNow(cur, ref, st, cmp, yd, hist){
   const card = (M, name, kmin, kmax, kavg, u, du, dec, fmt) => {
     if(o[kavg] == null) return '';
     return `<div class="sc">
-      <div class="sc-h"><span>${name}</span>${dl(kavg, du, dec)}</div>
+      <div class="sc-h"><span><i class="en">${{temp:'Temp',hum:'Humidity',dew:'Dew point'}[M]}</i>${name}</span>${dl(kavg, du, dec)}</div>
       <div class="sc-v">${fmt(o[kavg])}<small>${u}</small></div>
       <div class="sc-r"><span>최저 <b>${fmt(o[kmin])}${u}</b> <em>${tm(o[kmin+'_ts'])}</em></span><span>최고 <b>${fmt(o[kmax])}${u}</b> <em>${tm(o[kmax+'_ts'])}</em></span></div>
       ${spark(M, pts)}</div>`; };
@@ -995,7 +1047,7 @@ function renderNow(cur, ref, st, cmp, yd, hist){
       const w = M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
       return v < rr[0] ? `${w} <em>쾌적까지 +${f(rr[0]-v)}</em>` : v > rr[1] ? `${w} <em>쾌적까지 −${f(v-rr[1])}</em>` : `${w} <em class="ok">쾌적 범위</em>`; };
     const metric = (M, name, v, fmt, unit, dec, du) => `<div class="hm" style="--c:${specColor(M, v)}">
-        <div class="hm-n">${name}</div>
+        <div class="hm-n"><span class="en">${{temp:'Temperature',hum:'Humidity'}[M]}</span>${name}</div>
         <div class="hm-v">${fmt(v)}<small>${unit}</small></div>
         <div class="hm-s">${status(M, v)}</div>
         ${deltas(M, du, M, dec)}
@@ -1105,7 +1157,7 @@ function renderAll(){
   renderNow(cur, cur && cur.prev, st, cmp, yd, hist);
   const cspec = now ? null : compareSpecs(range)[Math.min(cmpIdx, Math.max(0, compareSpecs(range).length-1))], cbase = cspec && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
   comfortStrip($('#scatter'), hist.points, o, cbase);
-  $('#scCap').innerHTML = `<span class="sg"><i style="background:var(--ok)"></i>쾌적했던 시간</span><span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
+  $('#scCap').innerHTML = `<span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
   if(panel === 'trend'){
     $('#trendCap').textContent = '';
     trend($('#trend'), hist.points, hist.marks);
