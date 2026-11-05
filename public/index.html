@@ -34,7 +34,7 @@
   --t-soft:rgba(194,65,12,.13); --h-soft:rgba(30,106,140,.13); --comfort:rgba(77,124,58,.12); --sw:#3b78c4; --sm:#4d7c3a; --ss:#d9822b;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#0B0B0C; --panel:#151517; --sunk:#1C1C1F; --sunk-2:#26262A;
+  --bg:#09090A; --panel:#141416; --sunk:#1E1E21; --sunk-2:#2A2A2E;
   --ink:#F3F3F4; --sub:#A4A4AB; --faint:#6F6F77;
   --rule:rgba(255,255,255,.10); --hair:rgba(255,255,255,.06);
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 32px -14px rgba(0,0,0,.6);
@@ -242,6 +242,54 @@ footer{margin-top:48px;font-size:12px;color:var(--faint);text-align:center;line-
 .chip.ex{font-weight:750;box-shadow:none}
 table.tb td{padding:11px 10px}
 .cmpbar span:last-child{color:var(--faint)}
+
+/* ---------- 현재 온습도 카드 (다크 기준) ---------- */
+.tiles2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mt{position:relative;isolation:isolate;overflow:hidden;min-width:0;padding:18px 18px 16px;border-radius:22px;background:var(--panel);border:1px solid var(--hair)}
+.mt::before{content:'';position:absolute;inset:0;z-index:-1;background:radial-gradient(130% 100% at 100% 0%,color-mix(in srgb,var(--c) 30%,transparent) 0%,color-mix(in srgb,var(--c) 8%,transparent) 45%,transparent 75%)}
+.mt-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mt-n{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.mt-w{font-size:12px;font-weight:650;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--ink);white-space:nowrap}
+.mt-v{display:flex;align-items:flex-start;margin:10px 0 12px;font-size:clamp(52px,7.4vw,84px);font-weight:800;letter-spacing:-.055em;line-height:.92;color:var(--ink)}
+.mt-v small{font-size:.28em;font-weight:600;letter-spacing:0;color:var(--sub);margin:.32em 0 0 .18em}
+.mt .chips{margin-bottom:16px}
+.gauge{position:relative;height:22px}
+.g-bar{position:absolute;left:0;right:0;top:8px;height:6px;border-radius:3px;opacity:.9}
+.g-band{position:absolute;top:4px;height:14px;border-radius:5px;box-shadow:inset 0 0 0 1.5px var(--ink);opacity:.4}
+.g-dot{position:absolute;top:3px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--panel),0 2px 8px rgba(0,0,0,.35)}
+.g-t{display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+/* ---------- 최저~최고 범위 막대 ---------- */
+.rrs{margin-top:10px}
+.rr{display:grid;grid-template-columns:56px 74px minmax(0,1fr) 74px;align-items:center;gap:0 14px;padding:16px 0;border-bottom:1px solid var(--hair)}
+.rr-h{padding:0 0 8px;font-size:12px;color:var(--faint);border-bottom:1px solid var(--rule)}
+.rr-h .c{text-align:center}.rr-h .r{text-align:right}
+.rr-l{font-size:13.5px;font-weight:700}
+.rr-v{min-width:0}
+.rr-v.hi{text-align:right}
+.rr-v b{display:block;font-size:22px;font-weight:750;letter-spacing:-.04em;line-height:1.1}
+.rr-v b em,.rr-avg em{font-style:normal;font-size:12px;font-weight:500;color:var(--faint);margin-left:1px;letter-spacing:0}
+.rr-v small{display:block;font-size:11px;color:var(--faint);margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rr-track{position:relative;height:46px}
+.rr-base{position:absolute;left:0;right:0;top:30px;height:6px;border-radius:3px;background:var(--sunk)}
+.rr-track .g-band{top:26px;height:14px}
+.rr-seg{position:absolute;top:30px;height:6px;border-radius:3px;background-repeat:no-repeat}
+.rr-dot{position:absolute;top:27px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 2.5px var(--bg)}
+.rr-avg{position:absolute;top:0;transform:translateX(-50%);font-size:15px;font-weight:750;letter-spacing:-.03em;white-space:nowrap}
+.dl{display:inline-block;font-size:11.5px;font-weight:650;margin-top:3px;font-variant-numeric:tabular-nums}
+.rr-avg .dl{margin:0 0 0 5px}
+.dl:not([class*="c-"]){color:var(--faint)}
+@media(max-width:520px){
+  .tiles2{gap:8px}
+  .mt{padding:14px 13px 12px;border-radius:18px}
+  .mt-v{font-size:clamp(40px,12.5vw,56px);margin:8px 0 10px}
+  .mt-w{font-size:11px;padding:2px 7px}
+  .mt .chips{grid-template-columns:auto auto;gap:4px;margin-bottom:12px}
+  .mt .chip2{font-size:11px;padding:2px 6px 2px 4px}
+  .rr{grid-template-columns:40px 58px minmax(0,1fr) 58px;gap:0 9px}
+  .rr-v b{font-size:18px}
+  .rr-l{font-size:12.5px}
+}
 @media(max-width:860px){
   .hero{grid-template-columns:1fr;gap:20px}
   .strip{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:16px}
@@ -701,22 +749,39 @@ function ratesHtml(o, base, cz = CTX, multi = false){
 function renderNow(cur, ref, st, cmp, yd){
   $('#rates').innerHTML = '';
   const o = st.overall, now = range === '24h';
-  const big = (t, h, tl, hl) => { const ct = colorOf('temp', t), ch = colorOf('hum', h); return `<div class="pair">
-      <div><div class="num t">${n1(t)}<small>°C</small></div>${ct ? `<i class="sw" style="background:${ct.fill}"></i>` : ''}<div class="lbl"><b>${tl[0]}</b>${tl[1]}</div></div>
-      <div><div class="num h">${n0(h)}<small>%</small></div>${ch ? `<i class="sw" style="background:${ch.fill}"></i>` : ''}<div class="lbl"><b>${hl[0]}</b>${hl[1]}</div></div></div>`; };
+  // 스펙트럼 위치(0~100%)와 그라데이션: 색은 '어디쯤인가'를 보여주는 데만 쓴다
+  const SP = (M) => { const st = BINS[M].stops; return { a: st[0][0], b: st.at(-1)[0], grad: `linear-gradient(90deg,${st.map(([v,c]) => `${c} ${((v-st[0][0])/(st.at(-1)[0]-st[0][0])*100).toFixed(1)}%`).join(',')})` }; };
+  const pos = (M, v) => { const q = SP(M); return Math.max(0, Math.min(100, (v - q.a) / (q.b - q.a) * 100)); };
+  const band = (M) => { const c = CTX, r = M === 'temp' ? c.t : M === 'hum' ? c.h : null; if(!r) return ''; const l = pos(M, r[0]), w = pos(M, r[1]) - l; return w > 0 ? `<i class="g-band" style="left:${l}%;width:${w}%"></i>` : ''; };
+  const gauge = (M, v) => { const q = SP(M); return `<div class="gauge"><div class="g-bar" style="background:${q.grad}"></div>${band(M)}${v == null ? '' : `<i class="g-dot" style="left:${pos(M, v)}%"></i>`}</div><div class="g-t"><span>${q.a}${BINS[M].u}</span><span>${q.b}${BINS[M].u}</span></div>`; };
+  const word = (M, v) => v == null ? '' : M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
+  const tile = (M, name, v, fmt, unit, extra) => { const c = colorOf(M, v); return `<div class="mt" style="--c:${c ? c.fill : 'var(--faint)'}">
+      <div class="mt-h"><span class="mt-n">${name}</span>${v == null ? '' : `<span class="mt-w">${word(M, v)}</span>`}</div>
+      <div class="mt-v">${v == null ? '–' : fmt(v)}<small>${unit}</small></div>${extra || ''}${gauge(M, v)}</div>`; };
+  const big = (t, h, tl, hl) => `<div class="tiles2">${tile('temp', '온도', t, n1, '°C', tl[1])}${tile('hum', '습도', h, n0, '%', hl[1])}</div>`;
   const tm = (ts) => !ts ? '' : range[0]==='d' ? hhmm(ts) : when(ts);
-  if(now && !cur){ $('#now').innerHTML = big(null,null,['온도',''],['습도','']).replace(/class="num (t|h)"/g,'class="num $1" style="color:var(--faint)"') + `<p class="verdict" style="color:var(--sub)">첫 측정값을 기다리고 있습니다. 센서 연결이 끝나면 1분 안에 이곳에 표시됩니다.</p>`; return; }
+  if(now && !cur){ $('#now').innerHTML = big(null,null,['온도',''],['습도','']) + `<p class="verdict" style="color:var(--sub)">첫 측정값을 기다리고 있습니다. 센서 연결이 끝나면 1분 안에 이곳에 표시됩니다.</p>`; return; }
   if(!now && (o.temp == null)){ $('#now').innerHTML = `<div class="k">${rangeLabel(range)}</div><p class="verdict" style="margin-top:14px;color:var(--sub)">이 기간에는 측정 기록이 없습니다.</p>`; return; }
   const specs = now ? [] : compareSpecs(range), sp = specs[Math.min(cmpIdx, specs.length-1)];
   const base = sp && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
   // 최저·최고·평균을 한 표로 (온도 / 습도 / 이슬점 3행 × 3열)
   const dl = (k, u, dec) => { if(!base || base[k] == null || o[k] == null) return ''; const d = o[k] - base[k];
     const kind = k[0] === 't' ? 'temp' : k[0] === 'h' ? 'hum' : 'dew';
-    return Math.abs(d) < (dec ? .05 : .5) ? '<div class="dl">– 변화 없음</div>' : `<div class="dl ${chgCls(kind, d, 0)}">${chgTxt(d, u, dec)}</div>`; };
-  const mc = (M, k, tsk, u, du, dec, fmt) => { const c = colorOf(M, o[k]); return `<div class="mc"><b style="${c ? `border-color:${c.fill}` : ''}">${fmt(o[k])}<em>${u}</em></b><small>${tsk ? tm(o[tsk]) : '&nbsp;'}</small>${dl(k, du, dec)}</div>`; };
-  const row = (M, label, unit, kmin, kmax, kavg, du, dec, fmt) => `<div class="ml">${label}</div>${mc(M,kmin,kmin+'_ts',unit,du,dec,fmt)}${mc(M,kmax,kmax+'_ts',unit,du,dec,fmt)}${mc(M,kavg,null,unit,du,dec,fmt)}`;
-  const matrix = `<div class="mx"><div></div><div class="mh">최저</div><div class="mh">최고</div><div class="mh">평균</div>
-      ${row('temp','온도','°C','tmin','tmax','temp','°',1,n1)}${row('hum','습도','%','hmin','hmax','hum','%p',0,n0)}${row('dew','이슬점','°C','dmin','dmax','dew','°',1,n1)}</div>`;
+    return Math.abs(d) < (dec ? .05 : .5) ? '<span class="dl">–</span>' : `<span class="dl ${chgCls(kind, d, 0)}">${chgTxt(d, u, dec)}</span>`; };
+  // 최저~최고 범위를 같은 스펙트럼 위의 막대로, 평균은 점으로
+  const rrow = (M, label, kmin, kmax, kavg, u, du, dec, fmt) => {
+    if(o[kmin] == null) return '';
+    // 행마다 범위에 맞춰 확대 (최소 폭 확보), 막대 색은 최저→최고 값의 색
+    const mh = { temp: .5, hum: 3, dew: .8 }[M], c0 = (o[kmin] + o[kmax]) / 2, half = Math.max((o[kmax] - o[kmin]) / 2 * 1.5, mh), lo = c0 - half, hi = c0 + half;
+    const P = (v) => (v - lo) / (hi - lo) * 100, l = P(o[kmin]), w = Math.max(P(o[kmax]) - l, 1.5), av = P(o[kavg]);
+    const segBg = `linear-gradient(90deg,${specColor(M, o[kmin])},${specColor(M, o[kmax])})`;
+    return `<div class="rr">
+      <div class="rr-l">${label}</div>
+      <div class="rr-v"><b>${fmt(o[kmin])}<em>${u}</em></b><small>${tm(o[kmin+'_ts'])}</small>${dl(kmin, du, dec)}</div>
+      <div class="rr-track"><div class="rr-base"></div><div class="rr-seg" style="left:${l}%;width:${w}%;background:${segBg}"></div>
+        <i class="rr-dot" style="left:${av}%"></i><span class="rr-avg" style="left:${Math.max(8, Math.min(92, av))}%">${fmt(o[kavg])}<em>${u}</em>${dl(kavg, du, dec)}</span></div>
+      <div class="rr-v hi"><b>${fmt(o[kmax])}<em>${u}</em></b><small>${tm(o[kmax+'_ts'])}</small>${dl(kmax, du, dec)}</div></div>`; };
+  const matrix = `<div class="rrs"><div class="rr rr-h"><div></div><div>최저</div><div class="c">평균</div><div class="r">최고</div></div>${rrow('temp','온도','tmin','tmax','temp','°','°',1,n1)}${rrow('hum','습도','hmin','hmax','hum','%','%p',0,n0)}${rrow('dew','이슬점','dmin','dmax','dew','°','°',1,n1)}</div>`;
   const fmtW = (ms) => `${md(ms)} ${hhmm(ms)}`;
   const bar = specs.length ? `<div class="cmpbar"><span>비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `${fmtW(sp.from)} – ${fmtW(sp.to)} · 비교할 기록 없음`}</span></div>` : '';
