@@ -691,7 +691,7 @@ function comfortStrip(el, pts, o, base){
     P.forEach((p, i) => { const k = fn(p), x = X(p.ts);
       if(!cur || cur.k !== k){ if(cur) cur.x2 = x; cur = { k, x1: x, x2: x }; out.push(cur); } });
     if(cur) cur.x2 = m.l + iw; return out; };
-  const fill = (M, k) => k === 'ok' ? 'var(--ok)' : k === 'none' ? 'transparent' : COLS[M][k];
+  const fill = (M, k) => k === 'ok' ? 'var(--ok)' : 'transparent';
   const draw = (ri, M, runs) => runs.map((u, i) => { if(u.k === 'none') return ''; const g0 = i ? 1.5 : 0, g1 = i < runs.length-1 ? 1.5 : 0, w = Math.max(u.x2-u.x1-g0-g1, 2);
     return `<rect x="${(u.x1+g0).toFixed(1)}" y="${rows[ri].y}" width="${w.toFixed(1)}" height="${RH}" rx="${Math.min(4, w/2).toFixed(1)}" fill="${fill(M, u.k)}" fill-opacity="${u.k === 'ok' ? .95 : .8}"/>`; }).join('');
   rows.forEach((R, ri) => { g += `<rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="4" fill="var(--sunk)"/>`; });
@@ -1105,7 +1105,7 @@ function renderAll(){
   renderNow(cur, cur && cur.prev, st, cmp, yd, hist);
   const cspec = now ? null : compareSpecs(range)[Math.min(cmpIdx, Math.max(0, compareSpecs(range).length-1))], cbase = cspec && cmp && cmp.overall && cmp.overall.n > 0 ? cmp.overall : null;
   comfortStrip($('#scatter'), hist.points, o, cbase);
-  $('#scCap').innerHTML = `<span class="sg"><i style="background:var(--cold)"></i>추움</span><span class="sg"><i style="background:var(--hot)"></i>더움</span><span class="sg"><i style="background:var(--dry)"></i>건조</span><span class="sg"><i style="background:var(--wet)"></i>습함</span><span class="sg"><i style="background:var(--ok)"></i>쾌적</span><span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
+  $('#scCap').innerHTML = `<span class="sg"><i style="background:var(--ok)"></i>쾌적했던 시간</span><span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
   if(panel === 'trend'){
     $('#trendCap').textContent = '';
     trend($('#trend'), hist.points, hist.marks);
