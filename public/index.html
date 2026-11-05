@@ -887,21 +887,34 @@ function heat(el, rows, metric){
   const B = BINS[metric], monthly = rows[0].d.length === 7;
   const days = [...new Set(rows.map(r => r.d))].sort(); const map = {};
   rows.forEach(r => map[r.d+'|'+r.h] = r[metric]);
-  const n = days.length, W = Math.max(320, el.clientWidth || 1112), m = {l:34, t:n > 20 ? 26 : 20, b:4}, cw = (W-m.l)/n, ch = 19, H = m.t + 24*ch + m.b, nums = false, fs = cw >= 22 ? 11 : 9;
+  const n = days.length, W = Math.max(320, el.clientWidth || 1112), m = {l:34, t:20, b:4}, iw = W-m.l, ch = 19, ih = 24*ch, H = m.t + ih + m.b, cw = iw/n;
+  // 칸을 나누지 않고 하나의 면으로: 날짜×시간 격자를 작은 이미지로 그린 뒤 부드럽게 늘린다
+  const cv = document.createElement('canvas'); cv.width = n; cv.height = 24; const cx = cv.getContext('2d'), img = cx.createImageData(n, 24);
+  const rgb = (c) => { const t = document.createElement('canvas').getContext('2d'); t.fillStyle = c; t.fillRect(0,0,1,1); return t.getImageData(0,0,1,1).data; };
+  const cache = {};
+  // 빈 칸은 가장 가까운 기록값으로 채워 번짐이 생기지 않게 하고, 위에 빈 칸 표시를 따로 덮는다
+  const near = (i, h) => { for(let r = 1; r < 48; r++) for(const [di, dh] of [[0,-r],[0,r],[-r,0],[r,0]]){ const ii = i+di, hh = h+dh; if(ii < 0 || ii >= n || hh < 0 || hh > 23) continue; const v = map[days[ii]+'|'+hh]; if(v != null) return v; } return null; };
+  const holes = [];
+  days.forEach((d, i) => { for(let h = 0; h < 24; h++){ let v = map[d+'|'+h]; const o = (h*n + i)*4; if(v == null){ holes.push([i, h]); v = near(i, h); if(v == null) continue; }
+    const k = metric === 'hum' ? Math.round(v) : Math.round(v*10)/10, c = cache[k] || (cache[k] = rgb(specColor(metric, k))); img.data[o] = c[0]; img.data[o+1] = c[1]; img.data[o+2] = c[2]; img.data[o+3] = 255; } });
+  cx.putImageData(img, 0, 0);
   let g = '';
   for(let h=0;h<24;h+=3) g += `<text x="${m.l-6}" y="${m.t+h*ch+ch/2+4}" text-anchor="end">${h}시</text>`;
   const lblStep = Math.ceil(n/(W < 600 ? 7 : 16));
-  days.forEach((d,i) => {
-    const x = m.l+i*cw+1;
-    if(i%lblStep===0) g += `<text x="${x+(cw-2)/2}" y="11" text-anchor="middle">${monthly ? `${+d.slice(5)}월` : `${+d.slice(8)}`}</text>`;
-    for(let h=0;h<24;h++){ const v = map[d+'|'+h], y = m.t+h*ch+1;
-      if(v==null){ g += `<rect x="${x}" y="${y}" width="${cw-2}" height="${ch-2}" rx="3" fill="var(--sunk)"/>`; continue; }
-      const c = specColor(metric, v);
-      g += `<rect data-d="${d}" data-h="${h}" data-v="${v}" x="${x}" y="${y}" width="${cw-2}" height="${ch-2}" rx="3" fill="${c}"/>`;
-      if(nums) g += `<text x="${x+(cw-2)/2}" y="${y+(ch-2)/2+4}" text-anchor="middle" style="fill:${lum(c) > .42 ? 'rgba(20,20,22,.72)' : 'rgba(255,255,255,.9)'};font-size:${fs}px;font-weight:600;pointer-events:none">${metric==='temp' ? v.toFixed(0) : Math.round(v)}</text>`; }
-  });
+  days.forEach((d,i) => { if(i%lblStep===0) g += `<text x="${m.l+i*cw+cw/2}" y="11" text-anchor="middle">${monthly ? `${+d.slice(5)}월` : `${+d.slice(8)}`}</text>`; });
+  g += `<clipPath id="hmClip"><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" rx="8"/></clipPath><rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" rx="8" fill="var(--sunk)"/>`;
+  g += `<image clip-path="url(#hmClip)" href="${cv.toDataURL()}" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" preserveAspectRatio="none" style="image-rendering:auto"/>`;
+  // 같은 날의 연속된 빈 시간은 한 덩어리로 (이음선 방지)
+  const blocks = []; holes.forEach(([i, h]) => { const L = blocks.at(-1); if(L && L.i === i && L.h1 === h - 1) L.h1 = h; else blocks.push({ i, h0: h, h1: h }); });
+  if(blocks.length) g += `<g clip-path="url(#hmClip)" shape-rendering="crispEdges">${blocks.map(B2 => `<rect x="${(m.l+B2.i*cw).toFixed(2)}" y="${m.t+B2.h0*ch}" width="${(cw+.6).toFixed(2)}" height="${(B2.h1-B2.h0+1)*ch}" fill="var(--sunk)"/>`).join('')}</g>`;
+  g += `<line id="hmV" y1="${m.t}" y2="${m.t+ih}" stroke="var(--ink)" stroke-opacity=".5" opacity="0"/><line id="hmH" x1="${m.l}" x2="${W}" stroke="var(--ink)" stroke-opacity=".5" opacity="0"/><rect id="hmHit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>${legendHtml(metric)}`;
-  el.querySelectorAll('rect[data-v]').forEach(r => { const d = r.dataset.d; r.onmousemove = e => showTip(e, `<b>${monthly ? `${+d.slice(5)}월 평균` : `${md2(d)} (${wd(d)})`} ${r.dataset.h}시</b><br>${metric==='hum' ? n0(+r.dataset.v) : n1(+r.dataset.v)}${B.u}`); r.onmouseleave = hideTip; });
+  const svg = el.firstChild, hit = svg.querySelector('#hmHit'), vl = svg.querySelector('#hmV'), hl = svg.querySelector('#hmH');
+  hit.onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W, py = (e.clientY-r.top)/r.height*H;
+    const i = Math.max(0, Math.min(n-1, Math.floor((px-m.l)/cw))), h = Math.max(0, Math.min(23, Math.floor((py-m.t)/ch))), d = days[i], v = map[d+'|'+h];
+    const x = m.l+i*cw+cw/2, y = m.t+h*ch+ch/2; vl.setAttribute('x1', x); vl.setAttribute('x2', x); hl.setAttribute('y1', y); hl.setAttribute('y2', y); vl.setAttribute('opacity', 1); hl.setAttribute('opacity', 1);
+    showTip(e, `<b>${monthly ? `${+d.slice(5)}월 평균` : `${md2(d)} (${wd(d)})`} ${h}시</b><br>${v == null ? '기록 없음' : (metric==='hum' ? n0(v) : n1(v)) + B.u}`); };
+  hit.onmouseleave = () => { vl.setAttribute('opacity', 0); hl.setAttribute('opacity', 0); hideTip(); };
 }
 
 /* ---------- 일별 범위 ---------- */
