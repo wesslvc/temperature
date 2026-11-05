@@ -228,6 +228,31 @@ table.tb td.t{color:var(--t)} table.tb td.h{color:var(--h)}
 footer{margin-top:48px;font-size:12px;color:var(--faint);text-align:center;line-height:1.8}
 
 
+
+/* ---------- 한 칸 흐름 레이아웃 ---------- */
+.mt{display:flex;flex-direction:column}.mt .gauge{margin-top:auto}
+.wrap{max-width:1000px}
+.hero{display:block;padding-top:22px}
+.now{padding:0}
+.scatter{margin-top:30px;padding:20px 20px 18px}
+.scatter h3{font-size:17px}
+.hero .tiles2{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mt-dew .mt-v{font-size:clamp(40px,5.2vw,60px)}
+.mt-dew .g-band{display:none}
+#scCap{gap:4px 0;margin:6px 0 14px}
+.sg.crit{color:var(--faint);margin-left:auto;margin-right:0}
+.area{pointer-events:none}
+.verdict{margin-top:20px}
+.subh{margin-top:34px}
+@media(max-width:720px){
+  .hero .tiles2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mt-dew{grid-column:1 / -1;display:grid;grid-template-columns:auto 1fr;grid-template-areas:"h h" "v g";column-gap:18px;align-items:end}
+  .mt-dew .mt-h{grid-area:h}.mt-dew .mt-v{grid-area:v;margin:6px 0 0;font-size:40px}
+  .mt-dew .gauge,.mt-dew .g-t{grid-column:2}
+  .mt-dew .gauge{grid-row:2;align-self:center;margin-bottom:14px}
+  .mt-dew .g-t{grid-row:2;align-self:end}
+  .sg.crit{margin-left:0;width:100%}
+}
 /* ---------- 디테일 보정 ---------- */
 .cs-l{fill:var(--sub)!important;font-size:12px!important;font-weight:650}
 #scatter svg{max-height:none}
@@ -277,7 +302,7 @@ table.tb td{padding:11px 10px}
 .rr-n small{display:block;font-size:11px;color:var(--faint);margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rr-track{grid-area:t;position:relative;height:16px;margin-top:10px}
 .rr-base{position:absolute;left:0;right:0;top:6px;height:4px;border-radius:2px;background:var(--sunk)}
-.rr-zone{position:absolute;top:3px;height:10px;border-radius:4px;background:color-mix(in srgb,var(--ok) 26%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ok) 45%,transparent)}
+.rr-zone{position:absolute;top:13px;height:2px;border-radius:1px;background:var(--ok);opacity:.9}
 .rr-seg{position:absolute;top:6px;height:4px;border-radius:2px}
 .rr-tick{position:absolute;top:1px;width:3px;height:14px;margin-left:-1.5px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 2px var(--bg)}
 .rr-out{position:absolute;top:0;z-index:1;line-height:16px;font-size:10.5px;font-weight:650;color:var(--ok);white-space:nowrap;background:var(--bg)}
@@ -557,9 +582,9 @@ function renderDetail(d){
 /* ---------- 값에 따른 색 그라데이션 (선·막대 공통) ---------- */
 let GID = 0;
 // y축 위치에 값의 색을 대응시킨 세로 그라데이션. yLo/yHi = lo/hi 값의 화면 y
-function vGrad(metric, lo, hi, yLo, yHi, op = 1){
+function vGrad(metric, lo, hi, yLo, yHi, op = 1, fade = false){
   const id = 'vg' + (++GID), n = 10;
-  const st = Array.from({length: n + 1}, (_, i) => { const v = lo + (hi - lo) * i / n; return `<stop offset="${(i / n * 100).toFixed(1)}%" stop-color="${specColor(metric, v)}" stop-opacity="${op}"/>`; }).join('');
+  const st = Array.from({length: n + 1}, (_, i) => { const v = lo + (hi - lo) * i / n; return `<stop offset="${(i / n * 100).toFixed(1)}%" stop-color="${specColor(metric, v)}" stop-opacity="${fade ? (op * Math.pow(i / n, 1.4)).toFixed(3) : op}"/>`; }).join('');
   return { id, def: `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${yLo}" y2="${yHi}">${st}</linearGradient>` };
 }
 /* ---------- 쾌적 시간: 시간축 위에 값의 색 띠 + 쾌적 범위 안 구간 표시 ---------- */
@@ -571,18 +596,18 @@ function comfortStrip(el, pts){
   const rows = [{k:'temp',name:'온도',y:4},{k:'hum',name:'습도',y:44},{k:'both',name:'둘 다',y:84}], RH = 18, H = 84+RH+30;
   let g = '';
   rows.forEach((R, ri) => { g += `<clipPath id="cs${ri}"><rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="6"/></clipPath><text class="cs-l" x="0" y="${R.y+RH/2+4}">${R.name}</text>`; });
-  // 값의 색을 가로 그라데이션 정지점으로 (이음새 없이), 쾌적 범위 밖은 옅게
-  const step = Math.max(1, Math.ceil(P.length / 240));
-  const stops = (M, okKey) => { let o = ''; for(let i = 0; i < P.length; i += step){ const p = P[i], ok = inComfort(comfortAt(p.ts), p.temp, p.hum)[okKey];
-      o += `<stop offset="${((X(p.ts)-m.l)/iw*100).toFixed(2)}%" stop-color="${specColor(M, p[M])}" stop-opacity="${ok ? 1 : .4}"/>`; } return o; };
-  g += `<defs><linearGradient id="csg0" gradientUnits="userSpaceOnUse" x1="${m.l}" x2="${m.l+iw}" y1="0" y2="0">${stops('temp','t')}</linearGradient><linearGradient id="csg1" gradientUnits="userSpaceOnUse" x1="${m.l}" x2="${m.l+iw}" y1="0" y2="0">${stops('hum','h')}</linearGradient></defs>`;
-  // 둘 다 쾌적인 구간은 이어진 덩어리로
-  let runs = '', st0 = null;
-  P.forEach((p, i) => { const ok = inComfort(comfortAt(p.ts), p.temp, p.hum), both = ok.t && ok.h;
-    if(both && st0 == null) st0 = X(p.ts);
-    if((!both || i === P.length-1) && st0 != null){ const x2 = both ? X(p.ts) : X(p.ts); runs += `<rect x="${st0.toFixed(1)}" y="${rows[2].y}" width="${Math.max(x2-st0, 2).toFixed(1)}" height="${RH}" fill="var(--ok)"/>`; st0 = null; } });
+  // 상태별로 이어진 덩어리: 온도 = 낮음(청)·쾌적(초록)·높음(적), 습도 = 건조(황)·쾌적·습함(민트), 둘 다 = 쾌적만
+  const COLS = { temp: { lo:'var(--cold)', hi:'var(--hot)' }, hum: { lo:'var(--dry)', hi:'var(--wet)' } };
+  const state = (M, p) => { const c = comfortAt(p.ts), r = M === 'temp' ? c.t : c.h, v = p[M]; return v < r[0] ? 'lo' : v > r[1] ? 'hi' : 'ok'; };
+  const runsOf = (fn) => { const out = []; let cur = null;
+    P.forEach((p, i) => { const k = fn(p), x = X(p.ts);
+      if(!cur || cur.k !== k){ if(cur) cur.x2 = x; cur = { k, x1: x, x2: x }; out.push(cur); } });
+    if(cur) cur.x2 = m.l + iw; return out; };
+  const fill = (M, k) => k === 'ok' ? 'var(--ok)' : k === 'none' ? 'transparent' : COLS[M][k];
+  const draw = (ri, M, runs) => runs.map(u => u.k === 'none' ? '' : `<rect x="${u.x1.toFixed(1)}" y="${rows[ri].y}" width="${Math.max(u.x2-u.x1, 1.5).toFixed(1)}" height="${RH}" fill="${fill(M, u.k)}" fill-opacity="${u.k === 'ok' ? .9 : .75}"/>`).join('');
   rows.forEach((R, ri) => { g += `<rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="6" fill="var(--sunk)"/>`; });
-  g += `<rect x="${m.l}" y="${rows[0].y}" width="${iw}" height="${RH}" rx="6" fill="url(#csg0)"/><rect x="${m.l}" y="${rows[1].y}" width="${iw}" height="${RH}" rx="6" fill="url(#csg1)"/><g clip-path="url(#cs2)">${runs}</g>`;
+  g += `<g clip-path="url(#cs0)">${draw(0, 'temp', runsOf(p => state('temp', p)))}</g><g clip-path="url(#cs1)">${draw(1, 'hum', runsOf(p => state('hum', p)))}</g>`;
+  g += `<g clip-path="url(#cs2)">${draw(2, 'temp', runsOf(p => state('temp', p) === 'ok' && state('hum', p) === 'ok' ? 'ok' : 'none'))}</g>`;
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
   const nt = W < 480 ? 2 : 4; for(let i=0;i<=nt;i++){ const ts = t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-6}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
   g += `<line id="csv" y1="0" y2="${84+RH+4}" stroke="var(--ink)" stroke-width="1.5" opacity="0"/><rect id="cshit" x="${m.l}" y="0" width="${iw}" height="${84+RH+6}" fill="transparent"/>`;
@@ -650,7 +675,7 @@ function trend(el, pts, marks){
     const mn = Math.min(...v), mx = Math.max(...v), pad = Math.max((mx-mn)*.12, .3), sc = niceScale(mn-pad, mx+pad), lo = sc.lo, hi = sc.hi;
     P.Y = val => P.y + P.h - (val-lo)/(hi-lo)*P.h;
     sc.ticks.forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
-    const gl = vGrad(P.k, lo, hi, P.Y(lo), P.Y(hi)), gb = vGrad(P.k, lo, hi, P.Y(lo), P.Y(hi), .2); g += `<defs>${gl.def}${gb.def}</defs>`; P.c = `url(#${gl.id})`; P.s = `url(#${gb.id})`;
+    const ga = vGrad(P.k, lo, hi, P.Y(lo), P.Y(hi), .38, true), gb = vGrad(P.k, lo, hi, P.Y(lo), P.Y(hi), .22); g += `<defs>${ga.def}${gb.def}</defs>`; P.c = 'var(--ink)'; P.s = `url(#${gb.id})`; P.a = `url(#${ga.id})`;
     const v2 = pts.filter(p => p[P.k]!=null);
     // 실측 지점이 보이는 범위(≤300회)에서는 실측값을 지나는 매끄러운 곡선으로, 그보다 촘촘한 범위에서는 보간 격자를 이어서 그린다
     const real = (marks || []).filter(q => q[P.k] != null && q.ts > t0 && q.ts < t1);
@@ -658,10 +683,13 @@ function trend(el, pts, marks){
     const line = smooth(ord(src).map(p => [X(p), P.Y(p[P.k])]));
     let band = '';
     if(!real.length){ const up = ord(v2).map(p => [X(p), P.Y(p[P.hi])]), dn = ord(v2).map(p => [X(p), P.Y(p[P.lo])]).reverse(); band = `<path d="${smooth(up) + smooth(dn, false)}Z" fill="${P.s}"/>`; }
-    g += `${band}<path d="${line}" fill="none" stroke="${P.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    // 선 아래를 값의 색으로 은은하게 채워 '얼마나 따뜻/습한지'는 색으로, 모양은 또렷한 선으로
+    const x0 = X(src[0]).toFixed(1), x1 = X(src.at(-1)).toFixed(1), yb = (P.y + P.h).toFixed(1);
+    const area = real.length ? `<path d="${line}L${x1},${yb}L${x0},${yb}Z" fill="${P.a}" class="area"/>` : '';
+    g += `${area}${band}<path d="${line}" fill="none" stroke="var(--ink)" stroke-opacity=".88" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
     P.label = `<g class="plab"><text x="${m.l-36}" y="${P.y-16}">${{temp:'온도',hum:'습도',dew:'이슬점'}[P.k]}</text></g>`;
-    const mk = (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1), mr = mk.length > 80 ? 2 : mk.length > 40 ? 2.5 : 3;
-    mk.forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="${mr}" fill="var(--panel)" stroke="${specColor(P.k, q[P.k])}" stroke-width="1.5"/>`; });
+    const mk = (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1);
+    if(mk.length <= 48) mk.forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="2.4" fill="var(--panel)" stroke="var(--ink)" stroke-opacity=".7" stroke-width="1.3"/>`; });
   });
   panels.forEach(P => { g += P.label; });
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
@@ -777,8 +805,9 @@ function hourly(el, rows){
     const v = rows.map(r => r[P.k]).filter(x => x != null), lo0 = Math.min(...v), hi0 = Math.max(...v), pad = Math.max((hi0-lo0)*.2, .3), sc = niceScale(lo0-pad, hi0+pad);
     P.Y = val => P.y + P.h - (val-sc.lo)/(sc.hi-sc.lo)*P.h;
     sc.ticks.forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
-    const gl = vGrad(P.k, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi)); g += `<defs>${gl.def}</defs>`;
-    g += `<path d="${smooth(rows.filter(r => r[P.k] != null).map(r => [X(r), P.Y(r[P.k])]))}" fill="none" stroke="url(#${gl.id})" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const ga = vGrad(P.k, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi), .38, true); g += `<defs>${ga.def}</defs>`;
+    const rr = rows.filter(r => r[P.k] != null), ln = smooth(rr.map(r => [X(r), P.Y(r[P.k])])), yb = P.y + P.h;
+    g += `<path d="${ln}L${X(rr.at(-1))},${yb}L${X(rr[0])},${yb}Z" fill="url(#${ga.id})" class="area"/><path d="${ln}" fill="none" stroke="var(--ink)" stroke-opacity=".88" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
     labs += `<g class="plab"><text x="${m.l-36}" y="${P.y-16}">${P.name}</text></g>`;
   });
   for(let h=0;h<24;h+=(W < 600 ? 6 : 3)) g += `<text x="${X({h})}" y="${H-6}" text-anchor="${h===0?'start':'middle'}">${h}시</text>`;
@@ -815,11 +844,11 @@ function renderNow(cur, ref, st, cmp, yd){
     if(v < r[0]) return `<div class="mt-c"><b>${f(r[0]-v)}${u}</b> 낮음 · 쾌적 ${rt}</div>`;
     if(v > r[1]) return `<div class="mt-c"><b>${f(v-r[1])}${u}</b> 높음 · 쾌적 ${rt}</div>`;
     return `<div class="mt-c in">쾌적 범위 안 · ${rt}</div>`; };
-  const word = (M, v) => v == null ? '' : M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
-  const tile = (M, name, v, fmt, unit, extra) => { const c = colorOf(M, v); return `<div class="mt" style="--c:${c ? c.fill : 'var(--faint)'}">
-      <div class="mt-h"><span class="mt-n">${name}</span>${v == null ? '' : `<span class="mt-w">${word(M, v)}</span>`}</div>
+  const word = (M, v) => v == null || M === 'dew' ? '' : M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
+  const tile = (M, name, v, fmt, unit, extra) => { const c = colorOf(M, v); return `<div class="mt mt-${M}" style="--c:${c ? c.fill : 'var(--faint)'}">
+      <div class="mt-h"><span class="mt-n">${name}</span>${word(M, v) ? `<span class="mt-w">${word(M, v)}</span>` : ''}</div>
       <div class="mt-v">${v == null ? '–' : fmt(v)}<small>${unit}</small></div>${extra || ''}${toComfort(M, v)}${gauge(M, v)}</div>`; };
-  const big = (t, h, tl, hl) => `<div class="tiles2">${tile('temp', '온도', t, n1, '°C', tl[1])}${tile('hum', '습도', h, n0, '%', hl[1])}</div>`;
+  const big = (t, h, tl, hl) => `<div class="tiles2">${tile('temp', '온도', t, n1, '°C', tl[1])}${tile('hum', '습도', h, n0, '%', hl[1])}${t == null ? '' : tile('dew', '이슬점', dew(t, h), n1, '°C', '')}</div>`;
   const tm = (ts) => !ts ? '' : range[0]==='d' ? hhmm(ts) : when(ts);
   if(now && !cur){ $('#now').innerHTML = big(null,null,['온도',''],['습도','']) + `<p class="verdict" style="color:var(--sub)">첫 측정값을 기다리고 있습니다. 센서 연결이 끝나면 1분 안에 이곳에 표시됩니다.</p>`; return; }
   if(!now && (o.temp == null)){ $('#now').innerHTML = `<div class="k">${rangeLabel(range)}</div><p class="verdict" style="margin-top:14px;color:var(--sub)">이 기간에는 측정 기록이 없습니다.</p>`; return; }
@@ -936,7 +965,7 @@ function renderAll(){
   MULTI = MULTI || SEASONS.length > 1;
   renderNow(cur, cur && cur.prev, st, cmp, yd);
   comfortStrip($('#scatter'), hist.points);
-  $('#scCap').innerHTML = MULTI ? '계절별 쾌적 기준 · 진하게 = 쾌적 범위 안' : `${CTX.season} 기준 ${comfortTxt(CTX)} · 진하게 = 쾌적 범위 안`;
+  $('#scCap').innerHTML = `<span class="sg"><i style="background:var(--cold)"></i>추움</span><span class="sg"><i style="background:var(--hot)"></i>더움</span><span class="sg"><i style="background:var(--dry)"></i>건조</span><span class="sg"><i style="background:var(--wet)"></i>습함</span><span class="sg"><i style="background:var(--ok)"></i>쾌적</span><span class="sg crit">${MULTI ? '계절별 기준' : `${CTX.season} ${comfortTxt(CTX)}`}</span>`;
   if(panel === 'trend'){
     $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · 실측 ${hist.samples.toLocaleString()}회` : '';
     trend($('#trend'), hist.points, hist.marks);
