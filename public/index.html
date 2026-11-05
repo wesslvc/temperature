@@ -229,20 +229,6 @@ footer{margin-top:48px;font-size:12px;color:var(--faint);text-align:center;line-
 
 
 /* ---------- 디테일 보정 ---------- */
-.sg i.dot{width:9px;height:9px;border-radius:50%;background:var(--ink)}
-.sg i.bx{width:10px;height:12px;border-radius:3px;background:color-mix(in srgb,var(--sub) 35%,transparent)}
-.sg i.bx2{width:6px;height:9px;border-radius:2px;background:var(--sub)}
-.sg i.ln{width:14px;height:2px;border-radius:2px;background:var(--ink)}
-#rangeCap{display:flex;flex-wrap:wrap;gap:4px 0;font-size:12px;color:var(--sub)}
-.dfoot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
-.badge{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:7px;font-size:12px;font-weight:650;background:var(--panel);color:var(--sub)}
-.badge.in{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
-.detail .dh b{font-size:15px;font-weight:700;letter-spacing:-.02em}
-/* 폰에서도 온도·습도를 나란히 */
-.pair .lbl{flex-direction:column;align-items:flex-start;gap:7px}
-.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 28px;max-width:640px}
-@media(max-width:520px){.num{font-size:clamp(46px,14.5vw,64px)}.num small{font-size:17px;margin-top:4px}.chips{grid-template-columns:repeat(2,auto);gap:4px}.chip2{padding:2px 6px 2px 5px;font-size:11.5px}.lbl{gap:6px}}
-
 .num,.num.t,.num.h,.detail .num{color:var(--ink);font-variant-numeric:normal;font-feature-settings:normal}
 .num small{color:var(--faint)}
 .mx .mc b,.strip b,.rate b,.tile .v,.facts div b{font-variant-numeric:normal;font-feature-settings:normal}
@@ -291,7 +277,7 @@ table.tb td{padding:11px 10px}
       <nav class="tabs" id="tabs"></nav>
       <div class="step" id="step" style="display:none"><button id="stPrev" aria-label="이전">‹</button><span id="stLbl"></span><button id="stNext" aria-label="다음">›</button></div>
     </div>
-    <button class="pill" id="pToggle" aria-expanded="false">기간 선택 ▾</button>
+    <button class="pill" id="pToggle" aria-expanded="false">기간 직접 선택 ▾</button>
   </div>
   <div class="pick2" id="pick2" hidden>
     <span class="k">기간</span>
@@ -319,7 +305,7 @@ table.tb td{padding:11px 10px}
   <div class="panel" id="p-trend">
     <div class="sec-h">
       <p class="cap" id="trendCap"></p>
-      <div class="legend"><span id="lgBand"><i class="band" style="background:var(--sub)"></i>최소–최대</span><span id="lgDot"></span></div>
+      <div class="legend"><span id="lgBand"><i class="band" style="background:var(--sub)"></i>최소–최대</span><span id="lgDot"><i style="background:none;border:1.5px solid var(--sub);width:7px;height:7px;border-radius:50%"></i>실측</span></div>
     </div>
     <div id="trend"></div>
     <div id="detail" class="detail" style="display:none"></div>
@@ -357,9 +343,11 @@ table.tb td{padding:11px 10px}
   </div>
 
   <div class="panel" id="p-day">
+    <p class="cap">선택한 구간의 시간대별 평균 (서울 시간)</p>
     <div id="hourly"></div>
   </div>
 
+  <footer><span>센서가 보고한 값만 기록합니다 · 선택한 기간의 모든 측정값 기준</span></footer>
 </div>
 <div id="tip"></div>
 
@@ -500,12 +488,13 @@ function renderDetail(d){
   const dd = (v, u, dec, kind) => v == null ? '<span class="delta">&nbsp;</span>' : Math.abs(v) < (dec ? .05 : .5) ? '<span class="delta">– 변화 없음</span>' : `<span class="delta ${chgCls(kind, v, 0)}">${chgTxt(v, u, dec)}</span>`;
   const num = (cls, c, val, unit, label, delta) => `<div class="pc"><div class="num ${cls}">${val}<small>${unit}</small></div><i class="sw" style="background:${c.fill}"></i><div class="lbl"><b>${label}</b>${delta}</div></div>`;
   const cz = comfortAt(d.ts), ok = inComfort(cz, d.temp, d.hum), inT = ok.t, inH = ok.h;
-  const vsAvg = avgT == null ? '' : `평균 ${n1(avgT)}° 대비 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `<b class="${chgCls('temp', d.temp-avgT, .05)}">${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°</b>`}`;
+  const vsAvg = avgT == null ? '' : `구간 평균 ${n1(avgT)}° 대비 온도 ${Math.abs(d.temp-avgT) < .05 ? '차이 없음' : `<b class="${chgCls('temp', d.temp-avgT, .05)}">${d.temp > avgT ? '▲' : '▼'} ${Math.abs(d.temp-avgT).toFixed(1)}°</b>`}`;
   el.style.display = '';
-  el.innerHTML = `<div class="dh"><b>${mdLong(d.ts)} ${hhmm(d.ts)}</b><button id="dClose">닫기</button></div>
+  el.innerHTML = `<div class="dh"><span class="k">선택한 시점 · ${when(d.ts)} 측정</span><button id="dClose">닫기</button></div>
+    <div class="k" style="margin-top:2px">${p ? (lastChg ? `변화는 값이 달라지기 직전 측정(${when(lastChg)}, ${gap} 전) 대비` : '이전 측정과 같은 값입니다') : '기록상 첫 측정입니다'}</div>
     <div class="pair3">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(d.prev_t ? d.temp-d.prev_t.temp : null, '°', 1, 'temp'))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(d.prev_h ? d.hum-d.prev_h.hum : null, '%p', 0, 'hum'))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(pdp != null ? dp-pdp : null, '°', 1, 'dew'))}</div>
     <p class="verdict">${feel(d.temp, d.hum, cz)}</p>
-    <div class="dfoot"><span class="badge${inT && inH ? ' in' : ''}">${inT && inH ? '쾌적' : '쾌적 범위 밖'}</span>${vsAvg ? `<span class="k">${vsAvg}</span>` : ''}</div>`;
+    <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (${cz.m}월 기준 ${comfortTxt(cz)})${vsAvg ? ' · ' + vsAvg : ''}</div>`;
   $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
 }
 
@@ -707,7 +696,7 @@ function hourly(el, rows){
 function ratesHtml(o, base, cz = CTX, multi = false){
   const d = (k) => !base || base[k] == null || o[k] == null ? '' : (() => { const x = o[k] - base[k]; return Math.abs(x) < .5 ? '– 변화 없음' : `${x > 0 ? '▲' : '▼'} ${Math.abs(x).toFixed(0)}%p`; })();
   const r = (label, k, sub) => `<div class="rate"><span class="k">${label}</span><b>${o[k] == null ? '–' : n0(o[k])}%</b><div class="bar2"><i style="width:${o[k] == null ? 0 : Math.min(100, o[k])}%"></i></div><small>${sub}${d(k) ? '<br>' + d(k) : ''}</small></div>`;
-  return `<div class="rates">${r('온도 진입률', 'comfort_t', multi ? '계절별 기준' : `${cz.t[0]}–${cz.t[1]}°C`)}${r('습도 진입률', 'comfort_h', multi ? '계절별 기준' : cz.hTxt)}${r('둘 다 진입률', 'comfort', '')}</div>`;
+  return `<div class="rates">${r('온도 진입률', 'comfort_t', multi ? '계절별 기준' : `${cz.t[0]}–${cz.t[1]}°C`)}${r('습도 진입률', 'comfort_h', multi ? '계절별 기준' : cz.hTxt)}${r('둘 다 진입률', 'comfort', '온도·습도 동시')}</div>`;
 }
 function renderNow(cur, ref, st, cmp, yd){
   $('#rates').innerHTML = '';
@@ -747,7 +736,7 @@ function renderNow(cur, ref, st, cmp, yd){
     $('#rates').innerHTML = ratesHtml(o, null, CTX, MULTI);
     return;
   }
-  $('#now').innerHTML = `<h2 class="rt">${rangeLabel(range)}</h2>${bar}${matrix}
+  $('#now').innerHTML = `<h2 class="rt">${rangeLabel(range)}</h2><div class="k">구간 통계</div>${bar}${matrix}
     <p class="verdict">구간 평균 기준으로 ${feel(o.temp, o.hum)}</p>`;
   $('#rates').innerHTML = ratesHtml(o, base, CTX, MULTI);
   document.querySelectorAll('.cmpbar button').forEach(bn => bn.onclick = () => { cmpIdx = +bn.dataset.i; load(); });
@@ -776,9 +765,9 @@ function renderStrip(st){
     c('온도 변동폭', o.tmax == null ? '–' : (o.tmax-o.tmin).toFixed(1)+'°', `${n1(o.tmin)}° ~ ${n1(o.tmax)}°`),
     c('습도 변동폭', o.hmax == null ? '–' : Math.round(o.hmax-o.hmin)+'%p', `${n0(o.hmin)}% ~ ${n0(o.hmax)}%`),
     c('이슬점 변동폭', o.dmax == null ? '–' : (o.dmax-o.dmin).toFixed(1)+'°', `${n1(o.dmin)}° ~ ${n1(o.dmax)}°`),
-    c('온도 편차', o.tstd == null ? '–' : '±'+o.tstd.toFixed(1)+'°', ''),
-    c('습도 편차', o.hstd == null ? '–' : '±'+o.hstd.toFixed(1)+'%p', ''),
-    c('측정 횟수', (o.n||0).toLocaleString(), ''),
+    c('온도 편차', o.tstd == null ? '–' : '±'+o.tstd.toFixed(1)+'°', '시간 가중 표준편차'),
+    c('습도 편차', o.hstd == null ? '–' : '±'+o.hstd.toFixed(1)+'%p', '시간 가중 표준편차'),
+    c('측정 횟수', (o.n||0).toLocaleString(), `${rl} · 실제 보고`),
   ].join('');
 }
 
@@ -817,9 +806,9 @@ function renderAll(){
   MULTI = MULTI || SEASONS.length > 1;
   renderNow(cur, cur && cur.prev, st, cmp, yd);
   const vis = scatter($('#scatter'), hist.points, now ? cur : (o.temp == null ? null : {temp:o.temp, hum:o.hum}), hist.marks);
-  $('#scCap').innerHTML = vis.map(k => `<span class="sg"><i style="background:var(--s${k})"></i>${SEASON_BOX[k].name.split(' ')[0]} ${SEASON_BOX[k].t[0]}–${SEASON_BOX[k].t[1]}°C · ${k === 'w' ? '40% 이상' : k === 's' ? '50% 이하' : '40–55%'}</span>`).join('') + (vis.length > 1 ? '<span class="sg"><i class="hx"></i>겹치는 범위</span>' : '') + `<span class="sg"><i class="dot"></i>${now ? '현재' : '평균'}</span>`;
+  $('#scCap').innerHTML = vis.map(k => `<span class="sg"><i style="background:var(--s${k})"></i>${SEASON_BOX[k].name} ${SEASON_BOX[k].t[0]}–${SEASON_BOX[k].t[1]}°C · ${k === 'w' ? '40% 이상' : k === 's' ? '50% 이하' : '40–55%'}</span>`).join('') + (vis.length > 1 ? '<span class="sg"><i class="hx"></i>겹치는 범위</span>' : '') + `<span class="sg">큰 점 = ${now ? '현재' : '구간 평균'}</span>`;
   if(panel === 'trend'){
-    $('#trendCap').textContent = '';
+    $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · 실측 ${hist.samples.toLocaleString()}회` : '';
     trend($('#trend'), hist.points, hist.marks);
     const dense = !(hist.marks && hist.marks.length); $('#lgBand').style.display = dense ? '' : 'none'; $('#lgDot').style.display = dense ? 'none' : '';
     renderStrip(st);
@@ -829,7 +818,7 @@ function renderAll(){
     document.querySelectorAll('#unitSeg button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
     document.querySelectorAll('#tblSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === tblMetric));
     $('#dailyT').textContent = '온도'; $('#dailyHT').textContent = '습도'; $('#dailyDT').textContent = '이슬점';
-    $('#rangeCap').innerHTML = `<span class="sg"><i class="bx"></i>최저–최고</span>${u === 'd' ? '' : '<span class="sg"><i class="bx2"></i>일 최저·최고 평균</span>'}<span class="sg"><i class="ln"></i>평균</span>`;
+    $('#rangeCap').textContent = (u === 'd' ? '연한 막대 = 하루 최저~최고 · 가로선 = 평균' : `연한 막대 = ${UW[u]}최저~최고 · 진한 막대 = 일 최저~최고 평균 · 가로선 = 평균`) + ' · 누르면 해당 기간으로 이동';
     rangeChart($('#daily'), rows, u, 'temp'); rangeChart($('#dailyHum'), rows, u, 'hum'); rangeChart($('#dailyDew'), rows, u, 'dew');
     $('#tblT').textContent = UNITS[u][0] + ' 요약';
     table($('#tbl'), rows, u, tblMetric);
@@ -848,7 +837,7 @@ const heatUnit = () => heatBy || (range === 'all' || range[0] === 'y' ? 'm' : 'd
 async function loadHeat(){
   const by = heatUnit();
   document.querySelectorAll('#hmSeg button').forEach(b => b.classList.toggle('on', b.dataset.b === by));
-  $('#hmCap').textContent = (range === '24h' ? '최근 14일' : rangeLabel(range)) + (by !== 'm' && (range === 'all' || range[0] === 'y') ? ' · 최근 62일' : '');
+  $('#hmCap').textContent = (range === '24h' ? '최근 14일' : rangeLabel(range)) + (by === 'm' ? ' · 월별 평균 (월 × 시간)' : ' · 일별 (날짜 × 시간)' + (range === 'all' || range[0] === 'y' ? ', 최근 62일' : ''));
   try { heatData = await get(`/api/heatmap?range=${range}&by=${by}`); } catch { heatData = []; }
   if(panel === 'heat') drawHeat();
 }
@@ -892,7 +881,7 @@ $('#hmSeg').onclick = e => { const bb = e.target.dataset.b; if(!bb) return; heat
 $('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); };
 $('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); };
 $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(pn); };
-$('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 선택 ▴' : '기간 선택 ▾'; };
+$('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 직접 선택 ▴' : '기간 직접 선택 ▾'; };
 (async () => { try { const b = await get('/api/bounds'); if(b.first){ dataFirst = kstDate(b.first); dataLast = kstDate(Math.max(b.last, Date.now())); } } catch {} syncPick(); })();
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 200); });
 if('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
