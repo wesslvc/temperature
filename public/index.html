@@ -15,8 +15,6 @@
 <meta name="apple-mobile-web-app-title" content="온습도">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* ==========================================================================
@@ -450,50 +448,50 @@ table.tb td{padding:11px 10px}
 /* ==========================================================================
    타이포그래피 중심: 크고 시원한 숫자(좁은 폭 그로테스크), 상자 대신 헤어라인, 무채색
    ========================================================================== */
-:root{--disp:"Archivo","Pretendard Variable",Pretendard,sans-serif}
-.en{display:block;font-family:var(--disp);font-style:normal;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;font-variation-settings:"wdth" 100}
-.hm-v,.sc-v,.rt,.dl-av{font-family:var(--disp);font-variation-settings:"wdth" 68;font-feature-settings:"tnum" 0,"lnum"}
-svg text.cs-p{font-family:var(--disp);font-variation-settings:"wdth" 68}
+:root{--disp:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif}
+.en{display:block;font-style:normal;font-size:10.5px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+.hm-v,.sc-v,.rt,.dl-av{font-family:var(--disp)}
+svg text.cs-p{font-family:var(--disp)}
 /* 현재 */
 .hero2{padding:14px 0 34px;border-radius:0;background:none;border:none;border-bottom:1px solid var(--rule);overflow:visible}
 .hero2::before{display:none}
-.h2-top{font-family:var(--disp);font-size:13px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--faint);font-variation-settings:"wdth" 100}
+.h2-top{font-family:var(--disp);font-size:13px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--faint)}
 .h2-top b{color:var(--ink)}
 .h2-main{margin-top:26px;gap:0 40px}
 .h2-sep{background:var(--rule)}
 .hm-n{font-size:14px;font-weight:650;color:var(--sub)}
-.hm-v{font-size:clamp(112px,16.5vw,196px);font-weight:800;letter-spacing:-.025em;line-height:.8;margin-top:14px}
-.hm-v small{font-family:"Pretendard Variable",Pretendard,sans-serif;font-size:.15em;font-weight:600;color:var(--faint);margin:.35em 0 0 .12em;letter-spacing:0}
-.hm-s{margin-top:22px;font-size:17px}
+.hm-v{font-size:clamp(72px,9.5vw,112px);font-weight:750;letter-spacing:-.055em;line-height:.9;margin-top:10px}
+.hm-v small{font-size:.22em;font-weight:600;color:var(--faint);margin:.35em 0 0 .12em;letter-spacing:0}
+.hm-s{margin-top:16px;font-size:15px}
 /* 지표 카드 → 상자 없이 헤어라인 열 */
-.subh{font-family:var(--disp);font-size:12px!important;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:34px 0 0!important;font-variation-settings:"wdth" 100}
+.subh{font-family:var(--disp);font-size:13px!important;font-weight:650;letter-spacing:0;text-transform:uppercase;color:var(--faint);margin:34px 0 0!important}
 .scs{gap:0 32px;margin-top:14px}
 .sc{padding:16px 0 0;border-radius:0;background:none;border:none;border-top:1px solid var(--rule);overflow:visible}
 .sc-h{font-size:14px;color:var(--sub)}
-.sc-v{font-size:clamp(64px,7.4vw,88px);font-weight:800;letter-spacing:-.02em;line-height:.85;margin-top:12px}
-.sc-v small{font-family:"Pretendard Variable",Pretendard,sans-serif;font-size:18px!important;color:var(--faint)}
+.sc-v{font-size:clamp(40px,4.4vw,52px);font-weight:750;letter-spacing:-.05em;line-height:1;margin-top:10px}
+.sc-v small{font-size:16px!important;color:var(--faint)}
 .sc-r{margin-top:14px}
 .sc .sp{margin:10px 0 0!important;width:100%!important;display:block}
 /* 쾌적 시간 */
 .scatter{background:none!important;border:none!important;border-radius:0!important;padding:0!important;margin-top:46px!important}
-.scatter h3{font-size:clamp(30px,4.2vw,44px)!important;font-weight:800;letter-spacing:-.045em;line-height:1}
+.scatter h3{font-size:24px!important;font-weight:750;letter-spacing:-.035em;line-height:1.1}
 #scCap{margin:10px 0 6px!important}
-svg text.cs-p{fill:var(--ink)!important;font-size:30px!important;font-weight:800;letter-spacing:-.01em}
-svg text.cs-p tspan.cs-u{font-size:15px;font-weight:600;fill:var(--faint)}
+svg text.cs-p{fill:var(--ink)!important;font-size:22px!important;font-weight:750;letter-spacing:-.03em}
+svg text.cs-p tspan.cs-u{font-size:13px;font-weight:600;fill:var(--faint)}
 svg text.cs-pd{fill:var(--faint)!important;font-size:12px!important;font-weight:600}
 svg text.cs-l{fill:var(--sub)!important;font-size:13px!important;font-weight:650}
 /* 기간 제목 */
-.rt{font-size:clamp(48px,8vw,96px);font-weight:800;letter-spacing:-.02em;line-height:.9;margin:18px 0 10px}
+.rt{font-size:clamp(30px,4.4vw,44px);font-weight:800;letter-spacing:-.045em;line-height:1.05;margin:14px 0 8px}
 /* 아래 섹션 */
 .secnav{margin-top:60px;gap:30px}
-.secnav button{font-size:17px;font-weight:700}
+.secnav button{font-size:15.5px;font-weight:650}
 .panel.on{background:none;border:none;border-radius:0;padding:22px 0 0}
 @media(max-width:560px){
   .h2-main{gap:0 20px}
-  .hm-v{font-size:clamp(64px,19vw,96px)}
+  .hm-v{font-size:clamp(52px,15vw,68px)}
   .scs{grid-template-columns:1fr;gap:0}
   .sc{padding-top:14px;margin-bottom:22px}
-  .sc-v{font-size:64px}
+  .sc-v{font-size:42px}
   .panel.on{margin-left:0;margin-right:0;padding:18px 0 0}
 }
 </style>
