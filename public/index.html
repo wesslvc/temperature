@@ -252,33 +252,38 @@ table.tb td{padding:11px 10px}
 .mt-w{font-size:12px;font-weight:650;padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--ink);white-space:nowrap}
 .mt-v{display:flex;align-items:flex-start;margin:10px 0 12px;font-size:clamp(52px,7.4vw,84px);font-weight:800;letter-spacing:-.055em;line-height:.92;color:var(--ink)}
 .mt-v small{font-size:.28em;font-weight:600;letter-spacing:0;color:var(--sub);margin:.32em 0 0 .18em}
-.mt .chips{margin-bottom:16px}
+.mt .chips{margin-bottom:12px}
 .gauge{position:relative;height:22px}
-.g-bar{position:absolute;left:0;right:0;top:8px;height:6px;border-radius:3px;opacity:.9}
-.g-band{position:absolute;top:4px;height:14px;border-radius:5px;box-shadow:inset 0 0 0 1.5px var(--ink);opacity:.4}
-.g-dot{position:absolute;top:3px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--panel),0 2px 8px rgba(0,0,0,.35)}
+.g-bar{position:absolute;left:0;right:0;top:9px;height:4px;border-radius:2px;background:var(--sunk-2)}
+.g-band{position:absolute;top:7px;height:8px;border-radius:4px;background:color-mix(in srgb,var(--ok) 55%,transparent)}
+.g-dot{position:absolute;top:3px;width:16px;height:16px;margin-left:-8px;border-radius:50%;box-shadow:0 0 0 2px var(--ink),0 0 0 5px var(--panel)}
 .g-t{display:flex;justify-content:space-between;margin-top:4px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
 
-/* ---------- 최저~최고 범위 막대 ---------- */
+/* ---------- 최저 · 평균 · 최고 + 범위 막대 ---------- */
 .rrs{margin-top:10px}
-.rr{display:grid;grid-template-columns:56px 74px minmax(0,1fr) 74px;align-items:center;gap:0 14px;padding:16px 0;border-bottom:1px solid var(--hair)}
-.rr-h{padding:0 0 8px;font-size:12px;color:var(--faint);border-bottom:1px solid var(--rule)}
+.rr{display:grid;grid-template-columns:64px repeat(3,minmax(0,1fr));grid-template-areas:"l a b c" ". t t t";align-items:start;gap:0 12px;padding:16px 0 14px;border-bottom:1px solid var(--hair)}
+.rr-h{display:grid;grid-template-areas:none;padding:0 0 8px;font-size:12px;color:var(--faint);border-bottom:1px solid var(--rule)}
 .rr-h .c{text-align:center}.rr-h .r{text-align:right}
-.rr-l{font-size:13.5px;font-weight:700}
-.rr-v{min-width:0}
-.rr-v.hi{text-align:right}
-.rr-v b{display:block;font-size:22px;font-weight:750;letter-spacing:-.04em;line-height:1.1}
-.rr-v b em,.rr-avg em{font-style:normal;font-size:12px;font-weight:500;color:var(--faint);margin-left:1px;letter-spacing:0}
-.rr-v small{display:block;font-size:11px;color:var(--faint);margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.rr-track{position:relative;height:46px}
-.rr-base{position:absolute;left:0;right:0;top:30px;height:6px;border-radius:3px;background:var(--sunk)}
-.rr-track .g-band{top:26px;height:14px}
-.rr-seg{position:absolute;top:30px;height:6px;border-radius:3px;background-repeat:no-repeat}
-.rr-dot{position:absolute;top:27px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 2.5px var(--bg)}
-.rr-avg{position:absolute;top:0;transform:translateX(-50%);font-size:15px;font-weight:750;letter-spacing:-.03em;white-space:nowrap}
-.dl{display:inline-block;font-size:11.5px;font-weight:650;margin-top:3px;font-variant-numeric:tabular-nums}
-.rr-avg .dl{margin:0 0 0 5px}
+.rr-l{grid-area:l;display:flex;align-items:center;gap:7px;padding-top:5px;font-size:13.5px;font-weight:700;white-space:nowrap}
+.rr-l i{width:8px;height:8px;border-radius:50%;flex:none}
+.rr-n{min-width:0}
+.rr-n.c{text-align:center}.rr-n.r{text-align:right}
+.rr-n b{display:block;font-size:22px;font-weight:700;letter-spacing:-.04em;line-height:1.15;color:var(--sub)}
+.rr-n.c b{font-size:28px;font-weight:800;color:var(--ink)}
+.rr-n b em{font-style:normal;font-size:12px;font-weight:500;color:var(--faint);margin-left:1px;letter-spacing:0}
+.rr-n small{display:block;font-size:11px;color:var(--faint);margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rr-track{grid-area:t;position:relative;height:16px;margin-top:10px}
+.rr-base{position:absolute;left:0;right:0;top:6px;height:4px;border-radius:2px;background:var(--sunk)}
+.rr-zone{position:absolute;top:3px;height:10px;border-radius:4px;background:color-mix(in srgb,var(--ok) 26%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ok) 45%,transparent)}
+.rr-seg{position:absolute;top:6px;height:4px;border-radius:2px}
+.rr-tick{position:absolute;top:1px;width:3px;height:14px;margin-left:-1.5px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 2px var(--bg)}
+.rr-out{position:absolute;top:0;z-index:1;line-height:16px;font-size:10.5px;font-weight:650;color:var(--ok);white-space:nowrap;background:var(--bg)}
+.rr-out.r{right:0;padding-left:7px}.rr-out.l{left:0;padding-right:7px}
+.dl{display:block;font-size:11.5px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}
 .dl:not([class*="c-"]){color:var(--faint)}
+.mt-c{font-size:12.5px;color:var(--sub);margin:0 0 10px}
+.mt-c b{font-weight:750;color:var(--ink)}
+.mt-c.in{color:var(--ok);font-weight:600}
 @media(max-width:520px){
   .tiles2{gap:8px}
   .mt{padding:14px 13px 12px;border-radius:18px}
@@ -286,9 +291,9 @@ table.tb td{padding:11px 10px}
   .mt-w{font-size:11px;padding:2px 7px}
   .mt .chips{grid-template-columns:auto auto;gap:4px;margin-bottom:12px}
   .mt .chip2{font-size:11px;padding:2px 6px 2px 4px}
-  .rr{grid-template-columns:40px 58px minmax(0,1fr) 58px;gap:0 9px}
-  .rr-v b{font-size:18px}
-  .rr-l{font-size:12.5px}
+  .rr{grid-template-columns:50px repeat(3,minmax(0,1fr));gap:0 8px}
+  .rr-n b{font-size:18px}.rr-n.c b{font-size:22px}
+  .rr-l{font-size:12.5px;gap:5px}
 }
 @media(max-width:860px){
   .hero{grid-template-columns:1fr;gap:20px}
@@ -752,12 +757,19 @@ function renderNow(cur, ref, st, cmp, yd){
   // 스펙트럼 위치(0~100%)와 그라데이션: 색은 '어디쯤인가'를 보여주는 데만 쓴다
   const SP = (M) => { const st = BINS[M].stops; return { a: st[0][0], b: st.at(-1)[0], grad: `linear-gradient(90deg,${st.map(([v,c]) => `${c} ${((v-st[0][0])/(st.at(-1)[0]-st[0][0])*100).toFixed(1)}%`).join(',')})` }; };
   const pos = (M, v) => { const q = SP(M); return Math.max(0, Math.min(100, (v - q.a) / (q.b - q.a) * 100)); };
-  const band = (M) => { const c = CTX, r = M === 'temp' ? c.t : M === 'hum' ? c.h : null; if(!r) return ''; const l = pos(M, r[0]), w = pos(M, r[1]) - l; return w > 0 ? `<i class="g-band" style="left:${l}%;width:${w}%"></i>` : ''; };
-  const gauge = (M, v) => { const q = SP(M); return `<div class="gauge"><div class="g-bar" style="background:${q.grad}"></div>${band(M)}${v == null ? '' : `<i class="g-dot" style="left:${pos(M, v)}%"></i>`}</div><div class="g-t"><span>${q.a}${BINS[M].u}</span><span>${q.b}${BINS[M].u}</span></div>`; };
+  const crange = (M) => M === 'temp' ? CTX.t : M === 'hum' ? CTX.h : null;
+  const band = (M) => { const r = crange(M); if(!r) return ''; const l = pos(M, r[0]), w = pos(M, r[1]) - l; return w > 0 ? `<i class="g-band" style="left:${l}%;width:${w}%"></i>` : ''; };
+  const gauge = (M, v) => { const q = SP(M), c = colorOf(M, v); return `<div class="gauge"><div class="g-bar"></div>${band(M)}${v == null ? '' : `<i class="g-dot" style="left:${pos(M, v)}%;background:${c.fill}"></i>`}</div><div class="g-t"><span>${q.a}${BINS[M].u}</span><span>${q.b}${BINS[M].u}</span></div>`; };
+  // 쾌적 범위까지의 거리 (안이면 '쾌적 범위 안')
+  const toComfort = (M, v) => { const r = crange(M); if(!r || v == null) return ''; const u = M === 'temp' ? '°' : '%p', f = M === 'temp' ? (x) => x.toFixed(1) : (x) => Math.round(x);
+    const rt = M === 'temp' ? `${r[0]}–${r[1]}°` : CTX.hTxt;
+    if(v < r[0]) return `<div class="mt-c"><b>${f(r[0]-v)}${u}</b> 낮음 · 쾌적 ${rt}</div>`;
+    if(v > r[1]) return `<div class="mt-c"><b>${f(v-r[1])}${u}</b> 높음 · 쾌적 ${rt}</div>`;
+    return `<div class="mt-c in">쾌적 범위 안 · ${rt}</div>`; };
   const word = (M, v) => v == null ? '' : M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
   const tile = (M, name, v, fmt, unit, extra) => { const c = colorOf(M, v); return `<div class="mt" style="--c:${c ? c.fill : 'var(--faint)'}">
       <div class="mt-h"><span class="mt-n">${name}</span>${v == null ? '' : `<span class="mt-w">${word(M, v)}</span>`}</div>
-      <div class="mt-v">${v == null ? '–' : fmt(v)}<small>${unit}</small></div>${extra || ''}${gauge(M, v)}</div>`; };
+      <div class="mt-v">${v == null ? '–' : fmt(v)}<small>${unit}</small></div>${extra || ''}${toComfort(M, v)}${gauge(M, v)}</div>`; };
   const big = (t, h, tl, hl) => `<div class="tiles2">${tile('temp', '온도', t, n1, '°C', tl[1])}${tile('hum', '습도', h, n0, '%', hl[1])}</div>`;
   const tm = (ts) => !ts ? '' : range[0]==='d' ? hhmm(ts) : when(ts);
   if(now && !cur){ $('#now').innerHTML = big(null,null,['온도',''],['습도','']) + `<p class="verdict" style="color:var(--sub)">첫 측정값을 기다리고 있습니다. 센서 연결이 끝나면 1분 안에 이곳에 표시됩니다.</p>`; return; }
@@ -769,18 +781,22 @@ function renderNow(cur, ref, st, cmp, yd){
     const kind = k[0] === 't' ? 'temp' : k[0] === 'h' ? 'hum' : 'dew';
     return Math.abs(d) < (dec ? .05 : .5) ? '<span class="dl">–</span>' : `<span class="dl ${chgCls(kind, d, 0)}">${chgTxt(d, u, dec)}</span>`; };
   // 최저~최고 범위를 같은 스펙트럼 위의 막대로, 평균은 점으로
+  const SER = { temp:'var(--t)', hum:'var(--h)', dew:'var(--d)' };
   const rrow = (M, label, kmin, kmax, kavg, u, du, dec, fmt) => {
     if(o[kmin] == null) return '';
-    // 행마다 범위에 맞춰 확대 (최소 폭 확보), 막대 색은 최저→최고 값의 색
-    const mh = { temp: .5, hum: 3, dew: .8 }[M], c0 = (o[kmin] + o[kmax]) / 2, half = Math.max((o[kmax] - o[kmin]) / 2 * 1.5, mh), lo = c0 - half, hi = c0 + half;
-    const P = (v) => (v - lo) / (hi - lo) * 100, l = P(o[kmin]), w = Math.max(P(o[kmax]) - l, 1.5), av = P(o[kavg]);
-    const segBg = `linear-gradient(90deg,${specColor(M, o[kmin])},${specColor(M, o[kmax])})`;
+    // 막대 눈금: 이 줄의 최저~최고에 맞춰 확대. 쾌적 범위가 화면 안이면 연하게 칠하고, 밖이면 끝에 방향만 표시
+    const mh = { temp: .5, hum: 3, dew: .8 }[M], c0 = (o[kmin] + o[kmax]) / 2, half = Math.max((o[kmax] - o[kmin]) / 2 * 1.35, mh), lo = c0 - half, hi = c0 + half;
+    const P = (v) => (v - lo) / (hi - lo) * 100, l = P(o[kmin]), w = Math.max(P(o[kmax]) - l, 1.2), av = P(o[kavg]);
+    const cr = crange(M); let zone = '';
+    if(cr){ const a = Math.max(0, P(cr[0])), b = Math.min(100, P(Math.min(cr[1], 100)));
+      if(b > a) zone = `<i class="rr-zone" style="left:${a}%;width:${b-a}%"></i>`;
+      else zone = `<span class="rr-out ${P(cr[0]) >= 100 ? 'r' : 'l'}">${P(cr[0]) >= 100 ? '' : '‹ '}쾌적 ${M === 'temp' ? `${cr[0]}–${cr[1]}°` : CTX.hTxt}${P(cr[0]) >= 100 ? ' ›' : ''}</span>`; }
     return `<div class="rr">
-      <div class="rr-l">${label}</div>
-      <div class="rr-v"><b>${fmt(o[kmin])}<em>${u}</em></b><small>${tm(o[kmin+'_ts'])}</small>${dl(kmin, du, dec)}</div>
-      <div class="rr-track"><div class="rr-base"></div><div class="rr-seg" style="left:${l}%;width:${w}%;background:${segBg}"></div>
-        <i class="rr-dot" style="left:${av}%"></i><span class="rr-avg" style="left:${Math.max(8, Math.min(92, av))}%">${fmt(o[kavg])}<em>${u}</em>${dl(kavg, du, dec)}</span></div>
-      <div class="rr-v hi"><b>${fmt(o[kmax])}<em>${u}</em></b><small>${tm(o[kmax+'_ts'])}</small>${dl(kmax, du, dec)}</div></div>`; };
+      <div class="rr-l"><i style="background:${SER[M]}"></i>${label}</div>
+      <div class="rr-n"><b>${fmt(o[kmin])}<em>${u}</em></b><small>${tm(o[kmin+'_ts'])}</small>${dl(kmin, du, dec)}</div>
+      <div class="rr-n c"><b>${fmt(o[kavg])}<em>${u}</em></b><small>&nbsp;</small>${dl(kavg, du, dec)}</div>
+      <div class="rr-n r"><b>${fmt(o[kmax])}<em>${u}</em></b><small>${tm(o[kmax+'_ts'])}</small>${dl(kmax, du, dec)}</div>
+      <div class="rr-track">${zone}<div class="rr-base"></div><div class="rr-seg" style="left:${l}%;width:${w}%;background:${SER[M]}"></div><i class="rr-tick" style="left:${av}%"></i></div></div>`; };
   const matrix = `<div class="rrs"><div class="rr rr-h"><div></div><div>최저</div><div class="c">평균</div><div class="r">최고</div></div>${rrow('temp','온도','tmin','tmax','temp','°','°',1,n1)}${rrow('hum','습도','hmin','hmax','hum','%','%p',0,n0)}${rrow('dew','이슬점','dmin','dmax','dew','°','°',1,n1)}</div>`;
   const fmtW = (ms) => `${md(ms)} ${hhmm(ms)}`;
   const bar = specs.length ? `<div class="cmpbar"><span>비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
