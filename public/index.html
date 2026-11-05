@@ -229,6 +229,9 @@ footer{margin-top:48px;font-size:12px;color:var(--faint);text-align:center;line-
 
 
 /* ---------- 디테일 보정 ---------- */
+.cs-l{fill:var(--sub)!important;font-size:12px!important;font-weight:650}
+#scatter svg{max-height:none}
+
 .num,.num.t,.num.h,.detail .num{color:var(--ink);font-variant-numeric:normal;font-feature-settings:normal}
 .num small{color:var(--faint)}
 .mx .mc b,.strip b,.rate b,.tile .v,.facts div b{font-variant-numeric:normal;font-feature-settings:normal}
@@ -344,7 +347,7 @@ table.tb td{padding:11px 10px}
   <section class="hero">
     <div class="now" id="now"></div>
     <div class="scatter">
-      <h3>쾌적 구간</h3>
+      <h3>쾌적 시간</h3>
       <p id="scCap"></p>
       <div id="scatter"></div>
       <div id="rates"></div>
@@ -551,6 +554,48 @@ function renderDetail(d){
   $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
 }
 
+/* ---------- 값에 따른 색 그라데이션 (선·막대 공통) ---------- */
+let GID = 0;
+// y축 위치에 값의 색을 대응시킨 세로 그라데이션. yLo/yHi = lo/hi 값의 화면 y
+function vGrad(metric, lo, hi, yLo, yHi, op = 1){
+  const id = 'vg' + (++GID), n = 10;
+  const st = Array.from({length: n + 1}, (_, i) => { const v = lo + (hi - lo) * i / n; return `<stop offset="${(i / n * 100).toFixed(1)}%" stop-color="${specColor(metric, v)}" stop-opacity="${op}"/>`; }).join('');
+  return { id, def: `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${yLo}" y2="${yHi}">${st}</linearGradient>` };
+}
+/* ---------- 쾌적 시간: 시간축 위에 값의 색 띠 + 쾌적 범위 안 구간 표시 ---------- */
+function comfortStrip(el, pts){
+  const P = pts.filter(p => p.temp != null && p.hum != null);
+  if(P.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
+  const W = Math.max(300, el.clientWidth || 520), m = {l:40,r:2}, iw = W-m.l-m.r, t0 = P[0].ts, t1 = P.at(-1).ts, span = t1-t0 || 1;
+  const X = ts => m.l + (ts-t0)/span*iw;
+  const rows = [{k:'temp',name:'온도',y:4},{k:'hum',name:'습도',y:44},{k:'both',name:'둘 다',y:84}], RH = 18, H = 84+RH+30;
+  let g = '';
+  rows.forEach((R, ri) => { g += `<clipPath id="cs${ri}"><rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="6"/></clipPath><text class="cs-l" x="0" y="${R.y+RH/2+4}">${R.name}</text>`; });
+  // 값의 색을 가로 그라데이션 정지점으로 (이음새 없이), 쾌적 범위 밖은 옅게
+  const step = Math.max(1, Math.ceil(P.length / 240));
+  const stops = (M, okKey) => { let o = ''; for(let i = 0; i < P.length; i += step){ const p = P[i], ok = inComfort(comfortAt(p.ts), p.temp, p.hum)[okKey];
+      o += `<stop offset="${((X(p.ts)-m.l)/iw*100).toFixed(2)}%" stop-color="${specColor(M, p[M])}" stop-opacity="${ok ? 1 : .4}"/>`; } return o; };
+  g += `<defs><linearGradient id="csg0" gradientUnits="userSpaceOnUse" x1="${m.l}" x2="${m.l+iw}" y1="0" y2="0">${stops('temp','t')}</linearGradient><linearGradient id="csg1" gradientUnits="userSpaceOnUse" x1="${m.l}" x2="${m.l+iw}" y1="0" y2="0">${stops('hum','h')}</linearGradient></defs>`;
+  // 둘 다 쾌적인 구간은 이어진 덩어리로
+  let runs = '', st0 = null;
+  P.forEach((p, i) => { const ok = inComfort(comfortAt(p.ts), p.temp, p.hum), both = ok.t && ok.h;
+    if(both && st0 == null) st0 = X(p.ts);
+    if((!both || i === P.length-1) && st0 != null){ const x2 = both ? X(p.ts) : X(p.ts); runs += `<rect x="${st0.toFixed(1)}" y="${rows[2].y}" width="${Math.max(x2-st0, 2).toFixed(1)}" height="${RH}" fill="var(--ok)"/>`; st0 = null; } });
+  rows.forEach((R, ri) => { g += `<rect x="${m.l}" y="${R.y}" width="${iw}" height="${RH}" rx="6" fill="var(--sunk)"/>`; });
+  g += `<rect x="${m.l}" y="${rows[0].y}" width="${iw}" height="${RH}" rx="6" fill="url(#csg0)"/><rect x="${m.l}" y="${rows[1].y}" width="${iw}" height="${RH}" rx="6" fill="url(#csg1)"/><g clip-path="url(#cs2)">${runs}</g>`;
+  const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
+  const nt = W < 480 ? 2 : 4; for(let i=0;i<=nt;i++){ const ts = t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-6}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
+  g += `<line id="csv" y1="0" y2="${84+RH+4}" stroke="var(--ink)" stroke-width="1.5" opacity="0"/><rect id="cshit" x="${m.l}" y="0" width="${iw}" height="${84+RH+6}" fill="transparent"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  const svg = el.firstChild, vl = svg.querySelector('#csv'), hit = svg.querySelector('#cshit');
+  const st = (M, v, c) => { const r = M === 'temp' ? c.t : c.h; return v < r[0] ? '낮음' : v > r[1] ? '높음' : '쾌적'; };
+  hit.onmousemove = e => { const rc = svg.getBoundingClientRect(), px = (e.clientX-rc.left)/rc.width*W;
+    let b = P[0]; for(const q of P) if(Math.abs(X(q.ts)-px) < Math.abs(X(b.ts)-px)) b = q;
+    const c = comfortAt(b.ts); vl.setAttribute('x1', X(b.ts)); vl.setAttribute('x2', X(b.ts)); vl.setAttribute('opacity', .7);
+    showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° · ${st('temp', b.temp, c)}<br>습도 ${n0(b.hum)}% · ${st('hum', b.hum, c)}`); };
+  hit.onmouseleave = () => { vl.setAttribute('opacity', 0); hideTip(); };
+}
+
 /* ---------- scatter: 온도 × 습도 ---------- */
 function scatter(el, pts, cur, marks){
   const W = 460, H = 330, m = {l:38,r:10,t:8,b:30}, iw = W-m.l-m.r, ih = H-m.t-m.b;
@@ -605,6 +650,7 @@ function trend(el, pts, marks){
     const mn = Math.min(...v), mx = Math.max(...v), pad = Math.max((mx-mn)*.12, .3), sc = niceScale(mn-pad, mx+pad), lo = sc.lo, hi = sc.hi;
     P.Y = val => P.y + P.h - (val-lo)/(hi-lo)*P.h;
     sc.ticks.forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
+    const gl = vGrad(P.k, lo, hi, P.Y(lo), P.Y(hi)), gb = vGrad(P.k, lo, hi, P.Y(lo), P.Y(hi), .2); g += `<defs>${gl.def}${gb.def}</defs>`; P.c = `url(#${gl.id})`; P.s = `url(#${gb.id})`;
     const v2 = pts.filter(p => p[P.k]!=null);
     // 실측 지점이 보이는 범위(≤300회)에서는 실측값을 지나는 매끄러운 곡선으로, 그보다 촘촘한 범위에서는 보간 격자를 이어서 그린다
     const real = (marks || []).filter(q => q[P.k] != null && q.ts > t0 && q.ts < t1);
@@ -613,15 +659,15 @@ function trend(el, pts, marks){
     let band = '';
     if(!real.length){ const up = ord(v2).map(p => [X(p), P.Y(p[P.hi])]), dn = ord(v2).map(p => [X(p), P.Y(p[P.lo])]).reverse(); band = `<path d="${smooth(up) + smooth(dn, false)}Z" fill="${P.s}"/>`; }
     g += `${band}<path d="${line}" fill="none" stroke="${P.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    P.label = `<g class="plab"><circle cx="${m.l-36}" cy="${P.y-20}" r="3.5" fill="${P.c}"/><text x="${m.l-28}" y="${P.y-16}">${{temp:'온도',hum:'습도',dew:'이슬점'}[P.k]}</text></g>`;
+    P.label = `<g class="plab"><text x="${m.l-36}" y="${P.y-16}">${{temp:'온도',hum:'습도',dew:'이슬점'}[P.k]}</text></g>`;
     const mk = (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1), mr = mk.length > 80 ? 2 : mk.length > 40 ? 2.5 : 3;
-    mk.forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="${mr}" fill="var(--bg)" stroke="${P.c}" stroke-width="1.5"/>`; });
+    mk.forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="${mr}" fill="var(--panel)" stroke="${specColor(P.k, q[P.k])}" stroke-width="1.5"/>`; });
   });
   panels.forEach(P => { g += P.label; });
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
   const nt = W < 600 ? 3 : 6; for(let i=0;i<=nt;i++){ const ts = REV ? t1-span*i/nt : t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-4}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
   if(selTs && selTs >= t0 && selTs <= t1){ const sx = XT(selTs).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="20" y2="${BOT}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
-  g += `<g id="cur" opacity="0"><line y1="20" y2="${BOT}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4" fill="var(--t)"/><circle id="d2" r="4" fill="var(--h)"/><circle id="d3" r="4" fill="var(--d)"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
+  g += `<g id="cur" opacity="0"><line y1="20" y2="${BOT}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d2" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d3" r="4.5" stroke="var(--panel)" stroke-width="2"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#cur'), hit = svg.querySelector('#hit');
   hit.onmousemove = e => {
@@ -629,7 +675,7 @@ function trend(el, pts, marks){
     let b = pts[0]; for(const p of pts) if(Math.abs(X(p)-px) < Math.abs(X(b)-px)) b = p;
     cur.setAttribute('opacity',1); cur.firstChild.setAttribute('x1',X(b)); cur.firstChild.setAttribute('x2',X(b));
     const d1 = cur.querySelector('#d1'), d2 = cur.querySelector('#d2');
-    d1.setAttribute('cx',X(b)); d1.setAttribute('cy',panels[0].Y(b.temp)); d2.setAttribute('cx',X(b)); d2.setAttribute('cy',panels[1].Y(b.hum)); const d3 = cur.querySelector('#d3'); if(b.dew != null){ d3.setAttribute('cx',X(b)); d3.setAttribute('cy',panels[2].Y(b.dew)); }
+    d1.setAttribute('cx',X(b)); d1.setAttribute('cy',panels[0].Y(b.temp)); d1.setAttribute('fill', specColor('temp', b.temp)); d2.setAttribute('fill', specColor('hum', b.hum)); if(b.dew != null) cur.querySelector('#d3').setAttribute('fill', specColor('dew', b.dew)); d2.setAttribute('cx',X(b)); d2.setAttribute('cy',panels[1].Y(b.hum)); const d3 = cur.querySelector('#d3'); if(b.dew != null){ d3.setAttribute('cx',X(b)); d3.setAttribute('cy',panels[2].Y(b.dew)); }
     showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° <span style="opacity:.6">(${n1(b.tmin)}–${n1(b.tmax)})</span><br>습도 ${n0(b.hum)}% <span style="opacity:.6">(${n0(b.hmin)}–${n0(b.hmax)})</span><br>이슬점 ${n1(b.dew)}° <span style="opacity:.6">(${n1(b.dmin)}–${n1(b.dmax)})</span>`);
   };
   hit.onmouseleave = () => { cur.setAttribute('opacity',0); hideTip(); };
@@ -705,8 +751,10 @@ function rangeChart(el, rows, u, M){
   sc.ticks.forEach(v => { const yy = Y(v); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${tickLabel(v, sc.step)}${K.u}</text>`; });
   const step = Math.ceil(rows.length/6), labels = rows.length <= 14;
   rows.forEach((r,i) => { const w = Math.min(bw*.46, 34), x = m.l+i*bw+(bw-w)/2, c = colorOf(M, r[K.av]), cx = x+w/2;
-    g += `<rect data-i="${i}" x="${x}" y="${Y(r[K.hi])}" width="${w}" height="${Math.max(4,Y(r[K.lo])-Y(r[K.hi]))}" rx="${Math.min(4, w/2)}" fill="${c.fill}" fill-opacity=".42" style="cursor:pointer"/>`;
-    if(u !== 'd' && r[K.alo] != null) g += `<rect x="${x+w*.18}" y="${Y(r[K.ahi])}" width="${w*.64}" height="${Math.max(2,Y(r[K.alo])-Y(r[K.ahi]))}" rx="${Math.min(3, w*.32)}" fill="${c.fill}" fill-opacity=".9" pointer-events="none"/>`;
+    const ga = vGrad(M, r[K.lo], r[K.hi], Y(r[K.lo]), Y(r[K.hi]), .6), gi = u !== 'd' && r[K.alo] != null ? vGrad(M, r[K.alo], r[K.ahi], Y(r[K.alo]), Y(r[K.ahi])) : null;
+    g += `<defs>${ga.def}${gi ? gi.def : ''}</defs>`;
+    g += `<rect data-i="${i}" x="${x}" y="${Y(r[K.hi])}" width="${w}" height="${Math.max(4,Y(r[K.lo])-Y(r[K.hi]))}" rx="${Math.min(4, w/2)}" fill="url(#${ga.id})" style="cursor:pointer"/>`;
+    if(u !== 'd' && r[K.alo] != null) g += `<rect x="${x+w*.18}" y="${Y(r[K.ahi])}" width="${w*.64}" height="${Math.max(2,Y(r[K.alo])-Y(r[K.ahi]))}" rx="${Math.min(3, w*.32)}" fill="url(#${gi ? gi.id : ''})" pointer-events="none"/>`;
     g += `<line x1="${x-3}" x2="${x+w+3}" y1="${Y(r[K.av])}" y2="${Y(r[K.av])}" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" pointer-events="none"/>`;
     if(labels){ g += `<text x="${cx}" y="${Y(r[K.hi])-4}" text-anchor="middle" style="font-weight:600;fill:var(--sub)">${K.fmt(r[K.hi])}</text><text x="${cx}" y="${Y(r[K.lo])+13}" text-anchor="middle" style="font-weight:600;fill:var(--sub)">${K.fmt(r[K.lo])}</text>`; }
     if(i%step===0) g += `<text x="${cx}" y="${H-8}" text-anchor="middle">${rowLabel(u, r.d, false)}</text>`; });
@@ -729,17 +777,18 @@ function hourly(el, rows){
     const v = rows.map(r => r[P.k]).filter(x => x != null), lo0 = Math.min(...v), hi0 = Math.max(...v), pad = Math.max((hi0-lo0)*.2, .3), sc = niceScale(lo0-pad, hi0+pad);
     P.Y = val => P.y + P.h - (val-sc.lo)/(sc.hi-sc.lo)*P.h;
     sc.ticks.forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
-    g += `<path d="${smooth(rows.filter(r => r[P.k] != null).map(r => [X(r), P.Y(r[P.k])]))}" fill="none" stroke="${P.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    labs += `<g class="plab"><circle cx="${m.l-36}" cy="${P.y-20}" r="3.5" fill="${P.c}"/><text x="${m.l-28}" y="${P.y-16}">${P.name}</text></g>`;
+    const gl = vGrad(P.k, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi)); g += `<defs>${gl.def}</defs>`;
+    g += `<path d="${smooth(rows.filter(r => r[P.k] != null).map(r => [X(r), P.Y(r[P.k])]))}" fill="none" stroke="url(#${gl.id})" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    labs += `<g class="plab"><text x="${m.l-36}" y="${P.y-16}">${P.name}</text></g>`;
   });
   for(let h=0;h<24;h+=(W < 600 ? 6 : 3)) g += `<text x="${X({h})}" y="${H-6}" text-anchor="${h===0?'start':'middle'}">${h}시</text>`;
-  g += labs + `<g id="cur" opacity="0"><line y1="20" y2="${last.y+last.h}" stroke="var(--ink)" stroke-opacity=".35"/>${panels.map(P => `<circle data-k="${P.k}" r="4" fill="${P.c}" stroke="var(--panel)" stroke-width="2"/>`).join('')}</g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
+  g += labs + `<g id="cur" opacity="0"><line y1="20" y2="${last.y+last.h}" stroke="var(--ink)" stroke-opacity=".35"/>${panels.map(P => `<circle data-k="${P.k}" r="4.5" stroke="var(--panel)" stroke-width="2"/>`).join('')}</g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#cur');
   svg.querySelector('#hit').onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W;
     let b = rows[0]; for(const q of rows) if(Math.abs(X(q)-px) < Math.abs(X(b)-px)) b = q;
     cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b)); cur.firstChild.setAttribute('x2', X(b));
-    panels.forEach(P => { const c = cur.querySelector(`[data-k="${P.k}"]`); if(b[P.k] != null){ c.setAttribute('cx', X(b)); c.setAttribute('cy', P.Y(b[P.k])); } });
+    panels.forEach(P => { const c = cur.querySelector(`[data-k="${P.k}"]`); if(b[P.k] != null){ c.setAttribute('cx', X(b)); c.setAttribute('cy', P.Y(b[P.k])); c.setAttribute('fill', specColor(P.k, b[P.k])); } });
     showTip(e, `<b>${b.h}시 평균</b><br>온도 ${n1(b.temp)}°<br>습도 ${n0(b.hum)}%` + (b.dew != null ? `<br>이슬점 ${n1(b.dew)}°` : '')); };
   svg.querySelector('#hit').onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); };
 }
@@ -792,11 +841,11 @@ function renderNow(cur, ref, st, cmp, yd){
       if(b > a) zone = `<i class="rr-zone" style="left:${a}%;width:${b-a}%"></i>`;
       else zone = `<span class="rr-out ${P(cr[0]) >= 100 ? 'r' : 'l'}">${P(cr[0]) >= 100 ? '' : '‹ '}쾌적 ${M === 'temp' ? `${cr[0]}–${cr[1]}°` : CTX.hTxt}${P(cr[0]) >= 100 ? ' ›' : ''}</span>`; }
     return `<div class="rr">
-      <div class="rr-l"><i style="background:${SER[M]}"></i>${label}</div>
+      <div class="rr-l">${label}</div>
       <div class="rr-n"><b>${fmt(o[kmin])}<em>${u}</em></b><small>${tm(o[kmin+'_ts'])}</small>${dl(kmin, du, dec)}</div>
       <div class="rr-n c"><b>${fmt(o[kavg])}<em>${u}</em></b><small>&nbsp;</small>${dl(kavg, du, dec)}</div>
       <div class="rr-n r"><b>${fmt(o[kmax])}<em>${u}</em></b><small>${tm(o[kmax+'_ts'])}</small>${dl(kmax, du, dec)}</div>
-      <div class="rr-track">${zone}<div class="rr-base"></div><div class="rr-seg" style="left:${l}%;width:${w}%;background:${SER[M]}"></div><i class="rr-tick" style="left:${av}%"></i></div></div>`; };
+      <div class="rr-track">${zone}<div class="rr-base"></div><div class="rr-seg" style="left:${l}%;width:${w}%;background:linear-gradient(90deg,${specColor(M, o[kmin])},${specColor(M, o[kmax])})"></div><i class="rr-tick" style="left:${av}%"></i></div></div>`; };
   const matrix = `<div class="rrs"><div class="rr rr-h"><div></div><div>최저</div><div class="c">평균</div><div class="r">최고</div></div>${rrow('temp','온도','tmin','tmax','temp','°','°',1,n1)}${rrow('hum','습도','hmin','hmax','hum','%','%p',0,n0)}${rrow('dew','이슬점','dmin','dmax','dew','°','°',1,n1)}</div>`;
   const fmtW = (ms) => `${md(ms)} ${hhmm(ms)}`;
   const bar = specs.length ? `<div class="cmpbar"><span>비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
@@ -886,8 +935,8 @@ function renderAll(){
   SEASONS = seasonsFor(range, cpts, cur);
   MULTI = MULTI || SEASONS.length > 1;
   renderNow(cur, cur && cur.prev, st, cmp, yd);
-  const vis = scatter($('#scatter'), hist.points, now ? cur : (o.temp == null ? null : {temp:o.temp, hum:o.hum}), hist.marks);
-  $('#scCap').innerHTML = vis.map(k => `<span class="sg"><i style="background:var(--s${k})"></i>${SEASON_BOX[k].name} ${SEASON_BOX[k].t[0]}–${SEASON_BOX[k].t[1]}°C · ${k === 'w' ? '40% 이상' : k === 's' ? '50% 이하' : '40–55%'}</span>`).join('') + (vis.length > 1 ? '<span class="sg"><i class="hx"></i>겹치는 범위</span>' : '') + `<span class="sg">큰 점 = ${now ? '현재' : '구간 평균'}</span>`;
+  comfortStrip($('#scatter'), hist.points);
+  $('#scCap').innerHTML = MULTI ? '계절별 쾌적 기준 · 진하게 = 쾌적 범위 안' : `${CTX.season} 기준 ${comfortTxt(CTX)} · 진하게 = 쾌적 범위 안`;
   if(panel === 'trend'){
     $('#trendCap').textContent = hist.points.length ? `${rangeLabel(range)} · 실측 ${hist.samples.toLocaleString()}회` : '';
     trend($('#trend'), hist.points, hist.marks);
