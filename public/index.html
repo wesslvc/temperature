@@ -557,6 +557,27 @@ svg .cc-seg{transition:fill-opacity .5s ease}
 .cd{transition:background .4s ease}
 .cc-tog{transition:color .15s,background .15s,box-shadow .2s}
 @media (prefers-reduced-motion:reduce){svg .cc-seg{animation:none;transition:none}}
+
+/* 첫 화면 등장 모션 (새로고침 때만) */
+@keyframes inUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes inFade{from{opacity:0}to{opacity:1}}
+@keyframes inDraw{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes inGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+body.intro .h2-top,body.intro .rt,body.intro .cmpbar{animation:inUp .7s cubic-bezier(.2,.7,.2,1) backwards}
+body.intro .hm{animation:inUp .8s cubic-bezier(.2,.7,.2,1) backwards}
+body.intro .hm:nth-child(3){animation-delay:.08s}
+body.intro .h2-sep{animation:inFade .8s ease .2s backwards}
+body.intro .g2{animation:inGrow .9s cubic-bezier(.2,.7,.2,1) .25s backwards;transform-origin:left}
+body.intro .g2-m{animation:inFade .5s ease .9s backwards}
+body.intro .subh{animation:inUp .7s cubic-bezier(.2,.7,.2,1) .16s backwards}
+body.intro .sc{animation:inUp .75s cubic-bezier(.2,.7,.2,1) backwards}
+body.intro .sc:nth-child(1){animation-delay:.2s}body.intro .sc:nth-child(2){animation-delay:.27s}body.intro .sc:nth-child(3){animation-delay:.34s}
+body.intro .sc .sp{animation:inDraw 1.1s cubic-bezier(.4,0,.2,1) .45s backwards}
+body.intro .scatter{animation:inUp .75s cubic-bezier(.2,.7,.2,1) .4s backwards}
+body.intro .secnav{animation:inUp .7s cubic-bezier(.2,.7,.2,1) .5s backwards}
+body.intro .panel.on{animation:inUp .8s cubic-bezier(.2,.7,.2,1) .56s backwards}
+body.intro .panel.on svg{animation:inDraw 1.3s cubic-bezier(.4,0,.2,1) .7s backwards}
+@media (prefers-reduced-motion:reduce){body.intro *{animation:none!important}}
 </style>
 </head>
 <body>
@@ -1249,6 +1270,18 @@ $('#refresh').onclick = async () => {
   await load(); loadHeat();
   b.disabled = false; b.textContent = '불러오기';
 };
+// 페이지를 처음 열 때(새로고침)만 한 번: 블록이 차례로 떠오르고, 숫자가 올라가고, 그래프 선이 그려진다
+let introDone = false;
+function playIntro(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.body.classList.add('intro');
+  const ease = t => 1 - Math.pow(1 - t, 3);
+  document.querySelectorAll('.hm-v, .sc-v').forEach((el, i) => { const n = el.firstChild; if(!n || n.nodeType !== 3) return;
+    const txt = n.textContent, v = parseFloat(txt); if(!isFinite(v)) return; const dec = (txt.split('.')[1] || '').length, dur = 900 + i*60, t0 = performance.now();
+    const step = (t) => { const k = Math.min(1, (t - t0) / dur); n.textContent = (v * ease(k)).toFixed(dec); if(k < 1) requestAnimationFrame(step); else n.textContent = txt; };
+    n.textContent = (0).toFixed(dec); requestAnimationFrame(step); });
+  setTimeout(() => document.body.classList.remove('intro'), 2200);
+}
 async function load(){
   try {
     const specs = compareSpecs(range), sp = specs[Math.min(cmpIdx, specs.length-1)];
@@ -1258,6 +1291,7 @@ async function load(){
     if(range === '24h' && cur){ try { yd = await get(`/api/point?ts=${cur.ts - 864e5}`); if(yd && Math.abs(yd.ts - (cur.ts - 864e5)) > 6*36e5) yd = null; } catch {} }
     cache = { cur, hist, st, cmp, yd }; lastStats = st;
     renderAll();
+    if(!introDone){ introDone = true; playIntro(); }
     // 센서가 실제로 보고한 시각만 표시 (화면을 불러온 시각이 아님)
     const age = cur ? (Date.now()-cur.ts)/60000 : null, f = $('#fresh');
     f.className = 'fresh' + (age == null ? '' : age < 120 ? ' live' : ' stale');
