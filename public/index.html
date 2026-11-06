@@ -550,7 +550,7 @@ svg text.cc-p{font-size:34px!important}
 @media (prefers-color-scheme:dark){:root{--cc-t:#F2C2A4;--cc-h:#BFE6D8;--cc-b:#C4EBCF}}
 #scatter{overflow:hidden}
 svg .cc-seg{transition:fill-opacity .5s ease}
-.ccs.intro svg .cc-seg{animation:ccSeg .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:calc(var(--i)*14ms)}
+.ccs.intro svg .cc-seg{animation:ccSeg .35s ease-out backwards;animation-delay:calc(var(--i)*6ms)}
 @keyframes ccSeg{from{fill-opacity:0}}
 .cc-mini b,.cc-big svg text.cc-p{color:var(--ink)}
 .cc-mini span::before,.cc-big figcaption::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--tint);margin:0 6px 1px 0;vertical-align:middle}
@@ -561,23 +561,16 @@ svg .cc-seg{transition:fill-opacity .5s ease}
 
 /* 버튼·탭 상태 전환 */
 .tabs button,.seg button,.secnav button,.pill{transition:background-color .2s ease,color .2s ease,box-shadow .2s ease}
-.secnav button.on::after{animation:tabLine .28s cubic-bezier(.2,.7,.2,1)}
-@keyframes tabLine{from{transform:scaleX(.3);opacity:0}}
 @media (prefers-reduced-motion:reduce){.secnav button.on::after{animation:none}}
 
-/* 불러오는 중 */
-header{position:sticky}
-.prog{position:absolute;left:0;right:0;bottom:-1px;height:2px;overflow:hidden;opacity:0;transition:opacity .25s ease;pointer-events:none}
-.prog::before{content:'';position:absolute;top:0;bottom:0;width:38%;border-radius:2px;background:linear-gradient(90deg,transparent,var(--ink),transparent);animation:prog 1.05s cubic-bezier(.45,0,.25,1) infinite}
-@keyframes prog{from{left:-40%}to{left:100%}}
-body.loading .prog{opacity:.85}
-#now,.scatter,.panel.on{transition:opacity .3s ease,filter .3s ease,transform .3s ease}
-body.loading #now,body.loading .scatter,body.loading .panel.on{opacity:.5;transform:translateY(2px);animation:breathe 1.2s ease-in-out .3s infinite}
-@keyframes breathe{50%{opacity:.32}}
-body.loading .hm-v,body.loading .sc-v{background:linear-gradient(100deg,var(--ink) 40%,color-mix(in srgb,var(--ink) 35%,transparent) 50%,var(--ink) 60%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 1.1s linear infinite}
-@keyframes shine{from{background-position:100% 0}to{background-position:-50% 0}}
-body.loading .fresh i{animation:breathe .8s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){.prog::before,body.loading #now,body.loading .scatter,body.loading .panel.on,body.loading .hm-v,body.loading .sc-v{animation:none}}
+/* 불러오는 중: 얇은 진행선 + 내용만 살짝 흐리게 (빠른 응답이면 거의 안 보이도록 지연) */
+.prog{position:absolute;left:0;right:0;bottom:-1px;height:1px;overflow:hidden;opacity:0;transition:opacity .2s ease;pointer-events:none}
+.prog::before{content:'';position:absolute;top:0;bottom:0;left:0;width:30%;background:var(--sub);animation:prog 1.4s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes prog{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+body.loading .prog{opacity:1;transition-delay:.15s}
+#now,.scatter,.panel.on{transition:opacity .2s ease}
+body.loading #now,body.loading .scatter,body.loading .panel.on{opacity:.55;transition-delay:.15s}
+@media (prefers-reduced-motion:reduce){.prog::before{animation:none}}
 </style>
 </head>
 <body>
@@ -896,8 +889,8 @@ function comfortClock(el, pts, o, base){
   const anim = el.dataset.ready && !matchMedia('(prefers-reduced-motion: reduce)').matches, h0 = el.offsetHeight;
   el.innerHTML = html; el.dataset.ready = 1;
   if(anim && ccFlag){ const h1 = el.offsetHeight; ccFlag = false;
-    el.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)' });
-    el.firstElementChild && el.querySelectorAll('.ccs > *, .cal').forEach((n, i) => n.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 360, delay: 40 + i*45, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' })); }
+    el.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 260, easing: 'cubic-bezier(.3,.7,.3,1)' });
+    el.firstElementChild && el.querySelectorAll('.ccs > *, .cal').forEach((n, i) => n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, delay: i*30, easing: 'ease-out', fill: 'backwards' })); }
 }
 
 /* ---------- scatter: 온도 × 습도 ---------- */
@@ -1274,12 +1267,12 @@ $('#refresh').onclick = async () => {
 // 전환 애니메이션: 바뀐 내용을 짧게 겹쳐 보이며 교체, 숫자는 이전 값에서 새 값으로 이어서 변한다
 const RM = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fx(...sel){ if(RM()) return; sel.flatMap(x => typeof x === 'string' ? [...document.querySelectorAll(x)] : [x]).filter(Boolean).forEach(el =>
-  el.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)' })); }
+  el.animate([{ opacity: .4 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })); }
 const NUMSEL = '.hm-v, .sc-v';
 function numSnap(){ const m = {}; document.querySelectorAll(NUMSEL).forEach((el, i) => { const n = el.firstChild; if(n && n.nodeType === 3) m[el.className + i] = parseFloat(n.textContent); }); return m; }
 function numTween(prev){ if(RM()) return; const ease = t => 1 - Math.pow(1 - t, 3);
   document.querySelectorAll(NUMSEL).forEach((el, i) => { const n = el.firstChild; if(!n || n.nodeType !== 3) return; const txt = n.textContent, v = parseFloat(txt), a = prev[el.className + i];
-    if(!isFinite(v) || !isFinite(a) || a === v) return; const dec = (txt.split('.')[1] || '').length, t0 = performance.now(), dur = 520;
+    if(!isFinite(v) || !isFinite(a) || a === v) return; const dec = (txt.split('.')[1] || '').length, t0 = performance.now(), dur = 360;
     const step = (t) => { const k = Math.min(1, (t - t0) / dur); n.textContent = (a + (v - a) * ease(k)).toFixed(dec); if(k < 1) requestAnimationFrame(step); else n.textContent = txt; };
     n.textContent = a.toFixed(dec); requestAnimationFrame(step); }); }
 let ccAnimNext = false;
