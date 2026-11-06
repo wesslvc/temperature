@@ -525,6 +525,25 @@ svg .cc-seg{stroke:var(--bg);stroke-width:1.2;stroke-linejoin:round}
 .cal-g .cd{border-radius:0;box-shadow:none;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
 .cal-g .cd:nth-child(7n){border-right:none}
 .cal-g .cd.e{box-shadow:none}
+
+/* 쾌적 시간: 접기/펼치기 + 다듬은 시계 */
+.cc-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cc-tog{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px 0 12px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--sub);box-shadow:inset 0 0 0 1px var(--rule);transition:color .15s,background .15s}
+.cc-tog:hover{color:var(--ink);background:var(--sunk)}
+.cc-tog svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.cc-tog[aria-expanded="true"] svg{transform:rotate(180deg)}
+.ccs.min{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 24px;max-width:none;margin-top:16px}
+.cc-mini{display:flex;align-items:center;gap:14px;min-width:0}
+.cc-mini .cc{width:56px;height:56px;flex:none}
+.cc-mini b{display:flex;align-items:baseline;font-size:30px;font-weight:750;letter-spacing:-.045em;line-height:1}
+.cc-mini b small{font-size:14px;font-weight:600;color:var(--faint);margin-left:1px;letter-spacing:0}
+.cc-mini span{display:block;margin-top:4px;font-size:12.5px;font-weight:600;color:var(--sub)}
+.cc-big{margin:0;min-width:0}
+.cc-big figcaption{text-align:center;margin-top:0;font-size:13px;font-weight:650;color:var(--sub)}
+svg .cc-tk{stroke:var(--faint);stroke-width:1.2;stroke-linecap:round}
+svg text.cc-h{font-size:9.5px!important;fill:var(--faint)!important}
+svg text.cc-p{font-size:34px!important}
+@media(max-width:560px){.ccs.min{gap:10px}.cc-mini{flex-direction:column;align-items:flex-start;gap:8px}.cc-mini .cc{width:44px;height:44px}.cc-mini b{font-size:26px}}
 </style>
 </head>
 <body>
@@ -552,7 +571,7 @@ svg .cc-seg{stroke:var(--bg);stroke-width:1.2;stroke-linejoin:round}
   <section class="hero">
     <div class="now" id="now"></div>
     <div class="scatter">
-      <h3>쾌적 시간</h3>
+      <div class="cc-head"><h3>쾌적 시간</h3><button class="cc-tog" id="ccTog" aria-expanded="false"><span>자세히</span><svg viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3"/></svg></button></div>
       <p id="scCap"></p>
       <div id="scatter"></div>
       <div id="rates"></div>
@@ -792,7 +811,11 @@ function comfortStrip(el, pts, o, base){
 }
 
 /* ---------- 쾌적 시간: 24시간 시계(시각별 쾌적 비율) + 날짜 달력 ---------- */
+let ccOpen = false; try { ccOpen = localStorage.getItem('ccOpen') === '1'; } catch {}
+let ccArgs = null;
 function comfortClock(el, pts, o, base){
+  ccArgs = [el, pts, o, base];
+  const tg = $('#ccTog'); if(tg){ tg.setAttribute('aria-expanded', ccOpen); tg.firstChild.textContent = ccOpen ? '간단히' : '자세히'; }
   const P = pts.filter(p => p.temp != null && p.hum != null);
   if(P.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
   const ok = (M, p) => { const c = comfortAt(p.ts), r = M === 'temp' ? c.t : c.h; return p[M] >= r[0] && p[M] <= r[1]; };
@@ -807,20 +830,23 @@ function comfortClock(el, pts, o, base){
   const arc = (cx, cy, r0, r1, a0, a1) => { const p = (r, a) => [cx + r*Math.sin(a), cy - r*Math.cos(a)], [x0,y0] = p(r1,a0), [x1,y1] = p(r1,a1), [x2,y2] = p(r0,a1), [x3,y3] = p(r0,a0);
     return `M${x0.toFixed(2)},${y0.toFixed(2)}A${r1},${r1} 0 0 1 ${x1.toFixed(2)},${y1.toFixed(2)}L${x2.toFixed(2)},${y2.toFixed(2)}A${r0},${r0} 0 0 0 ${x3.toFixed(2)},${y3.toFixed(2)}Z`; };
   const clock = (k, name, rk) => {
-    const S = 168, c = S/2, r1 = 70, r0 = 52, gap = 0; let g = '';
+    const S = 168, c = S/2, r1 = ccOpen ? 72 : 82, r0 = ccOpen ? 60 : 66, gap = 0; let g = '';
     for(let h = 0; h < 24; h++){ const [a, n] = H[k][h], a0 = h/24*2*Math.PI + gap, a1 = (h+1)/24*2*Math.PI - gap, sh = n ? a/n : null;
       g += `<path d="${arc(c, c, r0, r1, a0, a1)}" fill="${sh == null ? 'var(--sunk)' : 'var(--ink)'}" fill-opacity="${sh == null ? 1 : (.07 + .88*sh).toFixed(3)}" class="cc-seg"><title>${h}시 · ${sh == null ? '기록 없음' : `쾌적 ${Math.round(sh*100)}%`}</title></path>`; }
-    [0,6,12,18].forEach(h => { const a = h/24*2*Math.PI, x = c + 79*Math.sin(a), y = c - 79*Math.cos(a); g += `<text class="cc-h" x="${x.toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="middle">${h}</text>`; });
-    if(live){ const a = (nowH+.5)/24*2*Math.PI; g += `<circle cx="${(c + 46*Math.sin(a)).toFixed(1)}" cy="${(c - 46*Math.cos(a)).toFixed(1)}" r="2.2" fill="var(--ink)"/>`; }
     const v = o && o[rk] != null ? Math.round(o[rk]) : null, d = base && base[rk] != null && v != null ? o[rk] - base[rk] : null;
-    g += `<text class="cc-p" x="${c}" y="${c+6}" text-anchor="middle">${v == null ? '–' : v}<tspan class="cc-u">${v == null ? '' : '%'}</tspan></text>`;
-    g += `<text class="cc-n" x="${c}" y="${c+26}" text-anchor="middle">${name}</text>`;
-    if(d != null && Math.abs(d) >= .5) g += `<text class="cc-d" x="${c}" y="${c-26}" text-anchor="middle">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%p</text>`;
-    return `<svg class="cc" viewBox="-6 -6 ${S+12} ${S+12}">${g}</svg>`; };
-  let html = `<div class="ccs">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
+    if(!ccOpen){ // 간단히: 얇은 고리 + 옆에 큰 숫자
+      return `<div class="cc-mini"><svg class="cc" viewBox="0 0 ${S} ${S}">${g}</svg><div><b>${v == null ? '–' : v}<small>%</small></b><span>${name}</span></div></div>`; }
+    // 자세히: 시각 눈금(0·6·12·18)은 고리 안쪽 짧은 선, 지금 시각은 바깥 삼각형
+    [0,6,12,18].forEach(h => { const a = h/24*2*Math.PI, sx = Math.sin(a), cy0 = Math.cos(a);
+      g += `<text class="cc-h" x="${(c+84*sx).toFixed(1)}" y="${(c-84*cy0+3.5).toFixed(1)}" text-anchor="middle">${h}</text>`; });
+    if(live){ const a = (nowH+.5)/24*2*Math.PI, R = 78, q = (r, da) => `${(c + r*Math.sin(a+da)).toFixed(1)},${(c - r*Math.cos(a+da)).toFixed(1)}`; g += `<path d="M${q(R-2,0)}L${q(R+5,.045)}L${q(R+5,-.045)}Z" fill="var(--ink)"/>`; }
+    g += `<text class="cc-p" x="${c}" y="${c+10}" text-anchor="middle">${v == null ? '–' : v}<tspan class="cc-u">${v == null ? '' : '%'}</tspan></text>`;
+    if(d != null && Math.abs(d) >= .5) g += `<text class="cc-d" x="${c}" y="${c+26}" text-anchor="middle">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%p</text>`;
+    return `<figure class="cc-big"><svg class="cc" viewBox="-14 -14 ${S+28} ${S+28}">${g}</svg><figcaption>${name}</figcaption></figure>`; };
+  let html = `<div class="ccs${ccOpen ? '' : ' min'}">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
   // 날짜 달력: 하루 중 온·습도가 모두 쾌적했던 시간 비율
   const days = Object.keys(D).sort();
-  if(days.length >= 3){
+  if(ccOpen && days.length >= 3){
     const show = days.slice(-62), first = mondayOf(show[0]), last = show.at(-1);
     let cells = ''; for(let d = first; d <= last; d = addDays(d, 1)){
       const x = D[d], inR = d >= show[0];
@@ -1307,6 +1333,7 @@ $('#inD').onchange = e => { const o = derive(range); setRange(e.target.value ? '
 $('#hmSeg').onclick = e => { const bb = e.target.dataset.b; if(!bb) return; heatBy = bb; loadHeat(); };
 $('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); };
 $('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); };
+$('#ccTog').onclick = () => { ccOpen = !ccOpen; try { localStorage.setItem('ccOpen', ccOpen ? '1' : '0'); } catch {} if(ccArgs) comfortClock(...ccArgs); };
 $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(pn); };
 $('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 직접 선택 ▴' : '기간 직접 선택 ▾'; };
 (async () => { try { const b = await get('/api/bounds'); if(b.first){ dataFirst = kstDate(b.first); dataLast = kstDate(Math.max(b.last, Date.now())); } } catch {} syncPick(); })();
