@@ -564,6 +564,20 @@ svg .cc-seg{transition:fill-opacity .5s ease}
 .secnav button.on::after{animation:tabLine .28s cubic-bezier(.2,.7,.2,1)}
 @keyframes tabLine{from{transform:scaleX(.3);opacity:0}}
 @media (prefers-reduced-motion:reduce){.secnav button.on::after{animation:none}}
+
+/* 불러오는 중 */
+header{position:sticky}
+.prog{position:absolute;left:0;right:0;bottom:-1px;height:2px;overflow:hidden;opacity:0;transition:opacity .25s ease;pointer-events:none}
+.prog::before{content:'';position:absolute;top:0;bottom:0;width:38%;border-radius:2px;background:linear-gradient(90deg,transparent,var(--ink),transparent);animation:prog 1.05s cubic-bezier(.45,0,.25,1) infinite}
+@keyframes prog{from{left:-40%}to{left:100%}}
+body.loading .prog{opacity:.85}
+#now,.scatter,.panel.on{transition:opacity .3s ease,filter .3s ease,transform .3s ease}
+body.loading #now,body.loading .scatter,body.loading .panel.on{opacity:.5;transform:translateY(2px);animation:breathe 1.2s ease-in-out .3s infinite}
+@keyframes breathe{50%{opacity:.32}}
+body.loading .hm-v,body.loading .sc-v{background:linear-gradient(100deg,var(--ink) 40%,color-mix(in srgb,var(--ink) 35%,transparent) 50%,var(--ink) 60%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 1.1s linear infinite}
+@keyframes shine{from{background-position:100% 0}to{background-position:-50% 0}}
+body.loading .fresh i{animation:breathe .8s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.prog::before,body.loading #now,body.loading .scatter,body.loading .panel.on,body.loading .hm-v,body.loading .sc-v{animation:none}}
 </style>
 </head>
 <body>
@@ -571,6 +585,7 @@ svg .cc-seg{transition:fill-opacity .5s ease}
   <header>
     <div class="brand"><img src="/icons/favicon-32.png?v=2" alt="">Orion Room<span>온습도 기록</span></div>
     <div class="hr"><div class="fresh" id="fresh"><i></i><span>불러오는 중</span></div><button id="refresh" class="rbtn">불러오기</button></div>
+    <i class="prog" id="prog"></i>
   </header>
   <div class="pick">
     <div class="pickL">
@@ -1268,7 +1283,11 @@ function numTween(prev){ if(RM()) return; const ease = t => 1 - Math.pow(1 - t, 
     const step = (t) => { const k = Math.min(1, (t - t0) / dur); n.textContent = (a + (v - a) * ease(k)).toFixed(dec); if(k < 1) requestAnimationFrame(step); else n.textContent = txt; };
     n.textContent = a.toFixed(dec); requestAnimationFrame(step); }); }
 let ccAnimNext = false;
+// 불러오는 동안 멈춘 느낌이 없게: 상단 진행선이 흐르고 기존 내용은 살짝 가라앉아 숨 쉬듯 움직인다
+let loadingN = 0;
+const busy = (on) => { loadingN = Math.max(0, loadingN + (on ? 1 : -1)); document.body.classList.toggle('loading', loadingN > 0); };
 async function load(){
+  busy(true);
   try {
     const specs = compareSpecs(range), sp = specs[Math.min(cmpIdx, specs.length-1)];
     const [curR, hist, st, cmp] = await Promise.all([get('/api/current'), get(`/api/history?range=${range}`), get(`/api/stats?range=${range}`), sp ? get(`/api/stats?range=${sp.range}`).catch(() => null) : null]);
@@ -1286,6 +1305,7 @@ async function load(){
     f.lastChild.textContent = cur ? (innerWidth < 520 ? `${hhmm(cur.ts)} 측정 · ${ago}` : `마지막 측정 ${md(cur.ts)} ${hhmm(cur.ts)} · ${ago}`) : '수집 대기 중';
     f.title = cur ? `마지막 측정 ${md(cur.ts)} ${hhmm(cur.ts)}` : '';
   } catch(e){ $('#fresh').lastChild.textContent = '연결 오류'; }
+  finally { busy(false); }
 }
 // 서버 호출 없이 캐시로 다시 그리기. 폭을 재야 하는 그래프는 보이는 패널만 그린다.
 function renderAll(){
@@ -1331,7 +1351,7 @@ async function loadHeat(){
   const by = heatUnit();
   document.querySelectorAll('#hmSeg button').forEach(b => b.classList.toggle('on', b.dataset.b === by));
   $('#hmCap').textContent = (range === '24h' ? '최근 14일' : rangeLabel(range)) + (by === 'm' ? ' · 월 평균' : (range === 'all' || range[0] === 'y' ? ' · 최근 62일' : ''));
-  try { heatData = await get(`/api/heatmap?range=${range}&by=${by}`); } catch { heatData = []; }
+  busy(true); try { heatData = await get(`/api/heatmap?range=${range}&by=${by}`); } catch { heatData = []; } finally { busy(false); }
   if(panel === 'heat') drawHeat();
 }
 
