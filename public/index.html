@@ -563,13 +563,11 @@ svg .cc-seg{transition:fill-opacity .5s ease}
 .tabs button,.seg button,.secnav button,.pill{transition:background-color .2s ease,color .2s ease,box-shadow .2s ease}
 @media (prefers-reduced-motion:reduce){.secnav button.on::after{animation:none}}
 
-/* 불러오는 중: 얇은 진행선 + 내용만 살짝 흐리게 (빠른 응답이면 거의 안 보이도록 지연) */
+/* 불러오는 중: 얇은 진행선만 (빠른 응답이면 안 보이도록 지연) */
 .prog{position:absolute;left:0;right:0;bottom:-1px;height:1px;overflow:hidden;opacity:0;transition:opacity .2s ease;pointer-events:none}
 .prog::before{content:'';position:absolute;top:0;bottom:0;left:0;width:30%;background:var(--sub);animation:prog 1.4s cubic-bezier(.4,0,.2,1) infinite}
 @keyframes prog{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
 body.loading .prog{opacity:1;transition-delay:.15s}
-#now,.scatter,.panel.on{transition:opacity .2s ease}
-body.loading #now,body.loading .scatter,body.loading .panel.on{opacity:.55;transition-delay:.15s}
 @media (prefers-reduced-motion:reduce){.prog::before{animation:none}}
 </style>
 </head>
