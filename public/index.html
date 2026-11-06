@@ -549,7 +549,8 @@ svg text.cc-p{font-size:34px!important}
 :root{--cc-t:#E08A5C;--cc-h:#4FA88E;--cc-b:#3E9E6E}
 @media (prefers-color-scheme:dark){:root{--cc-t:#F2C2A4;--cc-h:#BFE6D8;--cc-b:#C4EBCF}}
 #scatter{overflow:hidden}
-svg .cc-seg{transition:fill-opacity .5s ease;animation:ccSeg .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:calc(var(--i)*14ms)}
+svg .cc-seg{transition:fill-opacity .5s ease}
+.ccs.intro svg .cc-seg{animation:ccSeg .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:calc(var(--i)*14ms)}
 @keyframes ccSeg{from{fill-opacity:0}}
 .cc-mini b,.cc-big svg text.cc-p{color:var(--ink)}
 .cc-mini span::before,.cc-big figcaption::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--tint);margin:0 6px 1px 0;vertical-align:middle}
@@ -856,7 +857,8 @@ function comfortClock(el, pts, o, base){
     g += `<text class="cc-p" x="${c}" y="${c+10}" text-anchor="middle">${v == null ? '–' : v}<tspan class="cc-u">${v == null ? '' : '%'}</tspan></text>`;
     if(d != null && Math.abs(d) >= .5) g += `<text class="cc-d" x="${c}" y="${c+26}" text-anchor="middle">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%p</text>`;
     return `<figure class="cc-big" style="--tint:${TINT[k]}"><svg class="cc" viewBox="-14 -14 ${S+28} ${S+28}">${g}</svg><figcaption>${name}</figcaption></figure>`; };
-  let html = `<div class="ccs${ccOpen ? '' : ' min'}">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
+  // 고리가 차례로 켜지는 모션은 페이지를 처음 열 때(새로고침)만
+  let html = `<div class="ccs${ccOpen ? '' : ' min'}${el.dataset.ready ? '' : ' intro'}">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
   // 날짜 달력: 하루 중 온·습도가 모두 쾌적했던 시간 비율
   const days = Object.keys(D).sort();
   if(ccOpen && days.length >= 3){
