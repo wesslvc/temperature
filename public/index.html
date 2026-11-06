@@ -558,26 +558,12 @@ svg .cc-seg{transition:fill-opacity .5s ease}
 .cc-tog{transition:color .15s,background .15s,box-shadow .2s}
 @media (prefers-reduced-motion:reduce){svg .cc-seg{animation:none;transition:none}}
 
-/* 첫 화면 등장 모션 (새로고침 때만) */
-@keyframes inUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@keyframes inFade{from{opacity:0}to{opacity:1}}
-@keyframes inDraw{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
-@keyframes inGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-body.intro .h2-top,body.intro .rt,body.intro .cmpbar{animation:inUp .7s cubic-bezier(.2,.7,.2,1) backwards}
-body.intro .hm{animation:inUp .8s cubic-bezier(.2,.7,.2,1) backwards}
-body.intro .hm:nth-child(3){animation-delay:.08s}
-body.intro .h2-sep{animation:inFade .8s ease .2s backwards}
-body.intro .g2{animation:inGrow .9s cubic-bezier(.2,.7,.2,1) .25s backwards;transform-origin:left}
-body.intro .g2-m{animation:inFade .5s ease .9s backwards}
-body.intro .subh{animation:inUp .7s cubic-bezier(.2,.7,.2,1) .16s backwards}
-body.intro .sc{animation:inUp .75s cubic-bezier(.2,.7,.2,1) backwards}
-body.intro .sc:nth-child(1){animation-delay:.2s}body.intro .sc:nth-child(2){animation-delay:.27s}body.intro .sc:nth-child(3){animation-delay:.34s}
-body.intro .sc .sp{animation:inDraw 1.1s cubic-bezier(.4,0,.2,1) .45s backwards}
-body.intro .scatter{animation:inUp .75s cubic-bezier(.2,.7,.2,1) .4s backwards}
-body.intro .secnav{animation:inUp .7s cubic-bezier(.2,.7,.2,1) .5s backwards}
-body.intro .panel.on{animation:inUp .8s cubic-bezier(.2,.7,.2,1) .56s backwards}
-body.intro .panel.on svg{animation:inDraw 1.3s cubic-bezier(.4,0,.2,1) .7s backwards}
-@media (prefers-reduced-motion:reduce){body.intro *{animation:none!important}}
+
+/* 버튼·탭 상태 전환 */
+.tabs button,.seg button,.secnav button,.pill{transition:background-color .2s ease,color .2s ease,box-shadow .2s ease}
+.secnav button.on::after{animation:tabLine .28s cubic-bezier(.2,.7,.2,1)}
+@keyframes tabLine{from{transform:scaleX(.3);opacity:0}}
+@media (prefers-reduced-motion:reduce){.secnav button.on::after{animation:none}}
 </style>
 </head>
 <body>
@@ -879,7 +865,7 @@ function comfortClock(el, pts, o, base){
     if(d != null && Math.abs(d) >= .5) g += `<text class="cc-d" x="${c}" y="${c+26}" text-anchor="middle">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%p</text>`;
     return `<figure class="cc-big" style="--tint:${TINT[k]}"><svg class="cc" viewBox="-14 -14 ${S+28} ${S+28}">${g}</svg><figcaption>${name}</figcaption></figure>`; };
   // 고리가 차례로 켜지는 모션은 페이지를 처음 열 때(새로고침)만
-  let html = `<div class="ccs${ccOpen ? '' : ' min'}${el.dataset.ready ? '' : ' intro'}">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
+  let html = `<div class="ccs${ccOpen ? '' : ' min'}${ccAnimNext ? ' intro' : ''}">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
   // 날짜 달력: 하루 중 온·습도가 모두 쾌적했던 시간 비율
   const days = Object.keys(D).sort();
   if(ccOpen && days.length >= 3){
@@ -1270,18 +1256,18 @@ $('#refresh').onclick = async () => {
   await load(); loadHeat();
   b.disabled = false; b.textContent = '불러오기';
 };
-// 페이지를 처음 열 때(새로고침)만 한 번: 블록이 차례로 떠오르고, 숫자가 올라가고, 그래프 선이 그려진다
-let introDone = false;
-function playIntro(){
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  document.body.classList.add('intro');
-  const ease = t => 1 - Math.pow(1 - t, 3);
-  document.querySelectorAll('.hm-v, .sc-v').forEach((el, i) => { const n = el.firstChild; if(!n || n.nodeType !== 3) return;
-    const txt = n.textContent, v = parseFloat(txt); if(!isFinite(v)) return; const dec = (txt.split('.')[1] || '').length, dur = 900 + i*60, t0 = performance.now();
-    const step = (t) => { const k = Math.min(1, (t - t0) / dur); n.textContent = (v * ease(k)).toFixed(dec); if(k < 1) requestAnimationFrame(step); else n.textContent = txt; };
-    n.textContent = (0).toFixed(dec); requestAnimationFrame(step); });
-  setTimeout(() => document.body.classList.remove('intro'), 2200);
-}
+// 전환 애니메이션: 바뀐 내용을 짧게 겹쳐 보이며 교체, 숫자는 이전 값에서 새 값으로 이어서 변한다
+const RM = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fx(...sel){ if(RM()) return; sel.flatMap(x => typeof x === 'string' ? [...document.querySelectorAll(x)] : [x]).filter(Boolean).forEach(el =>
+  el.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)' })); }
+const NUMSEL = '.hm-v, .sc-v';
+function numSnap(){ const m = {}; document.querySelectorAll(NUMSEL).forEach((el, i) => { const n = el.firstChild; if(n && n.nodeType === 3) m[el.className + i] = parseFloat(n.textContent); }); return m; }
+function numTween(prev){ if(RM()) return; const ease = t => 1 - Math.pow(1 - t, 3);
+  document.querySelectorAll(NUMSEL).forEach((el, i) => { const n = el.firstChild; if(!n || n.nodeType !== 3) return; const txt = n.textContent, v = parseFloat(txt), a = prev[el.className + i];
+    if(!isFinite(v) || !isFinite(a) || a === v) return; const dec = (txt.split('.')[1] || '').length, t0 = performance.now(), dur = 520;
+    const step = (t) => { const k = Math.min(1, (t - t0) / dur); n.textContent = (a + (v - a) * ease(k)).toFixed(dec); if(k < 1) requestAnimationFrame(step); else n.textContent = txt; };
+    n.textContent = a.toFixed(dec); requestAnimationFrame(step); }); }
+let ccAnimNext = false;
 async function load(){
   try {
     const specs = compareSpecs(range), sp = specs[Math.min(cmpIdx, specs.length-1)];
@@ -1290,8 +1276,9 @@ async function load(){
     let yd = null;
     if(range === '24h' && cur){ try { yd = await get(`/api/point?ts=${cur.ts - 864e5}`); if(yd && Math.abs(yd.ts - (cur.ts - 864e5)) > 6*36e5) yd = null; } catch {} }
     cache = { cur, hist, st, cmp, yd }; lastStats = st;
-    renderAll();
-    if(!introDone){ introDone = true; playIntro(); }
+    const prev = numSnap(), first = !document.querySelector('.hm-v, .sc-v');
+    ccAnimNext = true; renderAll(); ccAnimNext = false;
+    if(!first){ numTween(prev); fx('#now .hero2', '#now .scs', '#now .rt', '#now .cmpbar', '.panel.on > :not(.sec-h)'); }
     // 센서가 실제로 보고한 시각만 표시 (화면을 불러온 시각이 아님)
     const age = cur ? (Date.now()-cur.ts)/60000 : null, f = $('#fresh');
     f.className = 'fresh' + (age == null ? '' : age < 120 ? ' live' : ' stale');
@@ -1334,11 +1321,11 @@ function showPanel(name){
   panel = name; try { localStorage.panel = name; } catch {}
   document.querySelectorAll('.panel').forEach(el => el.classList.toggle('on', el.id === 'p-' + name));
   document.querySelectorAll('#secTabs button').forEach(b => b.classList.toggle('on', b.dataset.p === name));
-  renderAll();
+  renderAll(); fx('.panel.on');
 }
 let heatMetric = 'temp';
 const drawHeat = () => { document.querySelectorAll('#hmMSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === heatMetric)); heat($('#heatT'), heatData, heatMetric); };
-$('#hmMSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; heatMetric = m; drawHeat(); };
+$('#hmMSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; heatMetric = m; drawHeat(); fx('#heatT'); };
 const heatUnit = () => heatBy || (range === 'all' || range[0] === 'y' ? 'm' : 'd');
 async function loadHeat(){
   const by = heatUnit();
@@ -1384,8 +1371,8 @@ $('#inM').onchange = e => setRange(e.target.value ? 'm:'+e.target.value : 'y:'+d
 $('#inK').onchange = e => { const m = derive(range).m; setRange(e.target.value ? `k:${m}:${e.target.value}` : 'm:'+m); };
 $('#inD').onchange = e => { const o = derive(range); setRange(e.target.value ? 'd:'+e.target.value : (o.k ? `k:${o.m}:${o.k}` : 'm:'+o.m)); };
 $('#hmSeg').onclick = e => { const bb = e.target.dataset.b; if(!bb) return; heatBy = bb; loadHeat(); };
-$('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); };
-$('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); };
+$('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); fx('#rangeT', '#tbl'); };
+$('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); fx('#rangeT', '#tbl'); };
 $('#ccTog').onclick = () => { ccOpen = !ccOpen; try { localStorage.setItem('ccOpen', ccOpen ? '1' : '0'); } catch {} if(ccArgs){ const a = ccArgs.slice(0, 4); ccFlag = true; comfortClock(...a); } };
 $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(pn); };
 $('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 직접 선택 ▴' : '기간 직접 선택 ▾'; };
