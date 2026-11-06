@@ -508,7 +508,7 @@ svg text.cc-h{fill:var(--faint)!important;font-size:10px!important}
 .cal-h em{font-style:normal;font-size:12px;font-weight:500;color:var(--faint)}
 .cal-w,.cal-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cal-w{margin:12px 0 6px}.cal-w span{font-size:11px;color:var(--faint);text-align:left;padding-left:8px}
-.cd{position:relative;display:block;aspect-ratio:1.5;border-radius:8px;background:color-mix(in srgb,var(--ink) calc(var(--a)*100%),var(--sunk));font-style:normal;overflow:hidden}
+.cd{position:relative;display:block;aspect-ratio:1.5;border-radius:8px;background:color-mix(in srgb,var(--cc-b) calc(var(--a)*100%),var(--sunk));font-style:normal;overflow:hidden}
 .cd b{position:absolute;left:8px;top:6px;font-size:11.5px;font-weight:650;color:var(--sub)}
 .cd span{position:absolute;right:8px;bottom:5px;font-size:15px;font-weight:750;letter-spacing:-.03em;color:var(--ink)}
 .cd span::after{content:'%';font-size:10px;font-weight:600;color:var(--faint);margin-left:1px}
@@ -544,6 +544,18 @@ svg .cc-tk{stroke:var(--faint);stroke-width:1.2;stroke-linecap:round}
 svg text.cc-h{font-size:9.5px!important;fill:var(--faint)!important}
 svg text.cc-p{font-size:34px!important}
 @media(max-width:560px){.ccs.min{gap:10px}.cc-mini{flex-direction:column;align-items:flex-start;gap:8px}.cc-mini .cc{width:44px;height:44px}.cc-mini b{font-size:26px}}
+
+/* 쾌적 시계: 연한 색 + 부드러운 전환 */
+:root{--cc-t:#E08A5C;--cc-h:#4FA88E;--cc-b:#3E9E6E}
+@media (prefers-color-scheme:dark){:root{--cc-t:#F2C2A4;--cc-h:#BFE6D8;--cc-b:#C4EBCF}}
+#scatter{overflow:hidden}
+svg .cc-seg{transition:fill-opacity .5s ease;animation:ccSeg .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:calc(var(--i)*14ms)}
+@keyframes ccSeg{from{fill-opacity:0}}
+.cc-mini b,.cc-big svg text.cc-p{color:var(--ink)}
+.cc-mini span::before,.cc-big figcaption::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--tint);margin:0 6px 1px 0;vertical-align:middle}
+.cd{transition:background .4s ease}
+.cc-tog{transition:color .15s,background .15s,box-shadow .2s}
+@media (prefers-reduced-motion:reduce){svg .cc-seg{animation:none;transition:none}}
 </style>
 </head>
 <body>
@@ -812,7 +824,7 @@ function comfortStrip(el, pts, o, base){
 
 /* ---------- 쾌적 시간: 24시간 시계(시각별 쾌적 비율) + 날짜 달력 ---------- */
 let ccOpen = false; try { ccOpen = localStorage.getItem('ccOpen') === '1'; } catch {}
-let ccArgs = null;
+let ccArgs = null, ccFlag = false;
 function comfortClock(el, pts, o, base){
   ccArgs = [el, pts, o, base];
   const tg = $('#ccTog'); if(tg){ tg.setAttribute('aria-expanded', ccOpen); tg.firstChild.textContent = ccOpen ? '간단히' : '자세히'; }
@@ -829,20 +841,21 @@ function comfortClock(el, pts, o, base){
   const nowH = hr(Date.now()), live = Date.now() - P.at(-1).ts < 3*36e5;
   const arc = (cx, cy, r0, r1, a0, a1) => { const p = (r, a) => [cx + r*Math.sin(a), cy - r*Math.cos(a)], [x0,y0] = p(r1,a0), [x1,y1] = p(r1,a1), [x2,y2] = p(r0,a1), [x3,y3] = p(r0,a0);
     return `M${x0.toFixed(2)},${y0.toFixed(2)}A${r1},${r1} 0 0 1 ${x1.toFixed(2)},${y1.toFixed(2)}L${x2.toFixed(2)},${y2.toFixed(2)}A${r0},${r0} 0 0 0 ${x3.toFixed(2)},${y3.toFixed(2)}Z`; };
+  const TINT = { temp:'var(--cc-t)', hum:'var(--cc-h)', both:'var(--cc-b)' };
   const clock = (k, name, rk) => {
     const S = 168, c = S/2, r1 = ccOpen ? 72 : 82, r0 = ccOpen ? 60 : 66, gap = 0; let g = '';
     for(let h = 0; h < 24; h++){ const [a, n] = H[k][h], a0 = h/24*2*Math.PI + gap, a1 = (h+1)/24*2*Math.PI - gap, sh = n ? a/n : null;
-      g += `<path d="${arc(c, c, r0, r1, a0, a1)}" fill="${sh == null ? 'var(--sunk)' : 'var(--ink)'}" fill-opacity="${sh == null ? 1 : (.07 + .88*sh).toFixed(3)}" class="cc-seg"><title>${h}시 · ${sh == null ? '기록 없음' : `쾌적 ${Math.round(sh*100)}%`}</title></path>`; }
+      g += `<path d="${arc(c, c, r0, r1, a0, a1)}" fill="${sh == null ? 'var(--sunk)' : TINT[k]}" fill-opacity="${sh == null ? 1 : (.08 + .9*sh).toFixed(3)}" class="cc-seg" style="--i:${h}"><title>${h}시 · ${sh == null ? '기록 없음' : `쾌적 ${Math.round(sh*100)}%`}</title></path>`; }
     const v = o && o[rk] != null ? Math.round(o[rk]) : null, d = base && base[rk] != null && v != null ? o[rk] - base[rk] : null;
     if(!ccOpen){ // 간단히: 얇은 고리 + 옆에 큰 숫자
-      return `<div class="cc-mini"><svg class="cc" viewBox="0 0 ${S} ${S}">${g}</svg><div><b>${v == null ? '–' : v}<small>%</small></b><span>${name}</span></div></div>`; }
+      return `<div class="cc-mini" style="--tint:${TINT[k]}"><svg class="cc" viewBox="0 0 ${S} ${S}">${g}</svg><div><b>${v == null ? '–' : v}<small>%</small></b><span>${name}</span></div></div>`; }
     // 자세히: 시각 눈금(0·6·12·18)은 고리 안쪽 짧은 선, 지금 시각은 바깥 삼각형
     [0,6,12,18].forEach(h => { const a = h/24*2*Math.PI, sx = Math.sin(a), cy0 = Math.cos(a);
       g += `<text class="cc-h" x="${(c+84*sx).toFixed(1)}" y="${(c-84*cy0+3.5).toFixed(1)}" text-anchor="middle">${h}</text>`; });
     if(live){ const a = (nowH+.5)/24*2*Math.PI, R = 78, q = (r, da) => `${(c + r*Math.sin(a+da)).toFixed(1)},${(c - r*Math.cos(a+da)).toFixed(1)}`; g += `<path d="M${q(R-2,0)}L${q(R+5,.045)}L${q(R+5,-.045)}Z" fill="var(--ink)"/>`; }
     g += `<text class="cc-p" x="${c}" y="${c+10}" text-anchor="middle">${v == null ? '–' : v}<tspan class="cc-u">${v == null ? '' : '%'}</tspan></text>`;
     if(d != null && Math.abs(d) >= .5) g += `<text class="cc-d" x="${c}" y="${c+26}" text-anchor="middle">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%p</text>`;
-    return `<figure class="cc-big"><svg class="cc" viewBox="-14 -14 ${S+28} ${S+28}">${g}</svg><figcaption>${name}</figcaption></figure>`; };
+    return `<figure class="cc-big" style="--tint:${TINT[k]}"><svg class="cc" viewBox="-14 -14 ${S+28} ${S+28}">${g}</svg><figcaption>${name}</figcaption></figure>`; };
   let html = `<div class="ccs${ccOpen ? '' : ' min'}">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
   // 날짜 달력: 하루 중 온·습도가 모두 쾌적했던 시간 비율
   const days = Object.keys(D).sort();
@@ -856,7 +869,11 @@ function comfortClock(el, pts, o, base){
       cells += `<i class="cd${sh > .55 ? ' hi' : ''}" style="--a:${(.06 + .9*sh).toFixed(3)}" title="${md2(d)} (${wd(d)}) · 둘 다 ${pc(x.both)}% · 온도 ${pc(x.temp)}% · 습도 ${pc(x.hum)}%"><b>${+d.slice(8) === 1 || d === show[0] ? `${+d.slice(5,7)}/${+d.slice(8)}` : +d.slice(8)}</b><span>${pc(x.both)}</span></i>`; }
     html += `<div class="cal"><div class="cal-h"><span>날짜별</span><em>온·습도 모두 쾌적했던 시간 비율</em></div><div class="cal-w">${'월화수목금토일'.split('').map(w => `<span>${w}</span>`).join('')}</div><div class="cal-g">${cells}</div></div>`;
   }
-  el.innerHTML = html;
+  const anim = el.dataset.ready && !matchMedia('(prefers-reduced-motion: reduce)').matches, h0 = el.offsetHeight;
+  el.innerHTML = html; el.dataset.ready = 1;
+  if(anim && ccFlag){ const h1 = el.offsetHeight; ccFlag = false;
+    el.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 320, easing: 'cubic-bezier(.2,.7,.2,1)' });
+    el.firstElementChild && el.querySelectorAll('.ccs > *, .cal').forEach((n, i) => n.animate([{ opacity: 0, transform: 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 360, delay: 40 + i*45, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' })); }
 }
 
 /* ---------- scatter: 온도 × 습도 ---------- */
@@ -1333,7 +1350,7 @@ $('#inD').onchange = e => { const o = derive(range); setRange(e.target.value ? '
 $('#hmSeg').onclick = e => { const bb = e.target.dataset.b; if(!bb) return; heatBy = bb; loadHeat(); };
 $('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); };
 $('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); };
-$('#ccTog').onclick = () => { ccOpen = !ccOpen; try { localStorage.setItem('ccOpen', ccOpen ? '1' : '0'); } catch {} if(ccArgs) comfortClock(...ccArgs); };
+$('#ccTog').onclick = () => { ccOpen = !ccOpen; try { localStorage.setItem('ccOpen', ccOpen ? '1' : '0'); } catch {} if(ccArgs){ const a = ccArgs.slice(0, 4); ccFlag = true; comfortClock(...a); } };
 $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(pn); };
 $('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 직접 선택 ▴' : '기간 직접 선택 ▾'; };
 (async () => { try { const b = await get('/api/bounds'); if(b.first){ dataFirst = kstDate(b.first); dataLast = kstDate(Math.max(b.last, Date.now())); } } catch {} syncPick(); })();
