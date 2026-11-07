@@ -569,6 +569,22 @@ svg .cc-seg{transition:fill-opacity .5s ease}
 @keyframes prog{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
 body.loading .prog{opacity:1;transition-delay:.15s}
 @media (prefers-reduced-motion:reduce){.prog::before{animation:none}}
+
+/* 단위: °는 숫자 위쪽에 바짝, %는 아래 기준선 */
+.hm-v,.sc-v{align-items:flex-start!important}
+.hm-v small,.sc-v small{margin:0!important;line-height:1}
+.hm-v small.deg{font-size:.36em!important;font-weight:500!important;margin:.06em 0 0 .02em!important;letter-spacing:0;color:var(--sub)!important}
+.sc-v small.deg{font-size:.42em!important;font-weight:500!important;margin:.04em 0 0 .02em!important;color:var(--sub)!important}
+.hm-v small.pct,.sc-v small.pct{align-self:flex-end;font-size:.24em!important;font-weight:600!important;margin:0 0 .1em .06em!important;color:var(--faint)!important}
+.sc-v small.pct{font-size:.34em!important}
+/* 바깥 대비 */
+.hd.ho{color:var(--sub)}.hd.ho em{font-style:normal;color:var(--faint);margin-right:4px}.hd.ho b{color:var(--sub)}
+.sc-o{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px;color:var(--faint)}.sc-o b{color:var(--sub);font-weight:650}
+svg .od-gap{fill:var(--ink);fill-opacity:.07}
+svg .od-out{fill:none;stroke:var(--ink);stroke-opacity:.9;stroke-width:1.7;stroke-linejoin:round}
+svg .od-in{fill:none;stroke:var(--ink);stroke-opacity:.45;stroke-width:1.3;stroke-dasharray:3 3}
+svg text.od-l{fill:var(--faint)!important;font-size:11.5px!important}
+svg text.od-k{fill:var(--sub)!important;font-size:11px!important;font-weight:650;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
 </style>
 </head>
 <body>
@@ -937,7 +953,8 @@ function trend(el, pts, marks){
   if(pts.length < 2){ el.innerHTML = '<div class="empty">아직 그릴 만큼의 데이터가 없습니다. 수집이 시작되면 이곳에 나타납니다.</div>'; return; }
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
   const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:34,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:252,h:140,u:'%'},{k:'dew',lo:'dmin',hi:'dmax',c:'var(--d)',s:'var(--d-soft)',y:436,h:116,u:'°'}];
-  const BOT = 436+116, H = BOT+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
+  const OSx = cache && cache.out && cache.out.series ? cache.out.series.filter(q => q.ts >= pts[0].ts - 36e5 && q.ts <= pts.at(-1).ts + 36e5) : [], OP = OSx.length > 1 ? { y: 616, h: 130 } : null;
+  const BOT = OP ? OP.y + OP.h : 436+116, H = BOT+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
   const REV = false, XT = ts => m.l + (REV ? t1-ts : ts-t0)/span*iw, X = p => XT(p.ts), ord = a => REV ? a.slice().reverse() : a;
   let g = '';
   panels.forEach(P => {
@@ -956,7 +973,7 @@ function trend(el, pts, marks){
     if(!real.length){ const up = ord(v2).map(p => [X(p), P.Y(p[P.hi])]), dn = ord(v2).map(p => [X(p), P.Y(p[P.lo])]).reverse(); band = `<path d="${smooth(up) + smooth(dn, false)}Z" fill="${P.s}"/>`; }
     // 선 아래를 값의 색으로 은은하게 채워 '얼마나 따뜻/습한지'는 색으로, 모양은 또렷한 선으로
     const x0 = X(src[0]).toFixed(1), x1 = X(src.at(-1)).toFixed(1), yb = (P.y + P.h).toFixed(1);
-    const area = real.length ? `<path d="${line}L${x1},${yb}L${x0},${yb}Z" fill="${P.a}" class="area"/>` : '';
+    const area = `<path d="${line}L${x1},${yb}L${x0},${yb}Z" fill="${P.a}" class="area"/>`;
     g += `${area}${band}<path d="${line}" fill="none" stroke="var(--ink)" stroke-opacity=".88" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
     // 최고·최저 지점에만 값을 직접 표시
     if(src.length > 2){ const fv = P.k === 'hum' ? n0 : n1, ex = (best) => src.reduce((a, b) => best(b[P.k], a[P.k]) ? b : a);
@@ -966,11 +983,28 @@ function trend(el, pts, marks){
     const mk = (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1);
     if(mk.length <= 48) mk.forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="2.4" fill="var(--panel)" stroke="var(--ink)" stroke-opacity=".7" stroke-width="1.3"/>`; });
   });
+  // 실내·바깥 기온을 한 축에: 두 선 사이(편차)를 옅게 채움
+  if(OP){
+    const ins = pts.filter(p => p.temp != null), os = OSx.filter(q => q.ts >= t0 && q.ts <= t1);
+    const all = ins.map(p => p.temp).concat(os.map(q => q.temp)), mn = Math.min(...all), mx = Math.max(...all), sc = niceScale(mn - (mx-mn)*.08, mx + (mx-mn)*.08);
+    OP.Y = v => OP.y + OP.h - (v - sc.lo)/(sc.hi - sc.lo)*OP.h;
+    (sc.ticks.length > 4 ? sc.ticks.filter((_, i) => i % 2 === 0) : sc.ticks).forEach(t => { const yy = OP.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}°</text>`; });
+    if(os.length > 1){
+      const step = Math.max(1, Math.ceil(ins.length / 400)), iq = ins.filter((_, i) => i % step === 0 || i === ins.length-1);
+      const top = iq.map(p => [X(p), OP.Y(p.temp)]), bot = iq.slice().reverse().map(p => [X(p), OP.Y(valAt(os, p.ts, 'temp'))]);
+      g += `<path d="${smooth(top) + smooth(bot, false)}Z" class="od-gap"/>`;
+      g += `<path d="${smooth(os.map(q => [X(q), OP.Y(q.temp)]))}" class="od-out"/>`;
+      g += `<path d="${smooth(iq.map(p => [X(p), OP.Y(p.temp)]))}" class="od-in"/>`;
+      const gaps = iq.map(p => p.temp - valAt(os, p.ts, 'temp')), avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+      g += `<g class="plab"><text x="${m.l-36}" y="${OP.y-16}">실내 · 바깥 기온</text></g><text class="od-l" x="${W-m.r}" y="${OP.y-16}" text-anchor="end">평균 차이 ${avg >= 0 ? '+' : '−'}${Math.abs(avg).toFixed(1)}° · 바깥 ${OUT.name}</text>`;
+      const le = iq.at(-1), lo = os.at(-1); g += `<text class="od-k" x="${Math.min(X(le)+4, W-m.r-2)}" y="${OP.Y(le.temp)-6}" text-anchor="end">실내</text><text class="od-k" x="${Math.min(X(lo)+4, W-m.r-2)}" y="${OP.Y(lo.temp)+14}" text-anchor="end">바깥</text>`;
+    }
+  }
   panels.forEach(P => { g += P.label; });
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
   const nt = W < 600 ? 3 : 6; for(let i=0;i<=nt;i++){ const ts = REV ? t1-span*i/nt : t0+span*i/nt; g += `<text x="${m.l+iw*i/nt}" y="${H-4}" text-anchor="${i==0?'start':i==nt?'end':'middle'}">${fmt(ts)}</text>`; }
   if(selTs && selTs >= t0 && selTs <= t1){ const sx = XT(selTs).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="20" y2="${BOT}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
-  g += `<g id="cur" opacity="0"><line y1="20" y2="${BOT}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d2" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d3" r="4.5" stroke="var(--panel)" stroke-width="2"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
+  g += `<g id="cur" opacity="0"><line y1="20" y2="${BOT}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d2" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d3" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d4" r="4" fill="var(--ink)" stroke="var(--panel)" stroke-width="2" opacity="${OP ? 1 : 0}"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#cur'), hit = svg.querySelector('#hit');
   hit.onmousemove = e => {
@@ -979,7 +1013,9 @@ function trend(el, pts, marks){
     cur.setAttribute('opacity',1); cur.firstChild.setAttribute('x1',X(b)); cur.firstChild.setAttribute('x2',X(b));
     const d1 = cur.querySelector('#d1'), d2 = cur.querySelector('#d2');
     d1.setAttribute('cx',X(b)); d1.setAttribute('cy',panels[0].Y(b.temp)); d1.setAttribute('fill', specColor('temp', b.temp)); d2.setAttribute('fill', specColor('hum', b.hum)); if(b.dew != null) cur.querySelector('#d3').setAttribute('fill', specColor('dew', b.dew)); d2.setAttribute('cx',X(b)); d2.setAttribute('cy',panels[1].Y(b.hum)); const d3 = cur.querySelector('#d3'); if(b.dew != null){ d3.setAttribute('cx',X(b)); d3.setAttribute('cy',panels[2].Y(b.dew)); }
-    showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° <span style="opacity:.6">(${n1(b.tmin)}–${n1(b.tmax)})</span><br>습도 ${n0(b.hum)}% <span style="opacity:.6">(${n0(b.hmin)}–${n0(b.hmax)})</span><br>이슬점 ${n1(b.dew)}° <span style="opacity:.6">(${n1(b.dmin)}–${n1(b.dmax)})</span>`);
+    const ot = OP ? valAt(OSx, b.ts, 'temp') : null, oh = OP ? valAt(OSx, b.ts, 'hum') : null;
+    if(OP && OP.Y && ot != null){ const d4 = cur.querySelector('#d4'); d4.setAttribute('cx', X(b)); d4.setAttribute('cy', OP.Y(ot)); }
+    showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° <span style="opacity:.6">(${n1(b.tmin)}–${n1(b.tmax)})</span><br>습도 ${n0(b.hum)}% <span style="opacity:.6">(${n0(b.hmin)}–${n0(b.hmax)})</span><br>이슬점 ${n1(b.dew)}° <span style="opacity:.6">(${n1(b.dmin)}–${n1(b.dmax)})</span>` + (ot != null ? `<br>바깥 ${n1(ot)}° · ${n0(oh)}% <span style="opacity:.6">(실내 ${b.temp - ot >= 0 ? '+' : '−'}${n1(Math.abs(b.temp - ot))}°)</span>` : ''));
   };
   hit.onmouseleave = () => { cur.setAttribute('opacity',0); hideTip(); };
   hit.style.cursor = 'pointer';
@@ -1161,29 +1197,38 @@ function renderNow(cur, ref, st, cmp, yd, hist){
   const bar = specs.length ? `<div class="cmpbar"><span>비교</span>${specs.length > 1 ? specs.map((x,i) => `<button data-i="${i}" class="${i===Math.min(cmpIdx,specs.length-1)?'on':''}">${x.label}</button>`).join('') : `<b style="color:var(--ink);font-weight:600">${sp.label}</b>`}
       <span>${base ? `${fmtW(sp.from)} – ${fmtW(sp.to)}` : `${fmtW(sp.from)} – ${fmtW(sp.to)} · 비교할 기록 없음`}</span></div>` : '';
   const pts = (hist && hist.points) || [];
+  // 같은 기간 바깥 평균과 실내와의 차이
+  const OS = cache.out && cache.out.series && pts.length ? cache.out.series.filter(q => q.ts >= pts[0].ts && q.ts <= pts.at(-1).ts) : [];
+  const outLine = (M, v, u, du, fmt) => { if(OS.length < 2 || v == null) return ''; const vals = OS.map(q => M === 'dew' ? dew(q.temp, q.hum) : q[M]), av = vals.reduce((a, b) => a + b, 0) / vals.length, df = v - av;
+    return `<div class="sc-o"><span>바깥 평균 <b>${fmt(av)}${u}</b></span><span>실내가 <b>${df >= 0 ? '+' : '−'}${fmt(Math.abs(df))}${du}</b></span></div>`; };
   // 지표 카드: 평균을 크게, 최저·최고는 한 줄, 아래에 구간 흐름(작은 선 그래프)
   const card = (M, name, kmin, kmax, kavg, u, du, dec, fmt) => {
     if(o[kavg] == null) return '';
     return `<div class="sc">
       <div class="sc-h"><span><i class="en">${{temp:'Temp',hum:'Humidity',dew:'Dew point'}[M]}</i>${name}</span>${dl(kavg, du, dec)}</div>
-      <div class="sc-v">${fmt(o[kavg])}<small>${u}</small></div>
+      <div class="sc-v">${fmt(o[kavg])}<small class="${u.includes('°') ? 'deg' : 'pct'}">${u}</small></div>
       <div class="sc-r"><span>최저 <b>${fmt(o[kmin])}${u}</b> <em>${tm(o[kmin+'_ts'])}</em></span><span>최고 <b>${fmt(o[kmax])}${u}</b> <em>${tm(o[kmax+'_ts'])}</em></span></div>
+      ${outLine(M, o[kavg], u, du, fmt)}
       ${spark(M, pts)}</div>`; };
   const cards = `<div class="scs">${card('temp','온도','tmin','tmax','temp','°','°',1,n1)}${card('hum','습도','hmin','hmax','hum','%','%p',0,n0)}${card('dew','이슬점','dmin','dmax','dew','°','°',1,n1)}</div>`;
   if(now){
     // 직전 = 그 값이 실제로 달라지기 직전의 측정 (몇 초 간격으로 따로 온 같은 값은 건너뜀)
     const pr = { temp: cur.prev_t, hum: cur.prev_h };
     // 말 대신 아이콘: 시계(되감기) = 직전 측정 대비, 달력 = 어제 같은 시각 대비
-    const IC = { prev: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>', day: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>' };
+    const IC = { out: '<svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>', prev: '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>', day: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>' };
     const d1 = (v, u, kind, dec, ic, tip) => v == null ? '' : `<span class="hd" title="${tip}" aria-label="${tip}">${IC[ic]}${Math.abs(v) < .05 ? '<b class="z">–</b>' : `<b class="${chgCls(kind, v, .05)}">${chgTxt(v, u, dec)}</b>`}</span>`;
+    const oc = cache.out && cache.out.cur, ocv = (k) => !oc ? null : k === 'temp' ? oc.temp : oc.hum;
+    // 바깥 대비: 색 없이 '바깥 값'과 '실내 − 바깥' 차이만
+    const dOut = (k, u, dec) => { const ov = ocv(k); if(ov == null) return ''; const df = cur[k] - ov;
+      return `<span class="hd ho" title="바깥(${OUT.name}) ${dec ? ov.toFixed(1) : Math.round(ov)}${u === '°' ? '°' : '%'} 대비">${IC.out}<em>바깥 ${dec ? ov.toFixed(1) : Math.round(ov)}${u === '°' ? '°' : '%'}</em><b class="z">${df >= 0 ? '+' : '−'}${dec ? Math.abs(df).toFixed(1) : Math.round(Math.abs(df))}${u === '°' ? '°' : '%p'}</b></span>`; };
     const deltas = (k, u, kind, dec) => { const a = pr[k] && pr[k][k] != null ? cur[k] - pr[k][k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
-      return `<div class="hds">${d1(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${d1(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}</div>`; };
+      return `<div class="hds">${d1(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${d1(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}${dOut(k, u, dec)}</div>`; };
     const status = (M, v) => { const rr = M === 'temp' ? CTX.t : CTX.h, f = M === 'temp' ? (x) => x.toFixed(1) + '°' : (x) => Math.round(x) + '%p';
       const w = M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
       return v < rr[0] ? `${w} <em>쾌적까지 +${f(rr[0]-v)}</em>` : v > rr[1] ? `${w} <em>쾌적까지 −${f(v-rr[1])}</em>` : `${w} <em class="ok">쾌적 범위</em>`; };
     const metric = (M, name, v, fmt, unit, dec, du) => `<div class="hm" style="--c:${specColor(M, v)}">
         <div class="hm-n"><span class="en">${{temp:'Temperature',hum:'Humidity'}[M]}</span>${name}</div>
-        <div class="hm-v">${fmt(v)}<small>${unit}</small></div>
+        <div class="hm-v">${fmt(v)}<small class="${unit.includes('°') ? 'deg' : 'pct'}">${unit}</small></div>
         <div class="hm-s">${status(M, v)}</div>
         ${deltas(M, du, M, dec)}
         ${gauge2(M, v)}</div>`;
@@ -1262,6 +1307,31 @@ $('#refresh').onclick = async () => {
   await load(); loadHeat();
   b.disabled = false; b.textContent = '불러오기';
 };
+// 바깥 날씨 (Open-Meteo, 키 불필요). 위치 기본값: 서울
+const OUT = { lat: 37.5665, lon: 126.978, name: '서울' };
+const outMemo = {};
+async function omGet(url){ if(outMemo[url]) return outMemo[url]; const r = await fetch(url); if(!r.ok) throw new Error('om ' + r.status); return (outMemo[url] = r.json()); }
+const omSeries = (j) => { const h = j && j.hourly; if(!h) return []; return h.time.map((t, i) => ({ ts: Date.parse(t + ':00+09:00'), temp: h.temperature_2m[i], hum: h.relative_humidity_2m[i] })).filter(p => p.temp != null && p.hum != null); };
+async function outdoorRange(t0, t1){
+  const q = `latitude=${OUT.lat}&longitude=${OUT.lon}&hourly=temperature_2m,relative_humidity_2m&timezone=Asia%2FSeoul`;
+  const d0 = kstDate(t0 - 36e5), d1 = kstDate(t1 + 36e5), cut = kstDate(Date.now() - 6*864e5), parts = [];
+  // 6일보다 오래된 구간은 관측 기록(archive), 최근은 예보 API의 지난 값
+  if(d0 < cut) parts.push(omGet(`https://archive-api.open-meteo.com/v1/archive?${q}&start_date=${d0}&end_date=${d1 < cut ? d1 : addDays(cut, -1)}`));
+  if(d1 >= cut) parts.push(omGet(`https://api.open-meteo.com/v1/forecast?${q}&start_date=${d0 > cut ? d0 : cut}&end_date=${d1}`));
+  const all = (await Promise.all(parts.map(x => x.catch(() => null)))).flatMap(omSeries).sort((a, b) => a.ts - b.ts);
+  return all.filter(p => p.ts <= Date.now() + 36e5);
+}
+async function outdoorNow(){ const j = await omGet(`https://api.open-meteo.com/v1/forecast?latitude=${OUT.lat}&longitude=${OUT.lon}&current=temperature_2m,relative_humidity_2m&timezone=Asia%2FSeoul&_=${Math.floor(Date.now()/6e5)}`);
+  return j && j.current ? { ts: Date.parse(j.current.time + ':00+09:00'), temp: j.current.temperature_2m, hum: j.current.relative_humidity_2m } : null; }
+// 시계열에서 특정 시각의 값 (선형 보간)
+function valAt(S, ts, k){ if(!S || !S.length) return null; let lo = 0, hi = S.length - 1; if(ts <= S[0].ts) return S[0][k]; if(ts >= S[hi].ts) return S[hi][k];
+  while(hi - lo > 1){ const m = (lo + hi) >> 1; if(S[m].ts <= ts) lo = m; else hi = m; } const a = S[lo], b = S[hi], f = (ts - a.ts) / (b.ts - a.ts); return a[k] + (b[k] - a[k]) * f; }
+async function loadOut(key){
+  const c = cache; if(!c || !c.hist || !c.hist.points.length) return;
+  const P = c.hist.points, [cur, series] = await Promise.all([outdoorNow().catch(() => null), outdoorRange(P[0].ts, P.at(-1).ts).catch(() => [])]);
+  if(cache !== c) return; c.out = { cur, series }; renderAll();
+}
+
 // 전환 애니메이션: 바뀐 내용을 짧게 겹쳐 보이며 교체, 숫자는 이전 값에서 새 값으로 이어서 변한다
 const RM = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fx(...sel){ if(RM()) return; sel.flatMap(x => typeof x === 'string' ? [...document.querySelectorAll(x)] : [x]).filter(Boolean).forEach(el =>
@@ -1288,6 +1358,7 @@ async function load(){
     cache = { cur, hist, st, cmp, yd }; lastStats = st;
     const prev = numSnap(), first = !document.querySelector('.hm-v, .sc-v');
     ccAnimNext = true; renderAll(); ccAnimNext = false;
+    loadOut();
     if(!first){ numTween(prev); fx('#now .hero2', '#now .scs', '#now .rt', '#now .cmpbar', '.panel.on > :not(.sec-h)'); }
     // 센서가 실제로 보고한 시각만 표시 (화면을 불러온 시각이 아님)
     const age = cur ? (Date.now()-cur.ts)/60000 : null, f = $('#fresh');
