@@ -599,6 +599,7 @@ svg text.od-k{fill:var(--sub)!important;font-size:11px!important;font-weight:650
 .db-x b{margin-left:6px;color:var(--sub);font-weight:650}
 .db.mini .db-x{font-size:11.5px}
 .sc .db{grid-column:1/-1}
+.d-out{margin-top:6px}.d-out .db{margin-top:12px}
 </style>
 </head>
 <body>
@@ -816,6 +817,8 @@ function renderDetail(d){
   el.innerHTML = `<div class="dh"><span class="k">선택한 시점 · ${when(d.ts)} 측정</span><button id="dClose">닫기</button></div>
     <div class="k" style="margin-top:2px">${p ? (lastChg ? `변화는 값이 달라지기 직전 측정(${when(lastChg)}, ${gap} 전) 대비` : '이전 측정과 같은 값입니다') : '기록상 첫 측정입니다'}</div>
     <div class="pair3">${num('t', colorOf('temp', d.temp), n1(d.temp), '°C', '온도', dd(d.prev_t ? d.temp-d.prev_t.temp : null, '°', 1, 'temp'))}${num('h', colorOf('hum', d.hum), n0(d.hum), '%', '습도', dd(d.prev_h ? d.hum-d.prev_h.hum : null, '%p', 0, 'hum'))}${num('d', colorOf('dew', dp), n1(dp), '°C', '이슬점', dd(pdp != null ? dp-pdp : null, '°', 1, 'dew'))}</div>
+    ${(() => { const S = cache && cache.out && cache.out.series; if(!S || !S.length || d.ts < S[0].ts - 36e5 || d.ts > S.at(-1).ts + 36e5) return '';
+      return `<div class="d-out">${dumbbell('temp', d.temp, valAt(S, d.ts, 'temp'))}${dumbbell('hum', d.hum, valAt(S, d.ts, 'hum'))}</div>`; })()}
     <p class="verdict">${feel(d.temp, d.hum, cz)}</p>
     <div class="k" style="margin-top:6px">${inT && inH ? '쾌적 범위 안' : '쾌적 범위 밖'} (${cz.m}월 기준 ${comfortTxt(cz)})${vsAvg ? ' · ' + vsAvg : ''}</div>`;
   $('#dClose').onclick = () => { selTs = null; el.style.display = 'none'; if(lastTrend) trend(...lastTrend); };
@@ -1378,7 +1381,7 @@ async function fetchOutdoor(t0, t1, onStep){
   const db = await get(`/api/outdoor?from=${Math.round(t0 - 30*60e3)}&to=${Math.round(t1 + 30*60e3)}`).catch(() => null);
   const ds = db && db.series || [];
   if(ds.length > 1){ const cover = (ds.at(-1).ts - ds[0].ts) / Math.max(1, t1 - t0), gaps = ds.some((p, i) => i && p.ts - ds[i-1].ts > 3*36e5);
-    const S = db.bucket === 1 ? smooth1(ds, 4) : ds;
+    const S = ds;
     if(cover > .95 && !gaps) return { series: S, src: '강동' };
     if(onStep) onStep({ series: S, src: '강동' }); }
   const omP = outdoorRange(t0, t1).catch(() => []);

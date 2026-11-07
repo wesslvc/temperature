@@ -54,10 +54,11 @@ export default async function handler(req, res) {
   if (req.query.from) {
     try {
       const now = Date.now(), from = Number(req.query.from), to = Math.min(Number(req.query.to) || now, now), span = to - from;
-      const b = span <= 2 * 864e5 ? 1 : span <= 31 * 864e5 ? 10 : 60;
+      // DB(PostgREST)는 한 번에 1000행까지만 돌려주므로 900행 안쪽이 되도록 평균 간격을 고른다
+      const b = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].find((m) => span / (m * 60e3) <= 900) || 1440;
       const rows = await rpc('roomtemp_out_series', { p_from: new Date(from).toISOString(), p_to: new Date(to).toISOString(), p_bucket_min: b });
       res.setHeader('Cache-Control', to < now - 36e5 ? 's-maxage=3600' : 's-maxage=60, stale-while-revalidate=300');
-      return res.json({ name: '강동', bucket: b, series: (rows || []).map((r) => ({ ts: Number(r.ts) - (b === 1 ? 30e3 : 0), temp: Number(r.temp), hum: Number(r.hum) })) });
+      return res.json({ name: '강동', bucket: b, series: (rows || []).map((r) => ({ ts: Number(r.ts), temp: Number(r.temp), hum: Number(r.hum) })) });
     } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
   }
   // 백필
