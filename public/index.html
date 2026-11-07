@@ -586,26 +586,18 @@ svg .od-in{fill:none;stroke:var(--ink);stroke-opacity:.45;stroke-width:1.3;strok
 svg text.od-l{fill:var(--faint)!important;font-size:11.5px!important}
 svg text.od-k{fill:var(--sub)!important;font-size:11px!important;font-weight:650;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
 
-/* 실내·바깥 덤벨 */
-.db{position:relative;height:44px;margin-top:22px}
-.db.mini{height:38px;margin-top:14px}
-.db-t{position:absolute;left:0;right:0;top:14px;height:1px;background:var(--rule)}
-.db-s{position:absolute;top:12px;height:5px;border-radius:3px;opacity:.85}
-.db-o,.db-i{position:absolute;top:8px;width:13px;height:13px;margin-left:-6.5px;border-radius:50%}
-.db-o{background:var(--bg);box-shadow:inset 0 0 0 2px var(--sub)}
-.db-i{background:var(--ink);box-shadow:0 0 0 3px var(--bg)}
-.db-g{position:absolute;top:-8px;transform:translateX(-50%);font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;letter-spacing:-.01em}
-.db.mini .db-g{font-size:11.5px}
-.db.mini .db-o,.db.mini .db-i{width:11px;height:11px;margin-left:-5.5px;top:9px}
-
-.db{height:auto;padding-top:14px}
-.db-t{top:28px}.db-s{top:26px}.db-o,.db-i{top:22px}.db-g{top:0}
-.db.mini .db-o,.db.mini .db-i{top:23px}
-.db-ks{display:flex;justify-content:space-between;gap:10px;margin-top:22px;font-size:11.5px;color:var(--faint);white-space:nowrap}
-.db-k b{color:var(--sub);font-weight:650}
-.db-k i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
-.db-k.o i{box-shadow:inset 0 0 0 1.5px var(--sub)}.db-k.i i{background:var(--ink)}
-.db.mini .db-ks{margin-top:20px;font-size:11px}
+/* 실내·바깥 비교 (한 줄) */
+.db{display:flex;align-items:center;gap:14px;margin-top:18px}
+.db.mini{margin-top:12px;gap:12px}
+.db-v{position:relative;flex:1;min-width:0;height:10px}
+.db-v::before{content:'';position:absolute;left:0;right:0;top:4.5px;height:1px;background:var(--rule)}
+.db-s{position:absolute;top:4px;height:2px;background:var(--sub);opacity:.55}
+.db-o,.db-i{position:absolute;top:1px;width:8px;height:8px;margin-left:-4px;border-radius:50%}
+.db-o{background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--sub)}
+.db-i{background:var(--ink)}
+.db-x{flex:none;font-size:12px;color:var(--faint);white-space:nowrap}
+.db-x b{margin-left:6px;color:var(--sub);font-weight:650}
+.db.mini .db-x{font-size:11.5px}
 .sc .db{grid-column:1/-1}
 </style>
 </head>
@@ -1273,21 +1265,15 @@ function renderNow(cur, ref, st, cmp, yd, hist){
   document.querySelectorAll('.cmpbar button').forEach(bn => bn.onclick = () => { cmpIdx = +bn.dataset.i; load(); });
 }
 
-// 실내·바깥 비교: 같은 눈금(기온 −10~35°, 습도 0~100%) 위의 두 점과 그 사이 막대. 막대 길이 = 차이
+// 실내·바깥 비교: 한 줄. 같은 눈금(기온 −10~35°, 습도 0~100%) 위 바깥(작은 고리)과 실내(점)를 가는 선으로 잇고, 오른쪽에 바깥 값과 차이
 function dumbbell(M, inV, outV, opt = {}){
   if(inV == null || outV == null) return '';
   const hum = M === 'hum', [a, b] = hum ? [0, 100] : [-10, 35], P = (v) => Math.max(0, Math.min(100, (v - a) / (b - a) * 100));
-  const pi = P(inV), po = P(outV), l = Math.min(pi, po), w = Math.abs(pi - po), d = inV - outV, f = (v) => hum ? `${Math.round(v)}%` : `${v.toFixed(1)}°`;
-  const cs = (v) => hum ? specColor('hum', v) : specColor('out', v), lg = po <= pi ? `${cs(outV)},${cs(inV)}` : `${cs(inV)},${cs(outV)}`;
-  // 이름표는 점 아래가 아니라 막대 양 끝(왼쪽 점 → 왼쪽, 오른쪽 점 → 오른쪽)에 둬서 좁아도 겹치지 않게
-  const outLeft = po <= pi, name = opt.out || '바깥';
-  const lo = `<span class="db-k o"><i></i>${name} <b>${f(outV)}</b></span>`, li = `<span class="db-k i"><i></i>실내 <b>${f(inV)}</b></span>`;
-  const dt = Math.abs(d) < (hum ? .5 : .05) ? '같음' : `${d > 0 ? '+' : '−'}${hum ? Math.round(Math.abs(d)) + '%p' : Math.abs(d).toFixed(1) + '°'}`;
-  return `<div class="db${opt.mini ? ' mini' : ''}" title="실내 ${f(inV)} · ${name} ${f(outV)}"><i class="db-t"></i>
-    <i class="db-s" style="left:${l}%;width:${w}%;background:linear-gradient(90deg,${lg})"></i>
-    <span class="db-g" style="left:${l + w / 2}%">${dt}</span>
-    <i class="db-o" style="left:${po}%"></i><i class="db-i" style="left:${pi}%"></i>
-    <div class="db-ks">${outLeft ? lo + li : li + lo}</div></div>`;
+  const pi = P(inV), po = P(outV), d = inV - outV, f = (v) => hum ? `${Math.round(v)}%` : `${v.toFixed(1)}°`;
+  const dt = Math.abs(d) < (hum ? .5 : .05) ? '±0' : `${d > 0 ? '+' : '−'}${hum ? Math.round(Math.abs(d)) + '%p' : Math.abs(d).toFixed(1) + '°'}`;
+  return `<div class="db${opt.mini ? ' mini' : ''}" title="실내 ${f(inV)} · ${opt.out || '바깥'} ${f(outV)}">
+    <div class="db-v"><i class="db-s" style="left:${Math.min(pi, po)}%;width:${Math.abs(pi - po)}%"></i><i class="db-o" style="left:${po}%"></i><i class="db-i" style="left:${pi}%"></i></div>
+    <div class="db-x">${opt.out || '바깥'} ${f(outV)} <b>${dt}</b></div></div>`;
 }
 // 쾌적 구간만 밝게 켜진 얇은 스펙트럼 선 + 현재 위치
 function gauge2(M, v){
