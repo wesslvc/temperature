@@ -613,11 +613,14 @@ svg .od-line{fill:none;stroke:var(--ink);stroke-opacity:.88;stroke-width:1.8;str
 svg .od-dot{fill:var(--ink);stroke:var(--bg);stroke-width:1.5}
 @media(max-width:560px){.os{gap:14px 24px}.os-m b{font-size:28px}.os-m.sm b{font-size:18px}}
 svg .ov-i{fill:none;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
-svg .ov-o{fill:none;stroke-width:1.8;stroke-dasharray:5 4;stroke-linecap:round;opacity:.95}
-svg .ov-r{stroke:var(--ink);stroke-opacity:.35;stroke-width:1}
-svg .ov-e{fill:var(--ink);stroke:var(--bg);stroke-width:1.5}
-svg text.ov-d{fill:var(--ink)!important;font-size:11.5px!important;font-weight:650;paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round}
-svg text.ov-k{fill:var(--sub)!important;font-size:11px!important;font-weight:600}
+svg .ov-o{fill:none;stroke-width:1.3;stroke-linejoin:round;stroke-linecap:round;opacity:.9}
+svg .ov-b{fill:none;stroke:var(--faint);stroke-width:1}
+svg text.ov-v{fill:var(--ink)!important;font-size:12px!important;font-weight:650;letter-spacing:-.01em}
+svg text.ov-v.o{fill:var(--sub)!important;font-weight:500}
+svg text.ov-d{fill:var(--faint)!important;font-size:11px!important;font-weight:600}
+svg .ov-rb{fill:var(--ink);fill-opacity:.07}
+svg .ov-rbl{fill:none;stroke:var(--sub);stroke-width:1.1;stroke-opacity:.8}
+svg text.ov-rl{fill:var(--faint)!important;font-size:10.5px!important}
 </style>
 </head>
 <body>
@@ -1169,32 +1172,35 @@ function outPanel(el, sumEl){
     <div class="os-m"><span class="k">습도 차 평균</span><b>${sg(avg('dh'), 0, '%p')}</b><em>실내 ${n0(avg("ih"))}% · AWS ${n0(avg("oh"))}%</em></div>
     <div class="os-m sm"><span class="k">가장 벌어짐</span><b>${sg(tmx.dt, 1, '°')}</b><em>${when(tmx.ts)}</em></div>
     <div class="os-m sm"><span class="k">가장 좁음</span><b>${sg(tmn.dt, 1, '°')}</b><em>${when(tmn.ts)}</em></div>`;
-  const W = Math.max(320, el.clientWidth || 1112), m = {l:44, r:8}, iw = W - m.l - m.r, t0 = D[0].ts, t1 = D.at(-1).ts, span = t1 - t0 || 1, X = ts => m.l + (ts - t0) / span * iw;
-  // 두 선(실내·AWS)을 같은 축에 값의 색으로 그리고, 사이를 같은 색으로 옅게 채운다. 몇 지점에 차이를 세로 눈금으로 겹쳐 표시
-  const panels = [{i:'it', o:'ot', d:'dt', cm:'out', y:40, h:220, u:'°', dec:1, name:'기온'}, {i:'ih', o:'oh', d:'dh', cm:'hum', y:330, h:170, u:'%', dec:0, name:'습도'}];
-  const H = panels[1].y + panels[1].h + 30;
+  const narrow = (el.clientWidth || 1112) < 600, W = Math.max(320, el.clientWidth || 1112), m = {l:44, r: narrow ? 58 : 76}, iw = W - m.l - m.r, t0 = D[0].ts, t1 = D.at(-1).ts, span = t1 - t0 || 1, X = ts => m.l + (ts - t0) / span * iw;
+  // 두 선(실내·AWS)을 같은 축에 값의 색으로, 사이는 아주 옅게. 오른쪽 여백에 마지막 값과 그 차이를 괄호로, 아래 얇은 띠에 차이의 흐름
+  const panels = [{i:'it', o:'ot', d:'dt', cm:'out', y:40, h:200, u:'°', dec:1, name:'기온'}, {i:'ih', o:'oh', d:'dh', cm:'hum', y:340, h:150, u:'%', dec:0, name:'습도'}];
+  const RB = 26, H = panels[1].y + panels[1].h + RB + 40;
   let g = '';
   panels.forEach(P => {
-    const all = D.flatMap(r => [r[P.i], r[P.o]]), mn = Math.min(...all), mx = Math.max(...all), pad = Math.max((mx - mn) * .08, P.u === '°' ? .5 : 2);
-    const sc = niceScale(mn - pad, mx + pad); P.Y = v => P.y + P.h - (v - sc.lo) / (sc.hi - sc.lo) * P.h;
-    (sc.ticks.length > 5 ? sc.ticks.filter((_, i) => i % 2 === 0) : sc.ticks).forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
-    const gs = vGrad(P.cm, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi), 1), gf = vGrad(P.cm, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi), .2); g += `<defs>${gs.def}${gf.def}</defs>`;
+    const all = D.flatMap(r => [r[P.i], r[P.o]]), mn = Math.min(...all), mx = Math.max(...all), sc = niceScale(mn - (mx - mn) * .04, mx + (mx - mn) * .04);
+    P.Y = v => P.y + P.h - (v - sc.lo) / (sc.hi - sc.lo) * P.h;
+    (sc.ticks.length > 5 ? sc.ticks.filter((_, i) => i % 2 === 0) : sc.ticks).forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${m.l+iw}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
+    const gs = vGrad(P.cm, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi), 1), gf = vGrad(P.cm, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi), .1); g += `<defs>${gs.def}${gf.def}</defs>`;
     const li = D.map(r => [X(r.ts), P.Y(r[P.i])]), lo = D.map(r => [X(r.ts), P.Y(r[P.o])]);
     g += `<path d="${smooth(li) + smooth(lo.slice().reverse(), false)}Z" fill="url(#${gf.id})"/>`;
     g += `<path d="${smooth(lo)}" class="ov-o" stroke="url(#${gs.id})"/><path d="${smooth(li)}" class="ov-i" stroke="url(#${gs.id})"/>`;
-    // 차이 눈금: 구간을 고르게 나눈 몇 지점
-    const n = W < 600 ? 4 : 7;
-    for(let k = 1; k <= n; k++){ const ts = t0 + span * (k - .5) / n; let r = D[0]; for(const q of D) if(Math.abs(q.ts - ts) < Math.abs(r.ts - ts)) r = q;
-      const x = X(r.ts), ya = P.Y(r[P.i]), yb = P.Y(r[P.o]), dv = r[P.d];
-      g += `<line x1="${x}" x2="${x}" y1="${ya}" y2="${yb}" class="ov-r"/><circle cx="${x}" cy="${ya}" r="2.5" class="ov-e"/><circle cx="${x}" cy="${yb}" r="2.5" class="ov-e"/>`;
-      g += `<text class="ov-d" x="${x}" y="${(ya + yb) / 2 + 4}" text-anchor="middle">${dv >= 0 ? '+' : '−'}${Math.abs(dv).toFixed(P.dec)}${P.u === '°' ? '°' : '%p'}</text>`; }
-    // 오른쪽 끝 이름표
-    const le = D.at(-1); g += `<text class="ov-k" x="${W-m.r}" y="${P.Y(le[P.i]) - 8}" text-anchor="end">실내</text><text class="ov-k" x="${W-m.r}" y="${P.Y(le[P.o]) + 16}" text-anchor="end">AWS</text>`;
+    // 오른쪽 여백: 마지막 두 값과 그 사이 괄호, 괄호 옆에 차이
+    const le = D.at(-1), yi = P.Y(le[P.i]), yo = P.Y(le[P.o]), bx = m.l + iw + 10, f = (v) => P.u === '°' ? v.toFixed(1) + '°' : Math.round(v) + '%';
+    const top = Math.min(yi, yo), bot = Math.max(yi, yo);
+    g += `<path d="M${bx},${top}h4V${bot}h-4" class="ov-b"/>`;
+    g += `<text class="ov-v" x="${bx + 9}" y="${yi + (yi < yo ? -4 : 12)}">${f(le[P.i])}</text><text class="ov-v o" x="${bx + 9}" y="${yo + (yo > yi ? 12 : -4)}">${f(le[P.o])}</text>`;
+    if(bot - top > 34) g += `<text class="ov-d" x="${bx + 9}" y="${(top + bot) / 2 + 4}">${sg(le[P.d], P.dec, P.u === '°' ? '°' : '%p')}</text>`;
     g += `<g class="plab"><text x="${m.l-36}" y="${P.y-18}">${P.name}</text></g>`;
+    // 차이 띠 (기온 패널 아래에만): 차이가 클수록 높게, 0 기준
+    if(P.d === 'dt'){ const ry = P.y + P.h + 18, dv = D.map(r => r.dt), d0 = Math.min(...dv), d1 = Math.max(...dv), RY = v => ry + RB - (3 + (v - d0) / Math.max(d1 - d0, .1) * (RB - 3));
+      // 차이의 오르내림이 보이도록 최소~최대 범위로 맞춤
+      g += `<path d="${smooth(D.map(r => [X(r.ts), RY(r.dt)]))}L${X(t1)},${ry + RB}L${X(t0)},${ry + RB}Z" class="ov-rb"/><path d="${smooth(D.map(r => [X(r.ts), RY(r.dt)]))}" class="ov-rbl"/><text class="ov-rl" x="${m.l-8}" y="${ry + RB - 4}" text-anchor="end">차이</text>`;
+      g += `<text class="ov-rl" x="${bx}" y="${ry + 8}">${sg(d1, 1, '°')}</text><text class="ov-rl" x="${bx}" y="${ry + RB}">${sg(d0, 1, '°')}</text>`; }
   });
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
   const nt = W < 600 ? 3 : 6; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${H-6}" text-anchor="${i == 0 ? 'start' : i == nt ? 'end' : 'middle'}">${fmt(ts)}</text>`; }
-  g += `<text class="od-l" x="${W-m.r}" y="22" text-anchor="end">실선 실내 · 점선 ${OUT.name}</text>`;
+  g += `<text class="od-l" x="${m.l+iw}" y="22" text-anchor="end">굵은 선 실내 · 가는 선 ${OUT.name}</text>`;
   g += `<g id="ocur" opacity="0"><line y1="24" y2="${H-24}" stroke="var(--ink)" stroke-opacity=".35"/><circle id="oc1" r="4" class="od-dot"/><circle id="oc2" r="4" class="od-dot"/><circle id="oc3" r="4" class="od-dot"/><circle id="oc4" r="4" class="od-dot"/></g><rect id="ohit" x="${m.l}" y="0" width="${iw}" height="${H-24}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#ocur');
