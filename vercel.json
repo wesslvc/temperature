@@ -6,6 +6,9 @@
     },
     "api/outdoor.js": {
       "maxDuration": 60
+    },
+    "api/collect.js": {
+      "maxDuration": 60
     }
   },
   "headers": [

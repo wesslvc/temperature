@@ -1,4 +1,7 @@
+import { rpc } from './_db.js';
 // 기상청 AWS 매분자료 (기본: 강동 402). 키는 서버 환경변수에만 둔다.
+// /api/outdoor?from=&to=      → DB에 쌓인 자료 (구간 길이에 따라 1·10·60분 평균)
+// /api/outdoor?backfill=YYYY-MM-DD (Bearer INGEST_TOKEN) → 그 날 1분 자료를 DB에 저장
 // /api/outdoor                → 가장 최근 1분 값
 // /api/outdoor?day=YYYY-MM-DD&res=1|10 → 그 날(한국 시간) 하루치. 지난 날은 CDN에 오래 캐시
 const KST = 9 * 3600e3;
@@ -29,7 +32,38 @@ const bucket = (S, min) => {
   return [...out.values()].map((b) => ({ ts: b.ts, temp: +(b.t / b.n).toFixed(2), hum: +(b.h / b.n).toFixed(1) }));
 };
 
+// 수집(collect)과 백필에서 같이 씀: 구간 1분 자료를 받아 DB에 저장
+export async function storeOutdoor(t0, t1) {
+  const key = process.env.KMA_AUTH_KEY, stn = process.env.KMA_STN || '402';
+  if (!key) return 0;
+  const rows = await chunk(stn, key, t0, t1);
+  let n = 0;
+  for (let i = 0; i < rows.length; i += 1000) n += await rpc('roomtemp_out_ingest', { p_token: process.env.INGEST_TOKEN, p_rows: rows.slice(i, i + 1000).map((r) => ({ ...r, stn: +stn })) });
+  return n;
+}
+
 export default async function handler(req, res) {
+  // DB 구간 조회
+  if (req.query.from) {
+    try {
+      const now = Date.now(), from = Number(req.query.from), to = Math.min(Number(req.query.to) || now, now), span = to - from;
+      const b = span <= 2 * 864e5 ? 1 : span <= 31 * 864e5 ? 10 : 60;
+      const rows = await rpc('roomtemp_out_series', { p_from: new Date(from).toISOString(), p_to: new Date(to).toISOString(), p_bucket_min: b });
+      res.setHeader('Cache-Control', to < now - 36e5 ? 's-maxage=3600' : 's-maxage=60, stale-while-revalidate=300');
+      return res.json({ name: '강동', bucket: b, series: (rows || []).map((r) => ({ ts: Number(r.ts) - (b === 1 ? 30e3 : 0), temp: Number(r.temp), hum: Number(r.hum) })) });
+    } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
+  }
+  // 백필
+  if (req.query.backfill) {
+    const given = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!process.env.INGEST_TOKEN || given !== process.env.INGEST_TOKEN) return res.status(401).json({ error: 'unauthorized' });
+    const day = String(req.query.backfill);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return res.status(400).json({ error: 'day' });
+    try {
+      const t0 = Date.parse(day + 'T00:00:00+09:00'), t1 = Math.min(t0 + 864e5 - 60e3, Date.now());
+      return res.json({ day, stored: await storeOutdoor(t0, t1) });
+    } catch (e) { return res.status(502).json({ day, error: e.message }); }
+  }
   const key = process.env.KMA_AUTH_KEY, stn = process.env.KMA_STN || '402';
   if (!key) return res.status(501).json({ error: 'KMA_AUTH_KEY 없음' });
   try {

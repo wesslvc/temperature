@@ -1348,10 +1348,17 @@ async function awsDays(t0, t1){
 }
 // onStep: Open-Meteo가 먼저 오면 바로 그리고, AWS가 오면 다시 그린다
 async function fetchOutdoor(t0, t1, onStep){
+  // 1순위: DB에 쌓인 강동 자료 (수집 때마다 저장). 거의 다 있으면 그걸로 끝
+  const db = await get(`/api/outdoor?from=${Math.round(t0 - 30*60e3)}&to=${Math.round(t1 + 30*60e3)}`).catch(() => null);
+  const ds = db && db.series || [];
+  if(ds.length > 1){ const cover = (ds.at(-1).ts - ds[0].ts) / Math.max(1, t1 - t0), gaps = ds.some((p, i) => i && p.ts - ds[i-1].ts > 3*36e5);
+    const S = db.bucket === 1 ? smooth1(ds, 4) : ds;
+    if(cover > .95 && !gaps) return { series: S, src: '강동' };
+    if(onStep) onStep({ series: S, src: '강동' }); }
   const omP = outdoorRange(t0, t1).catch(() => []);
   const awsP = t1 - t0 <= 31*864e5 ? awsDays(t0, t1).catch(() => []) : Promise.resolve([]);
   const om = await omP; if(onStep && om.length) onStep({ series: om, src: '서울' });
-  const aws = await awsP, series = mergeOut(aws, om);
+  const aws0 = await awsP, aws = ds.length ? mergeOut(ds, aws0) : aws0, series = mergeOut(aws, om);
   const cover = aws.length ? (aws.at(-1).ts - aws[0].ts) / Math.max(1, t1 - t0) : 0;
   return { series, src: !aws.length ? '서울' : cover > .9 ? '강동' : '강동·서울' };
 }
