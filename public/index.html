@@ -636,7 +636,7 @@ svg text.od-k{fill:var(--sub)!important;font-size:11px!important;font-weight:650
 
   <div class="panel" id="p-heat">
     <div class="sec-h agg-h">
-      <div class="seg" id="hmMSeg"><button data-m="temp">온도</button><button data-m="hum">습도</button><button data-m="dew">이슬점</button></div>
+      <div class="seg" id="hmMSeg"><button data-m="temp">온도</button><button data-m="hum">습도</button><button data-m="dew">이슬점</button><button data-m="out">바깥</button></div>
       <div class="seg" id="hmSeg"><button data-b="d">일별</button><button data-b="m">월별</button></div>
     </div>
     <p class="cap" id="hmCap"></p>
@@ -645,7 +645,7 @@ svg text.od-k{fill:var(--sub)!important;font-size:11px!important;font-weight:650
 
   <div class="panel" id="p-agg">
     <div class="sec-h agg-h">
-      <div class="seg" id="tblSeg"><button data-m="temp">온도</button><button data-m="hum">습도</button><button data-m="dew">이슬점</button></div>
+      <div class="seg" id="tblSeg"><button data-m="temp">온도</button><button data-m="hum">습도</button><button data-m="dew">이슬점</button><button data-m="out">바깥</button></div>
       <div class="seg" id="unitSeg"><button data-u="d">일별</button><button data-u="w">주별</button><button data-u="m">월별</button></div>
     </div>
     <div id="rangeT" class="rangeT"></div>
@@ -1029,6 +1029,8 @@ const BINS = {
           ticks:[[20,'≤20°'],[23,'23°'],[26,'26°'],[29,'29°'],[33,'33°+']] },
   hum:  { u:'%', stops:[[25,'#b9772f'],[32,'#d9a65b'],[40,'#ecd596'],[47,'#bfe0cf'],[55,'#82c4ad'],[65,'#6aa0d4'],[75,'#3d6bb0']],
           ticks:[[25,'≤25%'],[35,'35%'],[45,'45%'],[55,'55%'],[65,'65%'],[75,'75%+']] },
+  out:  { u:'°', stops:[[-15,'#2f5d9e'],[-6,'#4f86bd'],[2,'#7db3d3'],[9,'#a6d3c4'],[15,'#c9e2a0'],[20,'#f0e27d'],[24,'#f7c45f'],[28,'#f0974e'],[31,'#e2663f'],[34,'#c43a3a'],[37,'#8c2340']],
+          ticks:[[-15,'≤−15°'],[-5,'−5°'],[5,'5°'],[15,'15°'],[25,'25°'],[37,'37°+']] },
   dew:  { u:'°', stops:[[8,'#c98f4a'],[11.5,'#bfe0cf'],[14.5,'#82c4ad'],[17,'#f0e27d'],[19.5,'#f0974e'],[22,'#c43a3a']],
           ticks:[[8,'≤8°'],[11,'11°'],[14,'14°'],[17,'17°'],[20,'20°'],[22,'22°+']] },
 };
@@ -1073,7 +1075,7 @@ function heat(el, rows, metric){
   hit.onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W, py = (e.clientY-r.top)/r.height*H;
     const i = Math.max(0, Math.min(n-1, Math.floor((px-m.l)/cw))), h = Math.max(0, Math.min(23, Math.floor((py-m.t)/ch))), d = days[i], v = map[d+'|'+h];
     const x = m.l+i*cw+cw/2, y = m.t+h*ch+ch/2; vl.setAttribute('x1', x); vl.setAttribute('x2', x); hl.setAttribute('y1', y); hl.setAttribute('y2', y); vl.setAttribute('opacity', 1); hl.setAttribute('opacity', 1);
-    showTip(e, `<b>${monthly ? `${+d.slice(5)}월 평균` : `${md2(d)} (${wd(d)})`} ${h}시</b><br>${v == null ? '기록 없음' : (metric==='hum' ? n0(v) : n1(v)) + B.u}`); };
+    showTip(e, `<b>${monthly ? `${+d.slice(5)}월 평균` : `${md2(d)} (${wd(d)})`} ${h}시</b><br>${metric === 'out' ? `바깥(${OUT.name}) ` : ''}${v == null ? '기록 없음' : (metric==='hum' ? n0(v) : n1(v)) + B.u}`); };
   hit.onmouseleave = () => { vl.setAttribute('opacity', 0); hl.setAttribute('opacity', 0); hideTip(); };
 }
 
@@ -1085,7 +1087,8 @@ const rowRange = (u, d) => u==='d' ? 'd:'+d : u==='w' ? (() => { const p = d.spl
 const UNITS = { d:['일별','daily',31], w:['주별','weekly',26], m:['월별','monthly',24] };
 const MK = { temp: { lo:'tmin', hi:'tmax', alo:'tminavg', ahi:'tmaxavg', av:'temp', fmt:n1, u:'°', pad:1, name:'온도' },
              dew:  { lo:'dmin', hi:'dmax', alo:'dminavg', ahi:'dmaxavg', av:'dew', fmt:n1, u:'°', pad:1, name:'이슬점' },
-             hum:  { lo:'hmin', hi:'hmax', alo:'hminavg', ahi:'hmaxavg', av:'hum',  fmt:n0, u:'%', pad:3, name:'습도' } };
+             hum:  { lo:'hmin', hi:'hmax', alo:'hminavg', ahi:'hmaxavg', av:'hum',  fmt:n0, u:'%', pad:3, name:'습도' },
+             out:  { lo:'omin', hi:'omax', alo:'ominavg', ahi:'omaxavg', av:'out', fmt:n1, u:'°', pad:1, name:'바깥' } };
 const UW = { d:'', w:'주 ', m:'월 ' };
 function rangeChart(el, rows, u, M){
   const K = MK[M]; rows = rows.slice(-UNITS[u][2]);
@@ -1114,7 +1117,7 @@ function hourly(el, rows){
   if(rows.length < 2){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
   // 축 하나에 한 지표만: 온도·습도·이슬점을 같은 시간축 위에 위아래로 나눠 그린다
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
-  const panels = [{k:'temp',c:'var(--t)',y:34,h:120,u:'°',name:'온도'},{k:'hum',c:'var(--h)',y:192,h:100,u:'%',name:'습도'},{k:'dew',c:'var(--d)',y:332,h:90,u:'°',name:'이슬점'}].filter(P => rows.some(r => r[P.k] != null));
+  const panels = [{k:'temp',c:'var(--t)',y:34,h:120,u:'°',name:'온도'},{k:'hum',c:'var(--h)',y:192,h:100,u:'%',name:'습도'},{k:'dew',c:'var(--d)',y:332,h:90,u:'°',name:'이슬점'},{k:'out',y:472,h:100,u:'°',name:`바깥 기온 · ${OUT.name}`}].filter(P => rows.some(r => r[P.k] != null));
   const last = panels.at(-1), H = last.y + last.h + 28;
   const X = r => m.l + r.h/23*iw;
   let g = '', labs = '';
@@ -1135,7 +1138,7 @@ function hourly(el, rows){
     let b = rows[0]; for(const q of rows) if(Math.abs(X(q)-px) < Math.abs(X(b)-px)) b = q;
     cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b)); cur.firstChild.setAttribute('x2', X(b));
     panels.forEach(P => { const c = cur.querySelector(`[data-k="${P.k}"]`); if(b[P.k] != null){ c.setAttribute('cx', X(b)); c.setAttribute('cy', P.Y(b[P.k])); c.setAttribute('fill', specColor(P.k, b[P.k])); } });
-    showTip(e, `<b>${b.h}시 평균</b><br>온도 ${n1(b.temp)}°<br>습도 ${n0(b.hum)}%` + (b.dew != null ? `<br>이슬점 ${n1(b.dew)}°` : '')); };
+    showTip(e, `<b>${b.h}시 평균</b><br>온도 ${n1(b.temp)}°<br>습도 ${n0(b.hum)}%` + (b.dew != null ? `<br>이슬점 ${n1(b.dew)}°` : '') + (b.out != null ? `<br>바깥 ${n1(b.out)}° <span style="opacity:.6">(실내 ${b.temp - b.out >= 0 ? '+' : '−'}${n1(Math.abs(b.temp - b.out))}°)</span>` : '')); };
   svg.querySelector('#hit').onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); };
 }
 
@@ -1326,18 +1329,71 @@ async function outdoorNow(){ const j = await omGet(`https://api.open-meteo.com/v
 // 시계열에서 특정 시각의 값 (선형 보간)
 function valAt(S, ts, k){ if(!S || !S.length) return null; let lo = 0, hi = S.length - 1; if(ts <= S[0].ts) return S[0][k]; if(ts >= S[hi].ts) return S[hi][k];
   while(hi - lo > 1){ const m = (lo + hi) >> 1; if(S[m].ts <= ts) lo = m; else hi = m; } const a = S[lo], b = S[hi], f = (ts - a.ts) / (b.ts - a.ts); return a[k] + (b[k] - a[k]) * f; }
-// 우선 기상청 AWS(강동, 1분 단위)를 쓰고, 안 되거나 7일 넘는 구간은 Open-Meteo(서울, 1시간 단위)
+// 바깥 자료: 기상청 AWS 강동(1분, 날짜별로 받아 CDN 캐시)을 우선, 빠진 시간은 Open-Meteo(서울, 1시간)로 메운다
+const awsMemo = {};
+async function pool(tasks, n){ const out = new Array(tasks.length); let i = 0; await Promise.all(Array.from({length: Math.min(n, tasks.length)}, async () => { while(i < tasks.length){ const k = i++; out[k] = await tasks[k](); } })); return out; }
+const smooth1 = (S, w) => S.map((p, i) => { const a = S.slice(Math.max(0, i - w), i + w + 1); return { ts: p.ts, temp: a.reduce((x, q) => x + q.temp, 0) / a.length, hum: a.reduce((x, q) => x + q.hum, 0) / a.length }; });
+function mergeOut(aws, om){
+  if(!aws.length) return om; if(!om.length) return aws;
+  const near = (ts) => { let lo = 0, hi = aws.length - 1; while(hi - lo > 1){ const m = (lo + hi) >> 1; if(aws[m].ts <= ts) lo = m; else hi = m; } return Math.min(Math.abs(aws[lo].ts - ts), Math.abs(aws[hi].ts - ts)); };
+  return aws.concat(om.filter(q => near(q.ts) > 45*60e3)).sort((x, y) => x.ts - y.ts);
+}
+async function awsDays(t0, t1){
+  const res = t1 - t0 > 2*864e5 ? 10 : 1, days = []; for(let d = kstDate(t0); d <= kstDate(t1); d = addDays(d, 1)) days.push(d);
+  const today = kstDate(Date.now());
+  const parts = await pool(days.map(d => async () => { const k = d + '|' + res; if(awsMemo[k] && d < today) return awsMemo[k];
+    const j = await get(`/api/outdoor?day=${d}&res=${res}`).catch(() => null), S = j && j.series || []; if(S.length) awsMemo[k] = S; return S; }), 6);
+  const S = parts.flat().filter(p => p.ts >= t0 - 36e5 && p.ts <= t1 + 36e5).sort((x, y) => x.ts - y.ts);
+  return res === 1 ? smooth1(S, 4) : S;
+}
+// onStep: Open-Meteo가 먼저 오면 바로 그리고, AWS가 오면 다시 그린다
+async function fetchOutdoor(t0, t1, onStep){
+  const omP = outdoorRange(t0, t1).catch(() => []);
+  const awsP = t1 - t0 <= 31*864e5 ? awsDays(t0, t1).catch(() => []) : Promise.resolve([]);
+  const om = await omP; if(onStep && om.length) onStep({ series: om, src: '서울' });
+  const aws = await awsP, series = mergeOut(aws, om);
+  const cover = aws.length ? (aws.at(-1).ts - aws[0].ts) / Math.max(1, t1 - t0) : 0;
+  return { series, src: !aws.length ? '서울' : cover > .9 ? '강동' : '강동·서울' };
+}
 async function loadOut(){
   const c = cache; if(!c || !c.hist || !c.hist.points.length) return;
   const P = c.hist.points, t0 = P[0].ts, t1 = P.at(-1).ts;
-  const aws = (q) => get('/api/outdoor' + q).catch(() => null);
-  const [an, ar] = await Promise.all([aws(''), t1 - t0 <= 7*864e5 ? aws(`?from=${t0 - 30*60e3}&to=${t1 + 30*60e3}`) : null]);
-  // 1분 자료는 센서 잔떨림이 있어 앞뒤 몇 개 평균으로 살짝 다듬는다
-  const sm = (S, w) => S.map((p, i) => { const a = S.slice(Math.max(0, i - w), i + w + 1); return { ts: p.ts, temp: a.reduce((x, q) => x + q.temp, 0) / a.length, hum: a.reduce((x, q) => x + q.hum, 0) / a.length }; });
-  let cur = an && an.cur, series = ar && ar.series && ar.series.length > 1 ? sm(ar.series, t1 - t0 > 2*864e5 ? 1 : 4) : null, name = '강동';
-  if(!series){ series = await outdoorRange(t0, t1).catch(() => []); name = cur ? '강동·서울' : '서울'; }
-  if(!cur){ cur = await outdoorNow().catch(() => null); name = series && ar ? name : '서울'; }
-  if(cache !== c) return; OUT.name = name; c.out = { cur, series }; renderAll();
+  const curP = get('/api/outdoor').then(j => j && j.cur).catch(() => null).then(x => x || outdoorNow().catch(() => null));
+  const apply = (o) => { if(cache !== c) return; OUT.name = o.src; c.out = Object.assign({ cur: null }, c.out, { series: o.series }); renderAll(); };
+  curP.then(cur => { if(cache === c){ c.out = Object.assign({ series: [] }, c.out, { cur }); renderAll(); } });
+  apply(await fetchOutdoor(t0, t1, apply));
+}
+// 히트맵용 바깥 자료 (히트맵 기간이 따로라서)
+let heatOut = { key: '', rows: [] };
+async function loadHeatOut(){
+  const d = [...new Set(heatData.map(r => r.d))].sort(); if(!d.length) return;
+  const monthly = d[0].length === 7, t0 = kstMs(monthly ? d[0] + '-01' : d[0]), t1 = Math.min(Date.now(), monthly ? kstMs(addMonths(d.at(-1), 1) + '-01') : kstMs(addDays(d.at(-1), 1)));
+  const key = d[0] + d.at(-1); if(heatOut.key === key) return;
+  heatOut.key = key;
+  const { series } = await fetchOutdoor(t0, t1);
+  const g = {}; series.forEach(p => { const ds = kstDate(p.ts), k = (monthly ? ds.slice(0, 7) : ds) + '|' + new Date(p.ts + KST).getUTCHours(); (g[k] = g[k] || []).push(p.temp); });
+  if(heatOut.key !== key) return;
+  heatOut.rows = Object.entries(g).map(([k, v]) => { const [dd, h] = k.split('|'); return { d: dd, h: +h, out: v.reduce((a, b) => a + b, 0) / v.length }; });
+  if(panel === 'heat' && heatMetric === 'out') drawHeat();
+}
+const outIn = () => { const S = cache && cache.out && cache.out.series, P = cache && cache.hist && cache.hist.points; if(!S || !S.length || !P || !P.length) return null; const a = P[0].ts, b = P.at(-1).ts; return S.filter(p => p.ts >= a && p.ts <= b); };
+// 구간 집계용: 바깥 기온을 일·주·월 단위 최저/평균/최고로
+function outRows(u){
+  const S = outIn(); if(!S || !S.length) return [];
+  const day = {}; S.forEach(p => { const d = kstDate(p.ts); (day[d] = day[d] || []).push(p.temp); });
+  const D = Object.entries(day).sort().map(([d, v]) => ({ d, omin: Math.min(...v), omax: Math.max(...v), out: v.reduce((a, b) => a + b, 0) / v.length }));
+  D.forEach(r => { r.ominavg = r.omin; r.omaxavg = r.omax; });
+  if(u === 'd') return D;
+  const keyOf = (d) => u === 'm' ? d.slice(0, 7) : `${d.slice(0, 7)}-${Math.min(4, Math.ceil(+d.slice(8) / 7))}`, G = {};
+  D.forEach(r => (G[keyOf(r.d)] = G[keyOf(r.d)] || []).push(r));
+  const av = (a, k) => a.reduce((x, r) => x + r[k], 0) / a.length;
+  return Object.entries(G).sort().map(([d, a]) => ({ d, omin: Math.min(...a.map(r => r.omin)), omax: Math.max(...a.map(r => r.omax)), out: av(a, 'out'), ominavg: av(a, 'omin'), omaxavg: av(a, 'omax') }));
+}
+// 하루 패턴용: 시각별 바깥 평균
+function outHourly(){
+  const S = outIn(); if(!S || !S.length) return null;
+  const H = Array.from({length: 24}, () => []); S.forEach(p => H[new Date(p.ts + KST).getUTCHours()].push(p.temp));
+  return H.map(v => v.length ? v.reduce((a, b) => a + b, 0) / v.length : null);
 }
 
 // 전환 애니메이션: 바뀐 내용을 짧게 겹쳐 보이며 교체, 숫자는 이전 값에서 새 값으로 이어서 변한다
@@ -1398,13 +1454,13 @@ function renderAll(){
     renderStrip(st);
   }
   if(panel === 'agg'){
-    const u = unit || (range === 'all' || range[0] === 'y' ? 'm' : 'd'), rows = st[UNITS[u][1]];
+    const u = unit || (range === 'all' || range[0] === 'y' ? 'm' : 'd'), rows = tblMetric === 'out' ? outRows(u) : st[UNITS[u][1]];
     document.querySelectorAll('#unitSeg button').forEach(b => b.classList.toggle('on', b.dataset.u === u));
     document.querySelectorAll('#tblSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === tblMetric));
     rangeChart($('#rangeT'), rows, u, tblMetric);
     table($('#tbl'), rows, u, tblMetric);
   }
-  if(panel === 'day') hourly($('#hourly'), st.hourly);
+  if(panel === 'day'){ const oh = outHourly(); hourly($('#hourly'), oh ? st.hourly.map(r => ({ ...r, out: oh[r.h] })) : st.hourly); }
   if(panel === 'heat') drawHeat();
 }
 function showPanel(name){
@@ -1414,7 +1470,9 @@ function showPanel(name){
   renderAll(); fx('.panel.on');
 }
 let heatMetric = 'temp';
-const drawHeat = () => { document.querySelectorAll('#hmMSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === heatMetric)); heat($('#heatT'), heatData, heatMetric); };
+const drawHeat = () => { document.querySelectorAll('#hmMSeg button').forEach(b => b.classList.toggle('on', b.dataset.m === heatMetric));
+  if(heatMetric === 'out'){ if(!heatOut.rows.length){ $('#heatT').innerHTML = '<div class="empty">바깥 기온을 불러오는 중</div>'; loadHeatOut(); return; } heat($('#heatT'), heatOut.rows, 'out'); return; }
+  heat($('#heatT'), heatData, heatMetric); };
 $('#hmMSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; heatMetric = m; drawHeat(); fx('#heatT'); };
 const heatUnit = () => heatBy || (range === 'all' || range[0] === 'y' ? 'm' : 'd');
 async function loadHeat(){
@@ -1422,6 +1480,7 @@ async function loadHeat(){
   document.querySelectorAll('#hmSeg button').forEach(b => b.classList.toggle('on', b.dataset.b === by));
   $('#hmCap').textContent = (range === '24h' ? '최근 14일' : rangeLabel(range)) + (by === 'm' ? ' · 월 평균' : (range === 'all' || range[0] === 'y' ? ' · 최근 62일' : ''));
   busy(true); try { heatData = await get(`/api/heatmap?range=${range}&by=${by}`); } catch { heatData = []; } finally { busy(false); }
+  heatOut = { key: '', rows: [] }; if(heatMetric === 'out') loadHeatOut();
   if(panel === 'heat') drawHeat();
 }
 
