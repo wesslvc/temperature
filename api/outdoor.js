@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       const b = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].find((m) => span / (m * 60e3) <= 900) || 1440;
       const rows = await rpc('roomtemp_out_series', { p_from: new Date(from).toISOString(), p_to: new Date(to).toISOString(), p_bucket_min: b });
       res.setHeader('Cache-Control', to < now - 36e5 ? 's-maxage=3600' : 's-maxage=60, stale-while-revalidate=300');
-      return res.json({ name: '강동', bucket: b, series: (rows || []).map((r) => ({ ts: Number(r.ts), temp: Number(r.temp), hum: Number(r.hum) })) });
+      return res.json({ name: 'AWS 402', bucket: b, series: (rows || []).map((r) => ({ ts: Number(r.ts), temp: Number(r.temp), hum: Number(r.hum) })) });
     } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
   }
   // 백필
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
       // 호출 한도(하루 2만 회) 때문에 지금 값은 5분 동안 CDN에서 재사용 → 기상청 호출은 많아야 하루 288회
       const s = await chunk(stn, key, now - 40 * 60e3, now, 1);
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
-      return res.json({ stn, name: '강동', cur: s.at(-1) || null });
+      return res.json({ stn, name: 'AWS 402', cur: s.at(-1) || null });
     }
     const t0 = Date.parse(day + 'T00:00:00+09:00'), t1 = Math.min(t0 + 864e5 - 60e3, now);
     if (!(t0 < now)) return res.json({ stn, day, series: [] });
