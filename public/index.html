@@ -1382,7 +1382,8 @@ async function fetchOutdoor(t0, t1, onStep){
     if(cover > .95 && !gaps) return { series: S, src: '강동' };
     if(onStep) onStep({ series: S, src: '강동' }); }
   const omP = outdoorRange(t0, t1).catch(() => []);
-  const awsP = t1 - t0 <= 31*864e5 ? awsDays(t0, t1).catch(() => []) : Promise.resolve([]);
+  // 기상청 직접 조회는 호출 한도(하루 2만 회) 때문에 DB가 아예 응답하지 않을 때만, 7일 이하 구간에 한해 쓴다. 나머지 빈틈은 Open-Meteo
+  const awsP = !db && t1 - t0 <= 7*864e5 ? awsDays(t0, t1).catch(() => []) : Promise.resolve([]);
   const om = await omP; if(onStep && om.length) onStep({ series: om, src: '서울' });
   const aws0 = await awsP, aws = ds.length ? mergeOut(ds, aws0) : aws0, series = mergeOut(aws, om);
   const cover = aws.length ? (aws.at(-1).ts - aws[0].ts) / Math.max(1, t1 - t0) : 0;

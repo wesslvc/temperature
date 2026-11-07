@@ -2,18 +2,19 @@ import { rpc } from './_db.js';
 // 기상청 AWS 매분자료 (기본: 강동 402). 키는 서버 환경변수에만 둔다.
 // /api/outdoor?from=&to=      → DB에 쌓인 자료 (구간 길이에 따라 1·10·60분 평균)
 // /api/outdoor?backfill=YYYY-MM-DD (Bearer INGEST_TOKEN) → 그 날 1분 자료를 DB에 저장
+// 기상청 API허브 호출 한도: 하루 20,000회. 사용처: 수집(30분마다 1회) + 지금 값(5분 캐시) + 드문 대체 조회
 // /api/outdoor                → 가장 최근 1분 값
 // /api/outdoor?day=YYYY-MM-DD&res=1|10 → 그 날(한국 시간) 하루치. 지난 날은 CDN에 오래 캐시
 const KST = 9 * 3600e3;
 const tm = (ms) => new Date(ms + KST).toISOString().slice(0, 16).replace(/[-T:]/g, '');
 const parseTs = (s) => Date.parse(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(8, 10)}:${s.slice(10, 12)}:00+09:00`);
 
-async function chunk(stn, key, t1, t2) {
+async function chunk(stn, key, t1, t2, tries = 2) {
   const url = `https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min?tm1=${tm(t1)}&tm2=${tm(t2)}&stn=${stn}&disp=1&help=0&authKey=${key}`;
   let last;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(i < 2 ? 15000 : 25000) });
+      const r = await fetch(url, { signal: AbortSignal.timeout(i ? 25000 : 15000) });
       if (!r.ok) throw new Error('KMA ' + r.status);
       const txt = await r.text();
       // 열: 0 시각, 1 지점, ..., 8 기온(TA), 14 습도(HM). -50 이하 = 결측
@@ -75,8 +76,9 @@ export default async function handler(req, res) {
   try {
     const now = Date.now(), day = String(req.query.day || '');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
-      const s = await chunk(stn, key, now - 40 * 60e3, now);
-      res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
+      // 호출 한도(하루 2만 회) 때문에 지금 값은 5분 동안 CDN에서 재사용 → 기상청 호출은 많아야 하루 288회
+      const s = await chunk(stn, key, now - 40 * 60e3, now, 1);
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
       return res.json({ stn, name: '강동', cur: s.at(-1) || null });
     }
     const t0 = Date.parse(day + 'T00:00:00+09:00'), t1 = Math.min(t0 + 864e5 - 60e3, now);
