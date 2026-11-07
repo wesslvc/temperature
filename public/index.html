@@ -629,6 +629,19 @@ svg text.ov-rl{fill:var(--faint)!important;font-size:10.5px!important}
 .os-x{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:10px;font-size:12px;color:var(--faint)}
 .os-x b{color:var(--sub);font-weight:650;margin:0 2px}.os-x i{font-style:normal}
 @media(max-width:560px){.os{gap:16px 18px}.os-c>b{font-size:26px}.os-x{flex-direction:column}}
+
+/* 쾌적 시간: 좌우 대칭 */
+.scatter #scCap{justify-content:flex-start}
+.scatter .sg.crit{margin-left:0!important;width:auto}
+.ccs,.ccs.min{max-width:none!important;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:0!important}
+.ccs>*{justify-self:center}
+.ccs>*:not(:first-child){border-left:1px solid var(--hair)}
+.ccs.min>*{justify-self:stretch;justify-content:center;padding:6px 0}
+.cc-big{width:100%;display:flex;flex-direction:column;align-items:center;padding:4px 0}
+.cc-big svg{max-width:220px}
+.cal{max-width:none!important}
+@media(min-width:561px){.cal-g .cd{aspect-ratio:2.4}}
+@media(max-width:560px){.cc-mini{align-items:center!important;text-align:center}.cc-mini span{justify-content:center}}
 </style>
 </head>
 <body>
