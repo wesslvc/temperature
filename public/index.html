@@ -585,6 +585,28 @@ svg .od-out{fill:none;stroke:var(--ink);stroke-opacity:.9;stroke-width:1.7;strok
 svg .od-in{fill:none;stroke:var(--ink);stroke-opacity:.45;stroke-width:1.3;stroke-dasharray:3 3}
 svg text.od-l{fill:var(--faint)!important;font-size:11.5px!important}
 svg text.od-k{fill:var(--sub)!important;font-size:11px!important;font-weight:650;paint-order:stroke;stroke:var(--bg);stroke-width:3px}
+
+/* 실내·바깥 덤벨 */
+.db{position:relative;height:44px;margin-top:22px}
+.db.mini{height:38px;margin-top:14px}
+.db-t{position:absolute;left:0;right:0;top:14px;height:1px;background:var(--rule)}
+.db-s{position:absolute;top:12px;height:5px;border-radius:3px;opacity:.85}
+.db-o,.db-i{position:absolute;top:8px;width:13px;height:13px;margin-left:-6.5px;border-radius:50%}
+.db-o{background:var(--bg);box-shadow:inset 0 0 0 2px var(--sub)}
+.db-i{background:var(--ink);box-shadow:0 0 0 3px var(--bg)}
+.db-g{position:absolute;top:-8px;transform:translateX(-50%);font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;letter-spacing:-.01em}
+.db.mini .db-g{font-size:11.5px}
+.db.mini .db-o,.db.mini .db-i{width:11px;height:11px;margin-left:-5.5px;top:9px}
+
+.db{height:auto;padding-top:14px}
+.db-t{top:28px}.db-s{top:26px}.db-o,.db-i{top:22px}.db-g{top:0}
+.db.mini .db-o,.db.mini .db-i{top:23px}
+.db-ks{display:flex;justify-content:space-between;gap:10px;margin-top:22px;font-size:11.5px;color:var(--faint);white-space:nowrap}
+.db-k b{color:var(--sub);font-weight:650}
+.db-k i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
+.db-k.o i{box-shadow:inset 0 0 0 1.5px var(--sub)}.db-k.i i{background:var(--ink)}
+.db.mini .db-ks{margin-top:20px;font-size:11px}
+.sc .db{grid-column:1/-1}
 </style>
 </head>
 <body>
@@ -1203,6 +1225,7 @@ function renderNow(cur, ref, st, cmp, yd, hist){
   // 같은 기간 바깥 평균과 실내와의 차이
   const OS = cache.out && cache.out.series && pts.length ? cache.out.series.filter(q => q.ts >= pts[0].ts && q.ts <= pts.at(-1).ts) : [];
   const outLine = (M, v, u, du, fmt) => { if(OS.length < 2 || v == null) return ''; const vals = OS.map(q => M === 'dew' ? dew(q.temp, q.hum) : q[M]), av = vals.reduce((a, b) => a + b, 0) / vals.length, df = v - av;
+    return dumbbell(M === 'hum' ? 'hum' : 'temp', v, av, { mini: true, out: '바깥 평균' });
     return `<div class="sc-o"><span>바깥 평균 <b>${fmt(av)}${u}</b></span><span>실내가 <b>${df >= 0 ? '+' : '−'}${fmt(Math.abs(df))}${du}</b></span></div>`; };
   // 지표 카드: 평균을 크게, 최저·최고는 한 줄, 아래에 구간 흐름(작은 선 그래프)
   const card = (M, name, kmin, kmax, kavg, u, du, dec, fmt) => {
@@ -1225,7 +1248,7 @@ function renderNow(cur, ref, st, cmp, yd, hist){
     const dOut = (k, u, dec) => { const ov = ocv(k); if(ov == null) return ''; const df = cur[k] - ov;
       return `<span class="hd ho" title="바깥(${OUT.name}) ${dec ? ov.toFixed(1) : Math.round(ov)}${u === '°' ? '°' : '%'} 대비">${IC.out}<em>바깥 ${dec ? ov.toFixed(1) : Math.round(ov)}${u === '°' ? '°' : '%'}</em><b class="z">${df >= 0 ? '+' : '−'}${dec ? Math.abs(df).toFixed(1) : Math.round(Math.abs(df))}${u === '°' ? '°' : '%p'}</b></span>`; };
     const deltas = (k, u, kind, dec) => { const a = pr[k] && pr[k][k] != null ? cur[k] - pr[k][k] : null, b = yd && yd[k] != null ? cur[k] - yd[k] : null;
-      return `<div class="hds">${d1(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${d1(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}${dOut(k, u, dec)}</div>`; };
+      return `<div class="hds">${d1(a, u, kind, dec, 'prev', pr[k] ? `${md(pr[k].ts)} ${hhmm(pr[k].ts)} 측정값 대비` : '')}${d1(b, u, kind, dec, 'day', yd ? `${md(yd.ts)} ${hhmm(yd.ts)} 측정값 대비` : '')}</div>`; };
     const status = (M, v) => { const rr = M === 'temp' ? CTX.t : CTX.h, f = M === 'temp' ? (x) => x.toFixed(1) + '°' : (x) => Math.round(x) + '%p';
       const w = M === 'temp' ? tempWord(v)[3] : humWord(v)[3];
       return v < rr[0] ? `${w} <em>쾌적까지 +${f(rr[0]-v)}</em>` : v > rr[1] ? `${w} <em>쾌적까지 −${f(v-rr[1])}</em>` : `${w} <em class="ok">쾌적 범위</em>`; };
@@ -1234,7 +1257,8 @@ function renderNow(cur, ref, st, cmp, yd, hist){
         <div class="hm-v">${fmt(v)}<small class="${unit.includes('°') ? 'deg' : 'pct'}">${unit}</small></div>
         <div class="hm-s">${status(M, v)}</div>
         ${deltas(M, du, M, dec)}
-        ${gauge2(M, v)}</div>`;
+        ${gauge2(M, v)}
+        ${dumbbell(M, v, ocv(M), { out: `바깥` })}</div>`;
     const dp = dew(cur.temp, cur.hum);
     $('#now').innerHTML = `<div class="hero2" style="--ct:${specColor('temp', cur.temp)};--ch:${specColor('hum', cur.hum)}">
         <div class="h2-top"><span>${mdLong(cur.ts)} ${hhmm(cur.ts)}</span><span class="h2-dew">이슬점 <b>${n1(dp)}°</b></span></div>
@@ -1249,6 +1273,22 @@ function renderNow(cur, ref, st, cmp, yd, hist){
   document.querySelectorAll('.cmpbar button').forEach(bn => bn.onclick = () => { cmpIdx = +bn.dataset.i; load(); });
 }
 
+// 실내·바깥 비교: 같은 눈금(기온 −10~35°, 습도 0~100%) 위의 두 점과 그 사이 막대. 막대 길이 = 차이
+function dumbbell(M, inV, outV, opt = {}){
+  if(inV == null || outV == null) return '';
+  const hum = M === 'hum', [a, b] = hum ? [0, 100] : [-10, 35], P = (v) => Math.max(0, Math.min(100, (v - a) / (b - a) * 100));
+  const pi = P(inV), po = P(outV), l = Math.min(pi, po), w = Math.abs(pi - po), d = inV - outV, f = (v) => hum ? `${Math.round(v)}%` : `${v.toFixed(1)}°`;
+  const cs = (v) => hum ? specColor('hum', v) : specColor('out', v), lg = po <= pi ? `${cs(outV)},${cs(inV)}` : `${cs(inV)},${cs(outV)}`;
+  // 이름표는 점 아래가 아니라 막대 양 끝(왼쪽 점 → 왼쪽, 오른쪽 점 → 오른쪽)에 둬서 좁아도 겹치지 않게
+  const outLeft = po <= pi, name = opt.out || '바깥';
+  const lo = `<span class="db-k o"><i></i>${name} <b>${f(outV)}</b></span>`, li = `<span class="db-k i"><i></i>실내 <b>${f(inV)}</b></span>`;
+  const dt = Math.abs(d) < (hum ? .5 : .05) ? '같음' : `${d > 0 ? '+' : '−'}${hum ? Math.round(Math.abs(d)) + '%p' : Math.abs(d).toFixed(1) + '°'}`;
+  return `<div class="db${opt.mini ? ' mini' : ''}" title="실내 ${f(inV)} · ${name} ${f(outV)}"><i class="db-t"></i>
+    <i class="db-s" style="left:${l}%;width:${w}%;background:linear-gradient(90deg,${lg})"></i>
+    <span class="db-g" style="left:${l + w / 2}%">${dt}</span>
+    <i class="db-o" style="left:${po}%"></i><i class="db-i" style="left:${pi}%"></i>
+    <div class="db-ks">${outLeft ? lo + li : li + lo}</div></div>`;
+}
 // 쾌적 구간만 밝게 켜진 얇은 스펙트럼 선 + 현재 위치
 function gauge2(M, v){
   const st = BINS[M].stops, a = st[0][0], b = st.at(-1)[0], P = (x) => Math.max(0, Math.min(100, (x - a) / (b - a) * 100));
