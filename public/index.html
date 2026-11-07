@@ -970,7 +970,7 @@ function trend(el, pts, marks){
     const src = real.length ? [v2[0], ...real, v2.at(-1)] : v2;
     const line = smooth(ord(src).map(p => [X(p), P.Y(p[P.k])]));
     let band = '';
-    if(!real.length){ const up = ord(v2).map(p => [X(p), P.Y(p[P.hi])]), dn = ord(v2).map(p => [X(p), P.Y(p[P.lo])]).reverse(); band = `<path d="${smooth(up) + smooth(dn, false)}Z" fill="${P.s}"/>`; }
+    // (최소–최대 띠는 선 아래 채움과 겹쳐 헷갈려서 그리지 않음. 범위는 마우스를 올리면 보임)
     // 선 아래를 값의 색으로 은은하게 채워 '얼마나 따뜻/습한지'는 색으로, 모양은 또렷한 선으로
     const x0 = X(src[0]).toFixed(1), x1 = X(src.at(-1)).toFixed(1), yb = (P.y + P.h).toFixed(1);
     const area = `<path d="${line}L${x1},${yb}L${x0},${yb}Z" fill="${P.a}" class="area"/>`;
