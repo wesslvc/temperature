@@ -1326,10 +1326,16 @@ async function outdoorNow(){ const j = await omGet(`https://api.open-meteo.com/v
 // 시계열에서 특정 시각의 값 (선형 보간)
 function valAt(S, ts, k){ if(!S || !S.length) return null; let lo = 0, hi = S.length - 1; if(ts <= S[0].ts) return S[0][k]; if(ts >= S[hi].ts) return S[hi][k];
   while(hi - lo > 1){ const m = (lo + hi) >> 1; if(S[m].ts <= ts) lo = m; else hi = m; } const a = S[lo], b = S[hi], f = (ts - a.ts) / (b.ts - a.ts); return a[k] + (b[k] - a[k]) * f; }
-async function loadOut(key){
+// 우선 기상청 AWS(강동, 1분 단위)를 쓰고, 안 되거나 7일 넘는 구간은 Open-Meteo(서울, 1시간 단위)
+async function loadOut(){
   const c = cache; if(!c || !c.hist || !c.hist.points.length) return;
-  const P = c.hist.points, [cur, series] = await Promise.all([outdoorNow().catch(() => null), outdoorRange(P[0].ts, P.at(-1).ts).catch(() => [])]);
-  if(cache !== c) return; c.out = { cur, series }; renderAll();
+  const P = c.hist.points, t0 = P[0].ts, t1 = P.at(-1).ts;
+  const aws = (q) => get('/api/outdoor' + q).catch(() => null);
+  const [an, ar] = await Promise.all([aws(''), t1 - t0 <= 7*864e5 ? aws(`?from=${t0 - 30*60e3}&to=${t1 + 30*60e3}`) : null]);
+  let cur = an && an.cur, series = ar && ar.series && ar.series.length > 1 ? ar.series : null, name = '강동';
+  if(!series){ series = await outdoorRange(t0, t1).catch(() => []); name = cur ? '강동·서울' : '서울'; }
+  if(!cur){ cur = await outdoorNow().catch(() => null); name = series && ar ? name : '서울'; }
+  if(cache !== c) return; OUT.name = name; c.out = { cur, series }; renderAll();
 }
 
 // 전환 애니메이션: 바뀐 내용을 짧게 겹쳐 보이며 교체, 숫자는 이전 값에서 새 값으로 이어서 변한다
