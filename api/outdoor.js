@@ -25,6 +25,12 @@ async function chunk(stn, key, t1, t2) {
   }
   throw last;
 }
+// 지난 날짜는 하루를 한 번에 요청하면 매우 느려서 6시간씩 나눠 받는다
+async function chunks(stn, key, t0, t1) {
+  const parts = []; for (let t = t0; t <= t1; t += 6 * 36e5) parts.push([t, Math.min(t + 6 * 36e5 - 60e3, t1)]);
+  const out = []; for (const [a, b] of parts) out.push(...await chunk(stn, key, a, b));
+  return out;
+}
 // 10분 평균으로 줄이기
 const bucket = (S, min) => {
   const out = new Map();
@@ -36,7 +42,7 @@ const bucket = (S, min) => {
 export async function storeOutdoor(t0, t1) {
   const key = process.env.KMA_AUTH_KEY, stn = process.env.KMA_STN || '402';
   if (!key) return 0;
-  const rows = await chunk(stn, key, t0, t1);
+  const rows = await chunks(stn, key, t0, t1);
   let n = 0;
   for (let i = 0; i < rows.length; i += 1000) n += await rpc('roomtemp_out_ingest', { p_token: process.env.INGEST_TOKEN, p_rows: rows.slice(i, i + 1000).map((r) => ({ ...r, stn: +stn })) });
   return n;
@@ -75,7 +81,7 @@ export default async function handler(req, res) {
     }
     const t0 = Date.parse(day + 'T00:00:00+09:00'), t1 = Math.min(t0 + 864e5 - 60e3, now);
     if (!(t0 < now)) return res.json({ stn, day, series: [] });
-    let series = await chunk(stn, key, t0, t1);
+    let series = await chunks(stn, key, t0, t1);
     const full = series.length >= 1380, past = t0 + 864e5 < now - 20 * 60e3;
     if (Number(req.query.res) === 10) series = bucket(series, 10);
     // 지난 날 + 거의 다 받아짐 → 오래 캐시. 오늘이거나 빠진 게 많으면 짧게
