@@ -1332,7 +1332,9 @@ async function loadOut(){
   const P = c.hist.points, t0 = P[0].ts, t1 = P.at(-1).ts;
   const aws = (q) => get('/api/outdoor' + q).catch(() => null);
   const [an, ar] = await Promise.all([aws(''), t1 - t0 <= 7*864e5 ? aws(`?from=${t0 - 30*60e3}&to=${t1 + 30*60e3}`) : null]);
-  let cur = an && an.cur, series = ar && ar.series && ar.series.length > 1 ? ar.series : null, name = '강동';
+  // 1분 자료는 센서 잔떨림이 있어 앞뒤 몇 개 평균으로 살짝 다듬는다
+  const sm = (S, w) => S.map((p, i) => { const a = S.slice(Math.max(0, i - w), i + w + 1); return { ts: p.ts, temp: a.reduce((x, q) => x + q.temp, 0) / a.length, hum: a.reduce((x, q) => x + q.hum, 0) / a.length }; });
+  let cur = an && an.cur, series = ar && ar.series && ar.series.length > 1 ? sm(ar.series, t1 - t0 > 2*864e5 ? 1 : 4) : null, name = '강동';
   if(!series){ series = await outdoorRange(t0, t1).catch(() => []); name = cur ? '강동·서울' : '서울'; }
   if(!cur){ cur = await outdoorNow().catch(() => null); name = series && ar ? name : '서울'; }
   if(cache !== c) return; OUT.name = name; c.out = { cur, series }; renderAll();
