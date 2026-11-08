@@ -642,6 +642,28 @@ svg text.ov-rl{fill:var(--faint)!important;font-size:10.5px!important}
 .cal{max-width:none!important}
 @media(min-width:561px){.cal-g .cd{aspect-ratio:2.4}}
 @media(max-width:560px){.cc-mini{align-items:center!important;text-align:center}.cc-mini span{justify-content:center}}
+
+/* ---------- 디테일 다듬기 2 ---------- */
+.en{display:none!important}
+.hm-n{font-size:14px;font-weight:650;color:var(--sub);letter-spacing:-.01em}
+.hm-v small.pct{margin-left:-.12em!important}
+.sc-v small.pct{margin-left:-.08em!important}
+/* 현재 화면 아래 두 줄: 이름 | 그림 | 값 을 같은 열에 맞춤 */
+.hr-rows{display:flex;flex-direction:column;gap:14px;margin-top:22px}
+.hr-r{display:flex;align-items:center;gap:12px;min-width:0}
+.hr-k{flex:none;width:28px;font-size:11.5px;font-weight:600;color:var(--faint)}
+.hr-r .g2{flex:1;min-width:0;margin-top:0}
+.hr-r .db{flex:1;min-width:0;margin-top:0;gap:12px}
+.hr-x,.hr-r .db-x{flex:none;width:104px;text-align:right;font-size:12px;color:var(--faint);white-space:nowrap}
+.hr-r .db-x b{margin-left:6px}
+@media(max-width:560px){.hr-rows{gap:12px}.hr-k{width:auto}.hr-x,.hr-r .db-x{width:auto;min-width:0}.hr-r{gap:8px}.hr-x{font-size:11px}.hr-r .db-x{font-size:11px}}
+/* 섹션 탭: 넘칠 때 오른쪽이 잘린 게 아니라 이어진다는 걸 보이게 */
+@media(max-width:560px){.secnav{-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);padding-right:24px}}
+.subh{margin-top:40px!important}
+svg rect[id$="hit"],svg rect[id$="Hit"],.panel svg{touch-action:pan-y}
+/* 툴팁: 화면과 같은 어두운 톤, 숫자 정렬 */
+#tip{background:color-mix(in srgb,var(--panel) 92%,transparent)!important;color:var(--ink)!important;border:1px solid var(--rule)!important;box-shadow:0 8px 28px -10px rgba(0,0,0,.6)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);font-variant-numeric:tabular-nums;line-height:1.55;border-radius:12px!important;padding:9px 12px!important;font-size:12.5px!important}
+#tip b{font-weight:700}
 </style>
 </head>
 <body>
@@ -769,7 +791,9 @@ const md = (ts) => { const d = new Date(ts); return `${d.getMonth()+1}/${d.getDa
 const mdLong = (ts) => { const d = new Date(ts); return `${d.getMonth()+1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일`; };
 const when = (ts) => ts ? `${md(ts)} ${hhmm(ts)}` : '';
 const tip = $('#tip');
-const showTip = (e, h) => { if(matchMedia('(hover: none)').matches) return; tip.innerHTML = h; tip.style.opacity = 1; const w = tip.offsetWidth; tip.style.left = Math.min(e.clientX + 14, innerWidth - w - 8) + 'px'; tip.style.top = e.clientY + 16 + 'px'; };
+// 손가락으로 볼 때는 손에 가리지 않게 위쪽에 띄운다
+const showTip = (e, h) => { const touch = e.pointerType === 'touch' || matchMedia('(hover: none)').matches; tip.innerHTML = h; tip.style.opacity = 1; const w = tip.offsetWidth, hh = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(e.clientX + (touch ? -w / 2 : 14), innerWidth - w - 8)) + 'px'; tip.style.top = (touch ? Math.max(8, e.clientY - hh - 28) : e.clientY + 16) + 'px'; };
 const hideTip = () => tip.style.opacity = 0;
 const get = (u) => fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
 
@@ -1043,7 +1067,7 @@ function trend(el, pts, marks){
     if(src.length > 2){ const fv = P.k === 'hum' ? n0 : n1, ex = (best) => src.reduce((a, b) => best(b[P.k], a[P.k]) ? b : a);
       const hiP = ex((x, y) => x > y), loP = ex((x, y) => x < y), lbl = (pt, dy) => { const xx = Math.max(m.l+14, Math.min(W-m.r-14, X(pt))); return `<circle cx="${X(pt).toFixed(1)}" cy="${P.Y(pt[P.k]).toFixed(1)}" r="3" fill="var(--ink)"/><text class="exl" x="${xx.toFixed(1)}" y="${(P.Y(pt[P.k])+dy).toFixed(1)}" text-anchor="middle">${fv(pt[P.k])}${P.u}</text>`; };
       if(hiP[P.k] !== loP[P.k]) g += lbl(hiP, -9) + lbl(loP, 17); }
-    P.label = `<g class="plab"><text x="${m.l-36}" y="${P.y-16}">${{temp:'온도',hum:'습도',dew:'이슬점'}[P.k]}</text></g>`;
+    P.label = `<g class="plab"><text x="${m.l-36}" y="${P.y-20}">${{temp:'온도',hum:'습도',dew:'이슬점'}[P.k]}</text></g>`;
     const mk = (marks || []).filter(q => q[P.k] != null && q.ts >= t0 && q.ts <= t1);
     if(mk.length <= 48) mk.forEach(q => { g += `<circle cx="${XT(q.ts).toFixed(1)}" cy="${P.Y(q[P.k]).toFixed(1)}" r="2.4" fill="var(--panel)" stroke="var(--ink)" stroke-opacity=".7" stroke-width="1.3"/>`; });
   });
@@ -1079,7 +1103,8 @@ function trend(el, pts, marks){
     d1.setAttribute('cx',X(b)); d1.setAttribute('cy',panels[0].Y(b.temp)); d1.setAttribute('fill', specColor('temp', b.temp)); d2.setAttribute('fill', specColor('hum', b.hum)); if(b.dew != null) cur.querySelector('#d3').setAttribute('fill', specColor('dew', b.dew)); d2.setAttribute('cx',X(b)); d2.setAttribute('cy',panels[1].Y(b.hum)); const d3 = cur.querySelector('#d3'); if(b.dew != null){ d3.setAttribute('cx',X(b)); d3.setAttribute('cy',panels[2].Y(b.dew)); }
     const ot = OP ? valAt(OSx, b.ts, 'temp') : null, oh = OP ? valAt(OSx, b.ts, 'hum') : null;
     if(OP && OP.Y && ot != null){ const d4 = cur.querySelector('#d4'); d4.setAttribute('cx', X(b)); d4.setAttribute('cy', OP.Y(ot)); }
-    showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}° <span style="opacity:.6">(${n1(b.tmin)}–${n1(b.tmax)})</span><br>습도 ${n0(b.hum)}% <span style="opacity:.6">(${n0(b.hmin)}–${n0(b.hmax)})</span><br>이슬점 ${n1(b.dew)}° <span style="opacity:.6">(${n1(b.dmin)}–${n1(b.dmax)})</span>` + (ot != null ? `<br>바깥 ${n1(ot)}° · ${n0(oh)}% <span style="opacity:.6">(실내 ${b.temp - ot >= 0 ? '+' : '−'}${n1(Math.abs(b.temp - ot))}°)</span>` : ''));
+    const rg = (lo, hi, f) => lo == null || f(lo) === f(hi) ? '' : ` <span style="opacity:.55">${f(lo)}–${f(hi)}</span>`;
+    showTip(e, `<b>${when(b.ts)}</b><br>온도 ${n1(b.temp)}°${rg(b.tmin, b.tmax, n1)}<br>습도 ${n0(b.hum)}%${rg(b.hmin, b.hmax, n0)}<br>이슬점 ${n1(b.dew)}°${rg(b.dmin, b.dmax, n1)}` + (ot != null ? `<br>바깥 ${n1(ot)}° · ${n0(oh)}% <span style="opacity:.6">(실내 ${b.temp - ot >= 0 ? '+' : '−'}${n1(Math.abs(b.temp - ot))}°)</span>` : ''));
   };
   hit.onmouseleave = () => { cur.setAttribute('opacity',0); hideTip(); };
   hit.style.cursor = 'pointer';
@@ -1357,8 +1382,10 @@ function renderNow(cur, ref, st, cmp, yd, hist){
         <div class="hm-v">${fmt(v)}<small class="${unit.includes('°') ? 'deg' : 'pct'}">${unit}</small></div>
         <div class="hm-s">${status(M, v)}</div>
         ${deltas(M, du, M, dec)}
-        ${gauge2(M, v)}
-        ${dumbbell(M, v, ocv(M), { out: `바깥` })}</div>`;
+        <div class="hr-rows">
+          <div class="hr-r"><span class="hr-k">쾌적</span>${gauge2(M, v)}<span class="hr-x">${M === 'temp' ? `${CTX.t[0]}–${CTX.t[1]}°` : CTX.hTxt}</span></div>
+          ${ocv(M) != null ? `<div class="hr-r"><span class="hr-k">바깥</span>${dumbbell(M, v, ocv(M), { out: `` })}</div>` : ''}
+        </div></div>`;
     const dp = dew(cur.temp, cur.hum);
     $('#now').innerHTML = `<div class="hero2" style="--ct:${specColor('temp', cur.temp)};--ch:${specColor('hum', cur.hum)}">
         <div class="h2-top"><span>${mdLong(cur.ts)} ${hhmm(cur.ts)}</span><span class="h2-dew">이슬점 <b>${n1(dp)}°</b></span></div>
@@ -1381,7 +1408,7 @@ function dumbbell(M, inV, outV, opt = {}){
   const dt = Math.abs(d) < (hum ? .5 : .05) ? '±0' : `${d > 0 ? '+' : '−'}${hum ? Math.round(Math.abs(d)) + '%p' : Math.abs(d).toFixed(1) + '°'}`;
   return `<div class="db${opt.mini ? ' mini' : ''}" title="실내 ${f(inV)} · ${opt.out || '바깥'} ${f(outV)}">
     <div class="db-v"><i class="db-s" style="left:${Math.min(pi, po)}%;width:${Math.abs(pi - po)}%"></i><i class="db-o" style="left:${po}%"></i><i class="db-i" style="left:${pi}%"></i></div>
-    <div class="db-x">${opt.out || '바깥'} ${f(outV)} <b>${dt}</b></div></div>`;
+    <div class="db-x">${opt.out === '' ? '' : (opt.out || '바깥') + ' '}${f(outV)} <b>${dt}</b></div></div>`;
 }
 // 쾌적 구간만 밝게 켜진 얇은 스펙트럼 선 + 현재 위치
 function gauge2(M, v){
@@ -1666,6 +1693,13 @@ $('#hmSeg').onclick = e => { const bb = e.target.dataset.b; if(!bb) return; heat
 $('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); fx('#rangeT', '#tbl'); };
 $('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); fx('#rangeT', '#tbl'); };
 $('#ccTog').onclick = () => { ccOpen = !ccOpen; try { localStorage.setItem('ccOpen', ccOpen ? '1' : '0'); } catch {} if(ccArgs){ const a = ccArgs.slice(0, 4); ccFlag = true; comfortClock(...a); } };
+// 폰: 그래프 위에서 손가락을 가로로 끌면 값 확인(세로로는 그대로 스크롤). 손을 떼면 잠시 뒤 툴팁 닫힘
+const scrub = (x, y) => { const t = document.elementFromPoint(x, y); if(t && t.onmousemove && /hit$/i.test(t.id)) t.onmousemove({ clientX: x, clientY: y, pointerType: 'touch' }); };
+document.addEventListener('pointermove', e => { if(e.pointerType !== 'mouse') scrub(e.clientX, e.clientY); }, { passive: true });
+document.addEventListener('touchmove', e => { const t = e.touches[0]; if(t) scrub(t.clientX, t.clientY); }, { passive: true });
+let tipT = 0; const tipOff = () => { clearTimeout(tipT); tipT = setTimeout(() => { hideTip(); document.querySelectorAll('svg rect[id$="hit"]').forEach(r => r.onmouseleave && r.onmouseleave()); }, 1600); };
+document.addEventListener('pointerup', e => { if(e.pointerType !== 'mouse') tipOff(); }, { passive: true });
+addEventListener('scroll', () => { if(!matchMedia('(hover: none)').matches) hideTip(); }, { passive: true });
 $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(pn); };
 $('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 직접 선택 ▴' : '기간 직접 선택 ▾'; };
 (async () => { try { const b = await get('/api/bounds'); if(b.first){ dataFirst = kstDate(b.first); dataLast = kstDate(Math.max(b.last, Date.now())); } } catch {} syncPick(); })();
