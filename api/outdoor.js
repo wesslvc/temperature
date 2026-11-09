@@ -54,9 +54,12 @@ export default async function handler(req, res) {
   if (req.query.from) {
     try {
       const now = Date.now(), from = Number(req.query.from), to = Math.min(Number(req.query.to) || now, now), span = to - from;
-      // DB(PostgREST)는 한 번에 1000행까지만 돌려주므로 900행 안쪽이 되도록 평균 간격을 고른다
-      const b = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].find((m) => span / (m * 60e3) <= 900) || 1440;
-      const rows = await rpc('roomtemp_out_series', { p_from: new Date(from).toISOString(), p_to: new Date(to).toISOString(), p_bucket_min: b });
+      // 간격은 길어도 1시간(구간이 길면 1시간 평균). DB(PostgREST)는 한 번에 1000행까지라 900행씩 나눠 읽어 붙인다
+      const want = Number(req.query.b), b = [5, 10, 15, 30, 60].includes(want) ? want : ([5, 10, 15, 30].find((m) => span / (m * 60e3) <= 900) || 60);
+      const win = 900 * b * 60e3, parts = [];
+      const start = Math.floor(from / (b * 60e3)) * b * 60e3; // 창 경계를 평균 간격에 맞춰 같은 칸이 둘로 쪼개지지 않게
+      for (let t = start; t < to; t += win) parts.push(rpc('roomtemp_out_series', { p_from: new Date(t).toISOString(), p_to: new Date(Math.min(t + win - 1, to)).toISOString(), p_bucket_min: b }));
+      const seen = new Set(), rows = (await Promise.all(parts)).flat().filter((r) => r && !seen.has(r.ts) && seen.add(r.ts));
       res.setHeader('Cache-Control', to < now - 36e5 ? 's-maxage=3600' : 's-maxage=60, stale-while-revalidate=300');
       return res.json({ name: 'AWS 402', bucket: b, series: (rows || []).map((r) => ({ ts: Number(r.ts), temp: Number(r.temp), hum: Number(r.hum) })) });
     } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
