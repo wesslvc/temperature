@@ -1542,7 +1542,9 @@ async function loadHeatOut(){
   const { series } = await fetchOutdoor(t0, t1);
   const g = {}; series.forEach(p => { const ds = kstDate(p.ts), k = (monthly ? ds.slice(0, 7) : ds) + '|' + new Date(p.ts + KST).getUTCHours(); (g[k] = g[k] || []).push(p.temp); });
   if(heatOut.key !== key) return;
-  heatOut.rows = Object.entries(g).map(([k, v]) => { const [dd, h] = k.split('|'); return { d: dd, h: +h, out: v.reduce((a, b) => a + b, 0) / v.length }; });
+  // 실내 히트맵과 같은 날짜·시간 칸만 (앞뒤 여유분 때문에 생기던 빈 열 제거)
+  const want = new Set(d);
+  heatOut.rows = Object.entries(g).map(([k, v]) => { const [dd, h] = k.split('|'); return { d: dd, h: +h, out: v.reduce((a, b) => a + b, 0) / v.length }; }).filter(r => want.has(r.d));
   if(panel === 'heat' && heatMetric === 'out') drawHeat();
 }
 const outIn = () => { const S = cache && cache.out && cache.out.series, P = cache && cache.hist && cache.hist.points; if(!S || !S.length || !P || !P.length) return null; const a = P[0].ts, b = P.at(-1).ts; return S.filter(p => p.ts >= a && p.ts <= b); };
