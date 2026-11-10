@@ -51,6 +51,15 @@ export async function storeOutdoor(t0, t1) {
 }
 
 export default async function handler(req, res) {
+  // 방별 난방 기록: /api/outdoor?heat=1&from=&to=
+  if (req.query.heat) {
+    try {
+      const now = Date.now(), from = Number(req.query.from) || now - 864e5, to = Math.min(Number(req.query.to) || now, now);
+      const rows = await rpc('roomtemp_heat_series', { p_from: new Date(from).toISOString(), p_to: new Date(to).toISOString() });
+      res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=300');
+      return res.json({ series: (rows || []).map((r) => ({ ts: Number(r.ts), room: r.room, power: r.power, mode: r.mode, set_t: r.set_t == null ? null : Number(r.set_t), cur_t: r.cur_t == null ? null : Number(r.cur_t) })) });
+    } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
+  }
   // 집 위치 일사량(GHI, W/m², 1시간 평균, ts = 그 시간의 시작): /api/outdoor?ghi=1&from=&to=
   if (req.query.ghi && !req.query.ghifill) {
     try {

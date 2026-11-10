@@ -2,9 +2,12 @@ import { rpc } from './_db.js';
 import { cfgGet, readSensor } from './_st.js';
 import { resetTuya, sharedTuya } from './_tuya.js';
 import { storeOutdoor } from './outdoor.js';
+import { heatFill } from './_ht.js';
 import { ghiFill } from './_ghi.js';
 
 // 바깥(기상청 AWS) 최근 2시간을 함께 저장. 실패해도 실내 수집에는 영향 없음
+// 방별 난방 상태(HT 홈서비스). 계정이 없거나 실패해도 실내 수집에는 영향 없음
+const heatSave = () => heatFill().catch((e) => { console.error('heating', e.message); return null; });
 const outdoorFill = () => storeOutdoor(Date.now() - 2 * 36e5, Date.now()).catch((e) => { console.error('outdoor', e.message); return null; });
 // 집 위치 위성 일사량(햇빛): 정시 호출 때만. 서비스가 최근 약 12일치만 주므로 꾸준히 쌓아 둔다. 실패해도 실내 수집에는 영향 없음
 const sunFillSafe = () => ghiFill().catch((e) => { console.error('ghi', e.message); return null; });
@@ -19,7 +22,7 @@ export default async function handler(req, res) {
       const { temp, hum, measuredAt } = await readSensor();
       if ((temp == null && hum == null) || !measuredAt) throw new Error('SmartThings에서 값을 읽지 못했습니다.');
       const inserted = await rpc('roomtemp_ingest', { p_token: process.env.INGEST_TOKEN, p_temp: temp, p_hum: hum, p_measured_ms: measuredAt });
-      return res.json({ ok: true, source: 'smartthings', inserted, temp, hum, measuredAt, outdoor: await outdoorFill(), sun: await sunFillSafe() });
+      return res.json({ ok: true, source: 'smartthings', inserted, temp, hum, measuredAt, outdoor: await outdoorFill(), sun: await sunFillSafe(), heating: await heatSave() });
     } catch (e) { console.error('smartthings', e.message); }
     const { tuya, deviceId } = await sharedTuya();
     const { temp, hum, measuredAt } = await tuya.readDevice(deviceId);
@@ -35,7 +38,7 @@ export default async function handler(req, res) {
       const rows = await tuya.reportLogs(deviceId, Date.now() - 3 * 36e5, Date.now());
       if (rows.length) filled = await rpc('roomtemp_ingest_bulk', { p_token: process.env.INGEST_TOKEN, p_rows: rows });
     } catch (e) { fillError = e.message; console.error('fill', e.message); }
-    res.json({ ok: true, inserted, filled, fillError, temp, hum, measuredAt, outdoor: await outdoorFill(), sun: await sunFillSafe() });
+    res.json({ ok: true, inserted, filled, fillError, temp, hum, measuredAt, outdoor: await outdoorFill(), sun: await sunFillSafe(), heating: await heatSave() });
   } catch (e) {
     resetTuya();
     console.error(e.message);
