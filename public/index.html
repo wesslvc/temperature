@@ -621,14 +621,14 @@ svg text.ov-d{fill:var(--faint)!important;font-size:11px!important;font-weight:6
 svg .ov-rb{fill:var(--ink);fill-opacity:.07}
 svg .ov-rbl{fill:none;stroke:var(--sub);stroke-width:1.1;stroke-opacity:.8}
 svg text.ov-rl{fill:var(--faint)!important;font-size:10.5px!important}
-svg .ov-sun{fill:var(--sun)} svg .ov-sun.n{fill:var(--sun);fill-opacity:.35}
+svg .ov-sun{fill:var(--sun)}
 /* 햇빛과 실내 온도: 일별 햇빛량과 실내 일평균 변화 */
 .sunA{margin-top:28px;padding-top:22px;border-top:1px solid var(--hair)}
 .sunA h3{font-size:15px;font-weight:700;letter-spacing:-.02em}
 .sunA .cap{margin-bottom:16px}
 .sunA .os{margin-bottom:18px}
 .sunA .os-c>b small{font-size:15px;font-weight:600;color:var(--faint);margin-left:3px;letter-spacing:-.01em}
-.sd-row{display:grid;grid-template-columns:62px 1fr 60px 78px;white-space:nowrap;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--hair);font-size:13px}
+.sd-row{display:grid;grid-template-columns:58px 1fr 44px 54px 70px;white-space:nowrap;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--hair);font-size:13px}
 .sd-row.h{font-size:11.5px;color:var(--faint);border-bottom:1px solid var(--rule);padding-top:0}
 .sd-row .d{color:var(--sub)} .sd-row .d i{font-style:normal;color:var(--faint);font-size:11.5px;margin-left:3px}
 .sd-bar{position:relative;height:8px;border-radius:4px;background:var(--sunk)}
@@ -636,6 +636,53 @@ svg .ov-sun{fill:var(--sun)} svg .ov-sun.n{fill:var(--sun);fill-opacity:.35}
 .sd-row .v{text-align:right;font-weight:650} .sd-row .v.f{color:var(--faint);font-weight:500}
 .sd-row .up{color:var(--hot)} .sd-row .dn{color:var(--cold)}
 .sd-row.part{opacity:.55}
+.sd-row .v.n{color:var(--sub);font-weight:600}
+@media(max-width:480px){.sd-row{grid-template-columns:50px 1fr 34px 48px 62px;gap:8px;font-size:12.5px}}
+
+/* ---------- 열 배터리 ---------- */
+.bat{margin:6px 0 26px}
+.bat-row{display:flex;align-items:center;gap:28px}
+.bat-h{display:flex;flex-direction:column;gap:2px;min-width:118px}
+.bat-h>b{font-size:52px;font-weight:780;letter-spacing:-.05em;line-height:1}
+.bat-h>b small{font-size:20px;font-weight:650;color:var(--faint);margin-left:2px;letter-spacing:-.01em}
+.bat-st{font-style:normal;font-size:12.5px;font-weight:600;color:var(--sub)}
+.bat.chg .bat-st{color:var(--hot)} .bat.dis .bat-st{color:var(--cold)}
+.bat-v{position:relative;flex:1;display:flex;align-items:center;padding-bottom:20px;min-width:0}
+.bat-body{position:relative;flex:1;height:64px;border-radius:14px;border:2px solid var(--rule);background:var(--sunk);overflow:hidden}
+.bat-cap{width:7px;height:24px;margin-left:3px;border-radius:0 4px 4px 0;background:var(--rule)}
+.bat-fill{position:absolute;left:3px;top:3px;bottom:3px;width:calc((100% - 6px) * var(--k));min-width:6px;border-radius:10px;
+  background:linear-gradient(90deg,var(--lc),var(--tc));overflow:hidden;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.bat-flow{position:absolute;inset:0;opacity:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,0) 0 14px,rgba(255,255,255,.28) 14px 22px);background-size:200% 100%}
+.bat.chg .bat-flow{opacity:1;animation:batIn 1.6s linear infinite}
+.bat.dis .bat-flow{opacity:.55;animation:batOut 3.2s linear infinite}
+.bat.chg .bat-fill{box-shadow:0 0 18px -2px var(--tc);animation:batGlow 2.4s ease-in-out infinite}
+@keyframes batIn{from{background-position:0 0}to{background-position:-44px 0}}
+@keyframes batOut{from{background-position:-44px 0}to{background-position:0 0}}
+@keyframes batGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
+.bat-ticks i{position:absolute;top:10px;bottom:10px;width:1px;background:var(--panel);opacity:.55}
+.bat-bolt{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;fill:#fff;stroke:rgba(0,0,0,.25);stroke-width:1;opacity:0;transform:scale(.6);transition:opacity .3s,transform .3s}
+.bat.chg .bat-bolt{opacity:.95;transform:scale(1);animation:batBolt 2.4s ease-in-out infinite}
+@keyframes batBolt{0%,100%{opacity:.95}50%{opacity:.55}}
+.bat-sc{position:absolute;left:0;right:10px;bottom:0;display:flex;justify-content:space-between;font-size:11px;color:var(--faint)}
+.bat-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 24px;margin-top:18px}
+.bs{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bs>b{font-size:24px;font-weight:740;letter-spacing:-.04em;line-height:1.1}
+.bs>b small{font-size:12.5px;font-weight:600;color:var(--faint);letter-spacing:-.01em}
+.bs>b.up{color:var(--hot)} .bs>b.dn{color:var(--cold)}
+.bs>em{font-style:normal;font-size:12px;color:var(--faint)}
+.bat-note{margin-top:12px;font-size:13px;color:var(--sub)}
+.bat-hist{display:flex;gap:6px;margin-top:18px;align-items:flex-end}
+.bh{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0;max-width:40px}
+.bh-c{position:relative;width:100%;max-width:22px;height:46px;border-radius:5px;border:1.5px solid var(--rule);background:var(--sunk);overflow:hidden}
+.bh-c i{position:absolute;left:2px;right:2px;bottom:2px;border-radius:3px}
+.bh.now .bh-c{border-color:var(--sub)}
+.bh-s{width:7px;height:7px;border-radius:50%;background:var(--sun)}
+.bh-d{height:10px;font-size:9px;line-height:10px;color:var(--faint)} .bh-d.up{color:var(--hot)} .bh-d.dn{color:var(--cold)}
+.bh-l{font-size:10.5px;color:var(--faint)}
+.bat-leg{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--faint)}
+@media(max-width:560px){.bat-row{flex-direction:column;align-items:stretch;gap:12px}.bat-h{flex-direction:row;align-items:baseline;gap:10px}.bat-h>b{font-size:44px}
+  .bat-body{height:54px}.bat-stats{gap:10px 14px}.bs>b{font-size:20px}}
+@media (prefers-reduced-motion:reduce){.bat-flow,.bat-fill,.bat-bolt{animation:none!important}}
 
 .os{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 40px}
 .os-c{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -1262,19 +1309,19 @@ function outPanel(el, sumEl){
       g += `<path d="${smooth(D.map(r => [X(r.ts), RY(r[P.d])]))}L${X(t1)},${ry + RB}L${X(t0)},${ry + RB}Z" class="ov-rb"/><path d="${smooth(D.map(r => [X(r.ts), RY(r[P.d])]))}" class="ov-rbl"/><text class="ov-rl" x="${m.l-8}" y="${ry + RB - 4}" text-anchor="end">차이</text>`;
       g += `<text class="ov-rl" x="${bx}" y="${ry + 8}">${sg(d1, P.dec, du)}</text><text class="ov-rl" x="${bx}" y="${ry + RB}">${sg(d0, P.dec, du)}</text>`; }
   });
-  // 햇빛 패널: 집 앞 S-DoT 1시간 평균 조도를 막대로 (단위 klx). 밤(0 lx)은 비워 둔다
+  // 햇빛 패널: 집 위치 1시간 평균 일사량(W/㎡)을 막대로
   if(SUN.length){
-    const mx = Math.max(1, ...SUN.map(p => p.illu / 1000)), sc = niceScale(0, mx), Ys = v => sunY + SH - v / sc.hi * SH, yb = sunY + SH;
-    [0, sc.hi].forEach(t => { const yy = Ys(t); g += `<line class="gl" x1="${m.l}" x2="${m.l+iw}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${t ? tickLabel(t, sc.step) + 'k' : 0}</text>`; });
-    SUN.forEach(p => { if(!(p.illu > 0)) return; const [a, b] = sunWin(p.ts), x0 = Math.max(m.l, X(a)), x1 = Math.min(m.l + iw, X(b)); if(x1 - x0 < .2) return;
-      const w = (x1 - x0) > 3 ? (x1 - x0) - 1 : x1 - x0, y = Ys(p.illu / 1000); g += `<rect class="ov-sun" x="${x0.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${(yb - y).toFixed(1)}" rx="${w > 4 ? 1.5 : 0}"/>`; });
+    const mx = Math.max(100, ...SUN.map(h => h.w)), sc = niceScale(0, mx), Ys = v => sunY + SH - v / sc.hi * SH, yb = sunY + SH;
+    [0, sc.hi].forEach(t => { const yy = Ys(t); g += `<line class="gl" x1="${m.l}" x2="${m.l+iw}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${t ? Math.round(t) : 0}</text>`; });
+    SUN.forEach(h => { if(!(h.w > .5)) return; const x0 = Math.max(m.l, X(h.a)), x1 = Math.min(m.l + iw, X(h.b)); if(x1 - x0 < .2) return;
+      const w = (x1 - x0) > 3 ? (x1 - x0) - 1 : x1 - x0, y = Ys(h.w); g += `<rect class="ov-sun" x="${x0.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${(yb - y).toFixed(1)}" rx="${w > 4 ? 1.5 : 0}"/>`; });
     const today = sunDays(SUN).at(-1);
-    g += `<g class="plab"><text x="${m.l-36}" y="${sunY-18}">햇빛 · 조도</text></g>`;
-    if(today) g += `<text class="ov-v" x="${m.l + iw + 10}" y="${sunY + 12}">${today.light.toFixed(0)}</text><text class="ov-rl" x="${m.l + iw + 10}" y="${sunY + 26}">klx·h${today.full ? '' : ' 진행'}</text><text class="ov-rl" x="${m.l + iw + 10}" y="${sunY + 40}">${md(kstMs(today.d))}</text>`;
+    g += `<g class="plab"><text x="${m.l-36}" y="${sunY-18}">햇빛 · W/㎡</text></g>`;
+    if(today) g += `<text class="ov-v" x="${m.l + iw + 10}" y="${sunY + 12}">${today.kwh.toFixed(1)}</text><text class="ov-rl" x="${m.l + iw + 10}" y="${sunY + 26}">kWh/㎡</text><text class="ov-rl" x="${m.l + iw + 10}" y="${sunY + 40}">${md(kstMs(today.d))}${today.full ? '' : ' 진행'}</text>`;
   }
   const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
   const nt = W < 600 ? 3 : 6; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${H-6}" text-anchor="${i == 0 ? 'start' : i == nt ? 'end' : 'middle'}">${fmt(ts)}</text>`; }
-  g += `<text class="od-l" x="${m.l+iw}" y="22" text-anchor="end">굵은 선 실내 · 가는 선 ${OUT.name}${SUN.length && !narrow ? ' · 막대 ' + SUN_NAME : ''}</text>`;
+  g += `<text class="od-l" x="${m.l+iw}" y="22" text-anchor="end">굵은 선 실내 · 가는 선 ${OUT.name}${SUN.length && !narrow ? ' · 막대 일사량' : ''}</text>`;
   g += `<g id="ocur" opacity="0"><line y1="24" y2="${H-24}" stroke="var(--ink)" stroke-opacity=".35"/><circle id="oc1" r="4" class="od-dot"/><circle id="oc2" r="4" class="od-dot"/><circle id="oc3" r="4" class="od-dot"/><circle id="oc4" r="4" class="od-dot"/></g><rect id="ohit" x="${m.l}" y="0" width="${iw}" height="${H-24}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
   const svg = el.firstChild, cur = svg.querySelector('#ocur');
@@ -1282,57 +1329,97 @@ function outPanel(el, sumEl){
     let b = D[0]; for(const q of D) if(Math.abs(X(q.ts) - px) < Math.abs(X(b.ts) - px)) b = q;
     cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b.ts)); cur.firstChild.setAttribute('x2', X(b.ts));
     [['#oc1', 0, 'it'], ['#oc2', 0, 'ot'], ['#oc3', 1, 'ih'], ['#oc4', 1, 'oh']].forEach(([id, pi, k]) => { const c = svg.querySelector(id); c.setAttribute('cx', X(b.ts)); c.setAttribute('cy', panels[pi].Y(b[k])); });
-    const sp = SUN.find(p => { const [a, z] = sunWin(p.ts); return b.ts >= a && b.ts < z; });
-    showTip(e, `<b>${when(b.ts)}</b><br>기온 실내 ${n1(b.it)}° · AWS ${n1(b.ot)}° <span style="opacity:.6">(${sg(b.dt, 1, '°')})</span><br>습도 실내 ${n0(b.ih)}% · AWS ${n0(b.oh)}% <span style="opacity:.6">(${sg(b.dh, 0, '%p')})</span>` + (sp ? `<br>조도 ${sp.illu >= 1000 ? (sp.illu / 1000).toFixed(1) + 'k' : Math.round(sp.illu)} lx` + (sp.uv != null ? ` · 자외선 ${n1(sp.uv)}` : '') : '')); };
+    const sp = SUN.find(h => b.ts >= h.a && b.ts < h.b);
+    showTip(e, `<b>${when(b.ts)}</b><br>기온 실내 ${n1(b.it)}° · AWS ${n1(b.ot)}° <span style="opacity:.6">(${sg(b.dt, 1, '°')})</span><br>습도 실내 ${n0(b.ih)}% · AWS ${n0(b.oh)}% <span style="opacity:.6">(${sg(b.dh, 0, '%p')})</span>` + (sp ? `<br>일사량 ${Math.round(sp.w)} W/㎡` : '')); };
   svg.querySelector('#ohit').onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); };
 }
 
-/* ---------- 햇빛 (집 앞 S-DoT 조도, 1시간 평균) ---------- */
-// SENSING_TIME은 그 1시간의 끝: 18:07 자료에 일몰(17시 반) 전 빛이 들어 있고 19:07부터 0 → ts-1h ~ ts
-const SUN_SHIFT = -1;
-let SUN_NAME = 'S-DoT 고덕로 227';
-const sunWin = (ts) => [ts + SUN_SHIFT * 36e5, ts + (SUN_SHIFT + 1) * 36e5];
-const sunIn = (a, b) => (cache && cache.sun || []).filter(p => p.illu != null && sunWin(p.ts)[1] > a && sunWin(p.ts)[0] < b);
-// 일별 햇빛량 = 시간 평균 조도의 합 (klx·h). 낮 시간(7–16시) 10칸 중 9칸 이상 있어야 full
-function sunDays(S){
-  const g = {}; S.forEach(p => { if(p.illu == null) return; const d = kstDate(sunWin(p.ts)[0] + 18e5); (g[d] = g[d] || []).push(p); });
-  return Object.keys(g).sort().map(d => { const a = g[d], hrs = new Set(a.map(p => new Date(sunWin(p.ts)[0] + 18e5 + KST).getUTCHours()));
+/* ---------- 햇빛: 집 위치 위성 일사량 (한국에너지기술연구원, 1시간 평균 W/㎡, hm = 그 1시간의 시작) ---------- */
+// 시간별 [{ a, b, w }]  w = 1시간 평균 W/㎡
+function solarHours(){
+  const c = cache || {}, G = c.ghi || [], key = G.length + ':' + (G.at(-1) || {}).ts;
+  if(c._solarKey === key) return c._solar;
+  c._solarKey = key; c._solar = G.map(p => ({ a: p.ts, b: p.ts + 36e5, w: p.ghi }));
+  return c._solar;
+}
+const sunIn = (a, b) => solarHours().filter(h => h.b > a && h.a < b);
+// 일별 햇빛량 kWh/㎡ (= 시간 평균 W/㎡의 합 ÷ 1000). 낮(7–16시) 10칸 중 9칸 이상 있어야 full
+function sunDays(Hs){
+  const g = {}; Hs.forEach(h => { const d = kstDate(h.a + 18e5); (g[d] = g[d] || []).push(h); });
+  return Object.keys(g).sort().map(d => { const a = g[d], hrs = new Set(a.map(h => new Date(h.a + 18e5 + KST).getUTCHours()));
     let day = 0; for(let h = 7; h <= 16; h++) if(hrs.has(h)) day++;
-    return { d, light: a.reduce((x, p) => x + p.illu, 0) / 1000, peak: Math.max(...a.map(p => p.illu)) / 1000, full: day >= 9 }; });
+    return { d, kwh: a.reduce((x, h) => x + h.w, 0) / 1000, peak: Math.max(...a.map(h => h.w)), full: day >= 9 }; });
 }
 let sunIndoor = { key: '', rows: [] };
-async function loadSunIndoor(S){
-  if(!S.length) return;
-  const a = kstMs(kstDate(S[0].ts)) - 864e5, b = Math.min(Date.now(), kstMs(addDays(kstDate(S.at(-1).ts), 1))), key = a + ':' + b;
+async function loadSunIndoor(Hs){
+  if(!Hs.length) return;
+  const a = kstMs(kstDate(Hs[0].a)) - 864e5, b = Math.min(Date.now(), kstMs(addDays(kstDate(Date.now()), 1))), key = a + ':' + Math.floor(b / 9e5);
   if(sunIndoor.key === key) return; sunIndoor.key = key;
   const rows = await get(`/api/heatmap?range=r:${a}:${b}&by=d`).catch(() => []);
   if(sunIndoor.key === key){ sunIndoor.rows = Array.isArray(rows) ? rows : []; if(panel === 'out') sunAnalysis($('#outSun')); }
 }
+
+/* ---------- 열 배터리: 집이 품은 열을 배터리처럼. 잔량 = 24시간 평균 실내 온도가 20°(0%)~26°(100%) 사이 어디인지 ---------- */
+const BAT_LO = 20, BAT_HI = 26;
 function sunAnalysis(el){
-  const S = cache && cache.sun || [];
-  const head = `<h3>햇빛과 실내 온도</h3><p class="cap">가까운 ${SUN_NAME} 조도로 본 그날의 햇빛량과, 실내가 낮에 얼마나 데워지고(낮 상승) 전날보다 일평균이 얼마나 쌓였는지(하루 변화)</p>`;
-  if(!S.length){ el.innerHTML = head + '<div class="empty">조도 자료를 모으는 중이에요. 1시간 단위로 쌓입니다.</div>'; return; }
-  loadSunIndoor(S);
-  // 실내: 날짜별 시간 평균 → 일평균, 오전 최저, 하루 최고
-  const I = {}; sunIndoor.rows.forEach(r => { if(r.temp == null) return; (I[r.d] = I[r.d] || []).push(r); });
+  const Hs = solarHours();
+  if(!Hs.length){ el.innerHTML = '<h3>열 배터리</h3><div class="empty">햇빛 자료를 불러오는 중</div>'; return; }
+  loadSunIndoor(Hs);
+  const R = sunIndoor.rows.filter(r => r.temp != null).map(r => ({ ...r, ts: kstMs(r.d) + r.h * 36e5 }));
+  // 실내: 날짜별 일평균, 오전 최저, 하루 최고
+  const I = {}; R.forEach(r => (I[r.d] = I[r.d] || []).push(r));
   const ind = (d) => { const a = I[d]; if(!a || a.length < 20) return null; const am = a.filter(r => r.h < 12).map(r => r.temp);
     return { mean: a.reduce((x, r) => x + r.temp, 0) / a.length, amMin: am.length ? Math.min(...am) : null, max: Math.max(...a.map(r => r.temp)) }; };
-  const days = sunDays(S).map(r => { const i = ind(r.d), p = ind(addDays(r.d, -1));
-    return { ...r, rise: i && i.amMin != null ? i.max - i.amMin : null, dMean: i && p ? i.mean - p.mean : null }; });
-  const full = days.filter(r => r.full && r.rise != null);
+  const days = sunDays(Hs).map(r => { const i = ind(r.d), p = ind(addDays(r.d, -1));
+    return { ...r, mean: i && i.mean, rise: i && i.amMin != null ? i.max - i.amMin : null, dMean: i && p ? i.mean - p.mean : null }; });
   const avg = (a, k) => { const v = a.filter(r => r[k] != null); return v.length ? v.reduce((x, r) => x + r[k], 0) / v.length : null; };
-  const sgn = (v, dec = 1) => v == null ? '–' : `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(dec)}°`;
-  let sum = '';
-  if(full.length >= 3){
-    const srt = full.slice().sort((x, y) => x.light - y.light), half = Math.floor(srt.length / 2), cloudy = srt.slice(0, half), sunny = srt.slice(srt.length - half);
-    const col = (name, a) => `<div class="os-c"><span class="k">${name} · ${a.length}일</span><b>${sgn(avg(a, 'dMean'))}<small>/일</small></b><em>햇빛 평균 ${avg(a, 'light').toFixed(0)} klx·h · 낮 상승 ${sgn(avg(a, 'rise'))}</em></div>`;
-    sum = `<div class="os">${col('맑은 날', sunny)}${col('흐린 날', cloudy)}</div>`;
-  } else sum = `<p class="cap">맑은 날·흐린 날 비교는 낮 시간이 다 채워진 날이 3일 이상 쌓이면 시작해요 (지금 ${full.length}일).</p>`;
-  const mx = Math.max(1, ...days.map(r => r.light));
+  const sgn = (v, dec = 1, u = '°') => v == null ? '–' : `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(dec)}${u}`;
+  // 맑은 날·흐린 날의 하루 충전/방전 (햇빛량 위·아래 3분의 1, 날이 적으면 절반)
+  const full = days.filter(r => r.full && r.dMean != null), srt = full.slice().sort((x, y) => x.kwh - y.kwh);
+  const cut = srt.length >= 9 ? Math.round(srt.length / 3) : Math.floor(srt.length / 2);
+  const cloudy = cut ? srt.slice(0, cut) : [], sunny = cut ? srt.slice(srt.length - cut) : [];
+  const rateS = avg(sunny, 'dMean'), rateC = avg(cloudy, 'dMean');
+  // 지금 상태: 최근 24시간 평균과 그 전 24시간 평균
+  const now = Date.now(), m24 = (a, b) => { const v = R.filter(r => r.ts + 18e5 > a && r.ts + 18e5 <= b).map(r => r.temp); return v.length >= 12 ? v.reduce((x, y) => x + y, 0) / v.length : null; };
+  const T24 = m24(now - 864e5, now), P24 = m24(now - 2 * 864e5, now - 864e5), flow = T24 != null && P24 != null ? T24 - P24 : null;
+  const clamp = (v) => Math.max(0, Math.min(1, v)), soc = T24 == null ? null : clamp((T24 - BAT_LO) / (BAT_HI - BAT_LO)), pct = soc == null ? null : Math.round(soc * 100);
+  const st = flow == null ? 'idle' : flow > .05 ? 'chg' : flow < -.05 ? 'dis' : 'idle';
+  const stTxt = { chg: '충전 중', dis: '방전 중', idle: '유지' }[st];
+  const today = days.find(r => r.d === kstDate(now)), ref = Math.max(1, ...days.slice(-15).filter(r => r.full).map(r => r.kwh));
+  const runway = rateC != null && rateC < -.05 && T24 != null && T24 > BAT_LO ? (T24 - BAT_LO) / -rateC : null;
+  const tColor = T24 == null ? 'var(--faint)' : specColor('temp', T24), loColor = specColor('temp', BAT_LO);
+  const ticks = Array.from({ length: 9 }, (_, i) => `<i style="left:${(i + 1) * 10}%"></i>`).join('');
+  const bolt = `<svg class="bat-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 5 13.5h6L10 22l9-12.5h-6.2z"/></svg>`;
+  // 최근 14일 일평균을 작은 배터리로
+  const hist = days.filter(r => r.mean != null).slice(-14).map(r => { const s = clamp((r.mean - BAT_LO) / (BAT_HI - BAT_LO));
+    return `<div class="bh${r.d === kstDate(now) ? ' now' : ''}" title="${md(kstMs(r.d))} 일평균 ${r.mean.toFixed(1)}° · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡ · 하루 변화 ${sgn(r.dMean, 2)}">
+      <span class="bh-c"><i style="height:${(s * 100).toFixed(0)}%;background:${specColor('temp', r.mean)}"></i></span>
+      <span class="bh-s" style="opacity:${(.15 + .85 * Math.min(1, r.kwh / ref)).toFixed(2)}"></span>
+      <span class="bh-d ${r.dMean == null || Math.abs(r.dMean) < .05 ? '' : r.dMean > 0 ? 'up' : 'dn'}">${r.dMean == null ? '' : r.dMean > 0 ? '▲' : r.dMean < 0 ? '▼' : ''}</span>
+      <span class="bh-l">${+r.d.slice(8)}</span></div>`; }).join('');
+  const col = (k, v, sub, cls = '') => `<div class="bs"><span class="k">${k}</span><b class="${cls}">${v}</b><em>${sub}</em></div>`;
+  const stats = col('오늘 햇빛', today ? `${today.kwh.toFixed(1)}<small> kWh/㎡</small>` : '–', today ? `맑은 날의 ${Math.round(Math.min(1, today.kwh / ref) * 100)}%${today.full ? '' : ' · 진행 중'}` : '집 위치 위성')
+    + col('맑은 날 하루', rateS == null ? '–' : sgn(rateS, 2), sunny.length ? `충전 · ${sunny.length}일 평균` : '자료 모으는 중', rateS > 0 ? 'up' : 'dn')
+    + col('흐린 날 하루', rateC == null ? '–' : sgn(rateC, 2), cloudy.length ? `방전 · ${cloudy.length}일 평균` : '자료 모으는 중', rateC > 0 ? 'up' : 'dn');
+  const note = [T24 != null ? `24시간 평균 ${T24.toFixed(1)}°` : null, runway != null ? `흐린 날만 이어지면 약 ${runway < 1.5 ? '하루' : Math.round(runway) + '일'} 뒤 ${BAT_LO}°` : null].filter(Boolean).join(' · ');
+  const battery = `<div class="bat ${st}" style="--k:${soc == null ? 0 : soc.toFixed(3)};--tc:${tColor};--lc:${loColor}">
+    <div class="bat-row">
+      <div class="bat-h"><b>${pct == null ? '–' : pct}<small>%</small></b><em class="bat-st">${stTxt} ${flow == null ? '' : sgn(flow, 2) + ' / 24시간'}</em></div>
+      <div class="bat-v"><div class="bat-body"><div class="bat-fill"><i class="bat-flow"></i></div><div class="bat-ticks">${ticks}</div>${bolt}</div><div class="bat-cap"></div>
+        <div class="bat-sc"><span>${BAT_LO}°</span><span>${(BAT_LO + BAT_HI) / 2}°</span><span>${BAT_HI}°</span></div></div>
+    </div>
+    <div class="bat-stats">${stats}</div>
+    ${note ? `<p class="bat-note">${note}</p>` : ''}
+    <div class="bat-hist">${hist}</div>
+    <p class="bat-leg"><span><span class="bh-s" style="display:inline-block;margin-right:5px;vertical-align:1px"></span>햇빛 많을수록 진하게</span><span> · ▲ 전날보다 쌓임 ▼ 빠짐 · 잔량 0% = ${BAT_LO}°, 100% = ${BAT_HI}° (일평균)</span></p>
+  </div>`;
+  const mx = Math.max(.5, ...days.map(r => r.kwh));
   const rows = days.slice().reverse().slice(0, 21).map(r => `<div class="sd-row${r.full ? '' : ' part'}"><span class="d">${md(kstMs(r.d))}<i>${'일월화수목금토'[new Date(r.d + 'T00:00:00Z').getUTCDay()]}</i></span>
-    <span class="sd-bar" title="${r.light.toFixed(0)} klx·h · 최대 ${r.peak.toFixed(1)}k lx"><i style="width:${(r.light / mx * 100).toFixed(1)}%"></i></span>
+    <span class="sd-bar" title="${r.kwh.toFixed(2)} kWh/㎡ · 최대 ${Math.round(r.peak)} W/㎡"><i style="width:${(r.kwh / mx * 100).toFixed(1)}%"></i></span>
+    <span class="v n">${r.kwh.toFixed(1)}</span>
     <span class="v${r.rise == null ? ' f' : ''}">${r.rise == null ? '–' : sgn(r.rise)}</span><span class="v ${r.dMean == null || Math.abs(r.dMean) < .05 ? 'f' : r.dMean > 0 ? 'up' : 'dn'}">${sgn(r.dMean)}</span></div>`).join('');
-  el.innerHTML = head + sum + `<div class="sd-row h"><span>날짜</span><span>햇빛량 (klx·h)</span><span class="v f">낮 상승</span><span class="v f">하루 변화</span></div>` + rows;
+  el.innerHTML = `<h3>열 배터리</h3><p class="cap">벽·바닥·가구가 품은 열을 배터리처럼 봐요. 햇빛이 들면 충전, 바깥으로 새면 방전. 햇빛은 집 위치의 위성 일사량(한국에너지기술연구원)</p>`
+    + battery + `<div class="sd-row h"><span>날짜</span><span>햇빛</span><span class="v f">kWh/㎡</span><span class="v f">낮 상승</span><span class="v f">하루 변화</span></div>` + rows;
 }
 
 /* ---------- 하루 패턴 ---------- */
@@ -1607,7 +1694,8 @@ async function loadOut(){
   const apply = (o) => { if(cache !== c) return; OUT.name = o.src; c.out = Object.assign({ cur: null }, c.out, { series: o.series }); renderAll(); };
   curP.then(cur => { if(cache === c){ c.out = Object.assign({ series: [] }, c.out, { cur }); renderAll(); } });
   // 햇빛: 그래프 구간과 별개로 최근 60일을 한 번에 (1시간 자료라 가볍다)
-  get(`/api/outdoor?sun=1&from=${Math.min(t0 - 36e5, Date.now() - 60*864e5)}&to=${Date.now()}`).then(j => { if(cache === c && j && j.series){ c.sun = j.series; SUN_NAME = j.name || SUN_NAME; renderAll(); } }).catch(() => {});
+  const sf = Math.min(t0 - 36e5, Date.now() - 60*864e5);
+  get(`/api/outdoor?ghi=1&from=${sf}&to=${Date.now()}`).then(j => { if(cache === c && j && j.series){ c.ghi = j.series; renderAll(); } }).catch(() => {});
   apply(await fetchOutdoor(t0, t1, apply));
 }
 // 히트맵용 바깥 자료 (히트맵 기간이 따로라서)

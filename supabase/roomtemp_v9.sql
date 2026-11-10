@@ -1,7 +1,8 @@
--- 집 앞 S-DoT 조도(햇빛) 1시간 자료 (적용된 마이그레이션 roomtemp_sun_sdot 의 요약)
--- roomtemp.sun(ts pk, serial, illu_min/avg/max lx, uv_min/avg/max, temp, hum, data_no)
--- public.roomtemp_sun_ingest(p_token, p_rows jsonb)  : ingest_token 확인 후 upsert (data_no 큰 값=지연 보정 최종값 우선)
--- public.roomtemp_sun_series(p_from, p_to)           : ts(ms), illu(평균), illu_max, uv(평균)
--- 수집: api/collect.js(pg_cron 30분마다)가 서울 열린데이터광장 sDoTEnv 를 조회해 저장 (api/_sdot.js)
--- 센서: 고덕로 227(V02Q1940350). 집 앞 고덕로 360(V02Q1940352)은 조도·자외선이 0만 나와 제외
--- SENSING_TIME 은 그 1시간의 끝 시각. 과거분(10/10~)은 IotVdata017/{a}/{b}/Gangdong-gu (최근 한 달, 어제까지)로 채움
+-- 집 위치 위성 일사량 (적용된 마이그레이션 roomtemp_ghi_kier 의 요약)
+-- roomtemp.ghi(ts pk = 그 1시간의 시작, ghi W/㎡ 1시간 평균, lat, lon)
+-- public.roomtemp_ghi_ingest(p_token, p_rows jsonb) : ingest_token 확인 후 upsert
+-- public.roomtemp_ghi_series(p_from, p_to)          : ts(ms), ghi
+-- 출처: 공공데이터포털 한국에너지기술연구원_실시간 일사량 데이터 제공 서비스 (B551184/SrQtyService/getSrQtyPredcInfo)
+--   위도(소수 셋째 자리)가 같은 격자 한 줄을 시간별로 통째로 주고 경도로는 거르지 않아, 전부 받아 우리 격자만 고른다. 한 번에 50행, 초당 호출 제한 있음
+-- 수집: api/collect.js(pg_cron 30분마다) 정시 호출 때 오늘 것, 새벽 1시대엔 어제 것도. 10/29~ 는 처음에 한 번에 채움
+-- (roomtemp.sun 은 S-DoT 조도를 시험하던 테이블로 더는 쓰지 않음)

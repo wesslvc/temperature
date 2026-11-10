@@ -2,12 +2,12 @@ import { rpc } from './_db.js';
 import { cfgGet, readSensor } from './_st.js';
 import { resetTuya, sharedTuya } from './_tuya.js';
 import { storeOutdoor } from './outdoor.js';
-import { sunFill } from './_sdot.js';
+import { ghiFill } from './_ghi.js';
 
 // 바깥(기상청 AWS) 최근 2시간을 함께 저장. 실패해도 실내 수집에는 영향 없음
 const outdoorFill = () => storeOutdoor(Date.now() - 2 * 36e5, Date.now()).catch((e) => { console.error('outdoor', e.message); return null; });
-// 집 앞 S-DoT 조도(햇빛). 실패해도 실내 수집에는 영향 없음
-const sunFillSafe = () => sunFill().catch((e) => { console.error('sdot', e.message); return null; });
+// 집 위치 위성 일사량(햇빛): 정시 호출 때만. 서비스가 최근 약 12일치만 주므로 꾸준히 쌓아 둔다. 실패해도 실내 수집에는 영향 없음
+const sunFillSafe = () => ghiFill().catch((e) => { console.error('ghi', e.message); return null; });
 
 export default async function handler(req, res) {
   const given = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
