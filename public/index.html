@@ -787,6 +787,27 @@ svg .ov-sun{fill:var(--sun);fill-opacity:.55}
 svg .tb-100{stroke:var(--sub);stroke-opacity:.45;stroke-dasharray:3 3}
 svg .tb-raw{fill:none;stroke:var(--ink);stroke-opacity:.28;stroke-width:1}
 @media(max-width:560px){.tb-f{flex-direction:column;gap:4px}.tb-sc span:nth-child(2){display:none}}
+
+/* ---------- 열 배터리 모양 (몸통 0~150%, 100% 눈금) ---------- */
+.tbx{display:flex;align-items:center;gap:4px;margin-top:18px}
+.tbx-body{position:relative;flex:1;height:30px;border-radius:9px;background:var(--sunk);box-shadow:inset 0 0 0 1px var(--rule);overflow:hidden}
+.tbx-cap{flex:none;width:5px;height:12px;border-radius:0 3px 3px 0;background:var(--rule)}
+.tbx-fill{position:absolute;left:3px;top:3px;bottom:3px;max-width:calc(100% - 6px);border-radius:6px;overflow:hidden;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--tc) 55%,var(--sunk)),var(--tc));transition:width .8s cubic-bezier(.2,.7,.2,1)}
+.tbx-100{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed color-mix(in srgb,var(--ink) 45%,transparent)}
+.tbx-t{position:absolute;top:9px;bottom:9px;width:1px;background:color-mix(in srgb,var(--ink) 18%,transparent)}
+.tbx-sheen{position:absolute;inset:0;opacity:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.38) 50%,transparent 70%);background-size:220% 100%}
+.tb.chg .tbx-sheen{opacity:1;animation:tbxIn 2.2s cubic-bezier(.45,0,.55,1) infinite}
+.tb.dis .tbx-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:18px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.35));animation:tbxOut 2.6s ease-in-out infinite}
+.tbx-bolt{position:absolute;top:50%;width:16px;height:16px;margin-top:-8px;fill:var(--ink);opacity:.85;animation:tbxBolt 2.2s ease-in-out infinite}
+@keyframes tbxIn{from{background-position:120% 0}to{background-position:-100% 0}}
+@keyframes tbxOut{0%,100%{opacity:.2}50%{opacity:.7}}
+@keyframes tbxBolt{0%,100%{opacity:.85}50%{opacity:.4}}
+.tb-bar{display:none!important}
+.tb-sc span:nth-child(2){color:var(--sub)}
+.tb.chg .tb-s{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.tbx-sheen,.tbx-fill::after,.tbx-bolt{animation:none!important}}
+@media(max-width:560px){.tbx-body{height:26px}.tb-sc span:first-child,.tb-sc span:last-child{font-size:10.5px}}
 </style>
 </head>
 <body>
@@ -1398,10 +1419,13 @@ function outPanel(el, sumEl){
 
 /* ---------- 햇빛: 집 위치 위성 일사량 (한국에너지기술연구원, 1시간 평균 W/㎡, hm = 그 1시간의 시작) ---------- */
 // 시간별 [{ a, b, w }]  w = 1시간 평균 W/㎡
+let sunOM = { rows: [], at: 0 };
 function solarHours(){
-  const c = cache || {}, G = c.ghi || [], key = G.length + ':' + (G.at(-1) || {}).ts;
+  const c = cache || {}, G = c.ghi || [], key = G.length + ':' + (G.at(-1) || {}).ts + ':' + sunOM.rows.length;
   if(c._solarKey === key) return c._solar;
-  c._solarKey = key; c._solar = G.map(p => ({ a: p.ts, b: p.ts + 36e5, w: p.ghi }));
+  // 집 격자 위성값(KIER)을 우선, 없는 시간은 Open-Meteo
+  const K = G.map(p => ({ a: p.ts, b: p.ts + 36e5, w: p.ghi })), have = new Set(K.map(x => x.a));
+  c._solarKey = key; c._solar = K.concat(sunOM.rows.filter(x => !have.has(x.a)).map(x => ({ ...x, om: true }))).sort((x, y) => x.a - y.a);
   return c._solar;
 }
 const sunIn = (a, b) => solarHours().filter(h => h.b > a && h.a < b);
@@ -1530,12 +1554,12 @@ function holdHours(tin, tout, k){
 }
 const holdTxt = (t) => t == null ? '–' : t === Infinity ? '계속' : t < 1 ? `${Math.round(t * 60)}분` : t < 48 ? `${Math.round(t)}시간` : `${(t / 24).toFixed(1).replace(/\.0$/, '')}일`;
 // ---- 고정 눈금 배터리 ----
-// 0% = 18° (WHO가 권하는 겨울 실내 최저), 100% = 24° (겨울 쾌적 23–25°의 가운데). 1°당 약 17%p
-// 여름처럼 그보다 따뜻하면 100%를 넘고(27° = 150%), 추운 날이 이어지면 빠진다. 계절과 상관없이 같은 눈금이라
-// '지금 집이 절대적으로 따뜻한 편인지'와 '햇빛으로 얼마나 채워지고 바깥으로 얼마나 새는지'를 비교할 수 있다
-const BT = { lo: 18, hi: 24 };
+// 0% = 20° (정부 권장 겨울 난방 온도: 이 아래면 난방이 필요) · 100% = 26° (정부 권장 여름 냉방 온도: 이 위면 냉방이 필요)
+// 0~100% 사이 = 난방도 냉방도 필요 없는 '공짜 구간'. 여름엔 100%를 넘고(29° = 150%) 추운 날이 이어지면 빠진다.
+// 계절과 상관없이 같은 눈금이라 '지금 집이 절대적으로 따뜻한 편인지'와 '햇빛으로 얼마나 채워지는지'를 바로 비교할 수 있다
+const BT = { lo: 20, hi: 26 };
 const bSoc = (t) => (t - BT.lo) / (BT.hi - BT.lo);
-const bWord = (s) => s < 0 ? '아주 추운 편' : s < .35 ? '추운 편' : s < .8 ? '서늘한 편' : s < 1.15 ? '따뜻한 편' : s < 1.5 ? '아주 따뜻한 편' : '더운 편';
+const bWord = (s) => s < 0 ? '난방 필요' : s < .34 ? '서늘한 편' : s < .67 ? '알맞음' : s <= 1 ? '따뜻한 편' : s < 1.5 ? '더운 편 · 냉방 기준 넘음' : '아주 더움';
 function thermoDays(){
   const H = thermo.H; if(!H.length) return [];
   const g = {}; H.forEach(r => { const d = kstDate(r.ts); (g[d] = g[d] || []).push(r); });
@@ -1567,8 +1591,10 @@ function thermoCard(big){
   const T = thermoNow(); if(!T) return '';
   const pct = Math.round(T.soc * 100), col = specColor('temp', T.tin), sg = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v * 100))}%p`;
   const stTxt = { chg: '충전 중', dis: '방전 중', idle: '유지' }[T.st] + (T.rate == null ? '' : ` ${sg(T.rate)} / 하루`);
-  // 0~150%를 15칸(칸당 10%p). 100% 넘는 칸은 다른 톤. 150% 넘으면 숫자만 계속 올라감
-  const cells = Array.from({ length: 15 }, (_, i) => { const lo = i / 10, f = Math.max(0, Math.min(1, (T.soc - lo) * 10)); return `<i class="${i >= 10 ? 'ov' : ''}"><b style="width:${(f * 100).toFixed(0)}%"></b></i>`; }).join('');
+  const fillW = Math.max(0, Math.min(1.5, T.soc)) / 1.5 * 100;
+  const cells = `<div class="tbx"><div class="tbx-body"><div class="tbx-fill" style="width:${fillW.toFixed(1)}%"><i class="tbx-sheen"></i></div>
+      <i class="tbx-100" style="left:${(100 / 1.5).toFixed(2)}%"></i>${[.5].map(v => `<i class="tbx-t" style="left:${(v / 1.5 * 100).toFixed(2)}%"></i>`).join('')}
+      ${T.st === 'chg' ? `<svg class="tbx-bolt" style="left:max(8px, calc(${fillW.toFixed(1)}% - 22px))" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 5 13.5h6L10 22l9-12.5h-6.2z"/></svg>` : ''}</div><i class="tbx-cap"></i></div>`;
   const sunToday = T.B && T.today && T.today.kwh != null ? T.B.sun * T.today.kwh : null, sunY = T.B && T.yday && T.yday.kwh != null ? T.B.sun * T.yday.kwh : null, leakDay = T.B ? T.B.leak * (T.tin - T.tout) : null;
   const f = [
     `<span>햇빛 충전 <b>${sunY == null ? '–' : sg(sunY)}</b> <i>어제 ${T.yday && T.yday.kwh != null ? T.yday.kwh.toFixed(1) + ' kWh/㎡' : ''}</i></span>`,
@@ -1577,11 +1603,10 @@ function thermoCard(big){
   return `<div class="tb${big ? ' big' : ''} ${T.st}" style="--tc:${col}">
     <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.soc)}</em> · 24시간 평균 ${n1(T.tin)}°</span></div>
-    <div class="tb-bar">${cells}</div>
-    <div class="tb-sc"><span>${BT.lo}° · 0%</span><span style="left:${100 / 1.5}%">${BT.hi}° · 100%</span><span>${BT.lo + 1.5 * (BT.hi - BT.lo)}° · 150%</span></div>
+    ${cells}
+    <div class="tb-sc"><span>${BT.lo}° 난방 기준 · 0%</span><span style="left:${100 / 1.5}%">${BT.hi}° 냉방 기준 · 100%</span><span>${BT.lo + 1.5 * (BT.hi - BT.lo)}° · 150%</span></div>
     <div class="tb-f">${f}</div>
-    ${big ? `<p class="tb-n">눈금은 계절과 상관없이 고정: 0% = ${BT.lo}°(겨울 실내 최저 권장), 100% = ${BT.hi}°(겨울 쾌적의 가운데), 1°에 약 ${Math.round(100 / (BT.hi - BT.lo))}%p. 여름엔 100%를 넘고 추운 날이 이어지면 빠집니다.
-      햇빛 충전·바깥 손실은 최근 ${T.B ? T.B.n : 0}일의 하루 잔량 변화를 '햇빛량'과 '실내−바깥 차'로 나눠 잰 값${T.B ? ` (햇빛 1 kWh/㎡당 ${sg(T.B.sun)}, 바깥과 1° 차이당 하루 ${sg(-T.B.leak)} · 지금 바깥이면 하루 햇빛 ${(T.B.leak * (T.tin - T.tout) / T.B.sun).toFixed(1)} kWh/㎡가 들어야 본전)` : ' (자료가 더 쌓이면 나와요)'}.</p>` : ''}</div>`;
+    ${big ? `<p class="tb-n" title="햇빛 충전·바깥 손실은 최근 ${T.B ? T.B.n : 0}일의 하루 잔량 변화를 햇빛량과 실내−바깥 차로 나눠 잰 값. 일사량: 최근 약 12일은 집 위치 위성값(한국에너지기술연구원), 그 전은 Open-Meteo">기준 ${BT.lo}°(정부 권장 난방 온도) = 0%, ${BT.hi}°(권장 냉방 온도) = 100%, 1°에 약 ${Math.round(100 / (BT.hi - BT.lo))}%p.${T.B ? ` 햇빛 1 kWh/㎡에 ${sg(T.B.sun)}, 지금 바깥이면 하루 ${(T.B.leak * (T.tin - T.tout) / T.B.sun).toFixed(1)} kWh/㎡가 들어야 본전.` : ''}</p>` : ''}</div>`;
 }
 // 14일 잔량 흐름 + 햇빛
 function thermoChart(el){
@@ -1593,7 +1618,7 @@ function thermoChart(el){
   const vmax = Math.max(1.5, ...pts.map(p => p.raw)) , vmin = Math.min(0, ...pts.map(p => p.raw)), Y = (v) => y0 + h - (v - vmin) / (vmax - vmin) * h;
   let g = '';
   [0, .5, 1, 1.5].filter(v => v >= vmin && v <= vmax).forEach(v => { g += `<line class="${v === 1 ? 'tb-100' : 'gl'}" x1="${m.l}" x2="${m.l + iw}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${m.l - 8}" y="${Y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`; });
-  const gd = vGrad('temp', BT.lo + vmin * 6, BT.lo + vmax * 6, Y(vmin), Y(vmax), .3, true); g += `<defs>${gd.def}</defs>`;
+  const gd = vGrad('temp', BT.lo + vmin * (BT.hi - BT.lo), BT.lo + vmax * (BT.hi - BT.lo), Y(vmin), Y(vmax), .3, true); g += `<defs>${gd.def}</defs>`;
   const raw = smooth(pts.map(p => [X(p.ts), Y(p.raw)])), avg = smooth(pts.map(p => [X(p.ts), Y(p.v)]));
   g += `<path d="${avg}L${X(t1)},${Y(vmin)}L${X(t0)},${Y(vmin)}Z" fill="url(#${gd.id})"/><path d="${raw}" class="tb-raw"/><path d="${avg}" class="od-line"/>`;
   g += `<g class="plab"><text x="${m.l - 36}" y="${y0 - 12}">잔량 (24시간 평균)</text></g><text class="od-l" x="${m.l + iw}" y="${y0 - 12}" text-anchor="end">가는 선 = 시각별</text>`;
@@ -1825,7 +1850,8 @@ $('#refresh').onclick = async () => {
 // 바깥 날씨 (Open-Meteo, 키 불필요). 위치 기본값: 서울
 const OUT = { lat: 37.5665, lon: 126.978, name: '서울' };
 const outMemo = {};
-async function omGet(url){ if(outMemo[url]) return outMemo[url]; const r = await fetch(url); if(!r.ok) throw new Error('om ' + r.status); return (outMemo[url] = r.json()); }
+// 실패한 요청은 기억하지 않고 한 번 더 시도
+async function omGet(url){ if(outMemo[url]) return outMemo[url]; for(let i = 0; i < 2; i++){ try { const r = await fetch(url); if(!r.ok) throw new Error('om ' + r.status); return (outMemo[url] = await r.json()); } catch(e){ if(i) throw e; await new Promise(ok => setTimeout(ok, 1500)); } } }
 const omSeries = (j) => { const h = j && j.hourly; if(!h) return []; return h.time.map((t, i) => ({ ts: Date.parse(t + ':00+09:00'), temp: h.temperature_2m[i], hum: h.relative_humidity_2m[i] })).filter(p => p.temp != null && p.hum != null); };
 async function outdoorRange(t0, t1){
   const q = `latitude=${OUT.lat}&longitude=${OUT.lon}&hourly=temperature_2m,relative_humidity_2m&timezone=Asia%2FSeoul`;
@@ -1835,6 +1861,16 @@ async function outdoorRange(t0, t1){
   if(d1 >= cut) parts.push(omGet(`https://api.open-meteo.com/v1/forecast?${q}&start_date=${d0 > cut ? d0 : cut}&end_date=${d1}`));
   const all = (await Promise.all(parts.map(x => x.catch(() => null)))).flatMap(omSeries).sort((a, b) => a.ts - b.ts);
   return all.filter(p => p.ts <= Date.now() + 36e5);
+}
+// 일사량 과거값: 한국에너지기술연구원 API는 최근 약 12일만 주므로, 그 전은 Open-Meteo 일사(1시간 평균 W/㎡, 그 시각까지의 한 시간)로 채운다
+async function omSunRange(t0, t1){
+  const q = `latitude=37.552&longitude=127.169&hourly=shortwave_radiation&timezone=Asia%2FSeoul`;
+  const d0 = kstDate(t0), d1 = kstDate(t1), cut = kstDate(Date.now() - 6*864e5), parts = [];
+  if(d0 < cut) parts.push(omGet(`https://archive-api.open-meteo.com/v1/archive?${q}&start_date=${d0}&end_date=${d1 < cut ? d1 : addDays(cut, -1)}`));
+  if(d1 >= cut) parts.push(omGet(`https://api.open-meteo.com/v1/forecast?${q}&start_date=${d0 > cut ? d0 : cut}&end_date=${d1}`));
+  const js = await Promise.all(parts.map(x => x.catch(() => null)));
+  return js.flatMap(j => { const h = j && j.hourly; if(!h) return []; return h.time.map((t, i) => { const b = Date.parse(t + ':00+09:00'); return { a: b - 36e5, b, w: h.shortwave_radiation[i] }; }); })
+    .filter(x => x.w != null && x.b <= Date.now());
 }
 async function outdoorNow(){ const j = await omGet(`https://api.open-meteo.com/v1/forecast?latitude=${OUT.lat}&longitude=${OUT.lon}&current=temperature_2m,relative_humidity_2m&timezone=Asia%2FSeoul&_=${Math.floor(Date.now()/6e5)}`);
   return j && j.current ? { ts: Date.parse(j.current.time + ':00+09:00'), temp: j.current.temperature_2m, hum: j.current.relative_humidity_2m } : null; }
@@ -1884,6 +1920,7 @@ async function loadOut(){
   // 햇빛: 그래프 구간과 별개로 최근 60일을 한 번에 (1시간 자료라 가볍다)
   const sf = Math.min(t0 - 36e5, Date.now() - 60*864e5);
   get(`/api/outdoor?ghi=1&from=${sf}&to=${Date.now()}`).then(j => { if(cache === c && j && j.series){ c.ghi = j.series; renderAll(); } }).catch(() => {});
+  if(!sunOM.rows.length || Date.now() - sunOM.at > 36e5) omSunRange(Math.min(sf, kstMs('2026-09-25')), Date.now()).then(r => { if(r.length){ sunOM = { rows: r, at: Date.now() }; renderAll(); } }).catch(() => {});
   apply(await fetchOutdoor(t0, t1, apply));
 }
 // 히트맵용 바깥 자료 (히트맵 기간이 따로라서)
