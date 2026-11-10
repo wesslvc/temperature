@@ -837,6 +837,17 @@ svg .tb-heat{fill:var(--hot);fill-opacity:.6}svg .tb-heat.guess{fill-opacity:.35
 .bd.now .bd-c{box-shadow:inset 0 0 0 1px var(--sub)}
 .tb.heat .tbx-fill{background:linear-gradient(90deg,color-mix(in srgb,var(--hot) 80%,#000),var(--hot))!important;opacity:1}
 .tb.heat .tb-s i{background:var(--hot)!important}
+
+.bd-d{position:relative;width:14px;height:22px;display:flex;flex-direction:column-reverse;justify-content:flex-start;border-bottom:1px solid var(--rule)}
+.bd-d i{display:block;width:100%;max-height:100%}
+.bd-d i.s{background:var(--sun);opacity:.85}.bd-d i.h{background:var(--hot);opacity:.85}.bd-d i.n{background:color-mix(in srgb,var(--sub) 55%,transparent)}
+.bd.both .bd-c i{background:linear-gradient(0deg,var(--sun),var(--hot))}
+.bd.both em{color:var(--hot)}
+
+/* 잔량은 색 없이(그날 실내 온도 색을 옅게), 원인 색은 아래 '그날 변화'에만 */
+.bd .bd-c i,.bd.sun .bd-c i,.bd.heat .bd-c i,.bd.both .bd-c i,.bd.down .bd-c i{background:var(--bc)!important;opacity:.75!important}
+.bd-d{height:26px!important}
+.bd-d i{border-radius:1px}
 </style>
 </head>
 <body>
@@ -1702,10 +1713,12 @@ function thermoChart(el){
   const DL = Object.keys(dd).sort().filter(d => dd[d].length >= (d === today ? 3 : 18)).map(d => ({ d, v: dd[d].reduce((a, b) => a + b, 0) / dd[d].length }));
   const mid = dy + dh / 2, dm = Math.max(.1, ...DL.slice(1).map((r, i) => Math.abs(r.v - DL[i].v)));
   g += `<line x1="${m.l}" x2="${m.l + iw}" y1="${mid}" y2="${mid}" class="gl"/><text class="ov-rl" x="${m.l - 8}" y="${mid + 4}" text-anchor="end">하루</text>`;
-  const inR = (d) => kstMs(d) + 864e5 > t0 && kstMs(d) < t1, span = t1 - t0, SRC = Object.fromEntries(batteryDays().map(r => [r.d, r.src]));
+  const inR = (d) => kstMs(d) + 864e5 > t0 && kstMs(d) < t1, span = t1 - t0, BDm = Object.fromEntries(batteryDays().map(r => [r.d, r]));
   DL.forEach((r, i) => { if(!i || !inR(r.d)) return; const dv = r.v - DL[i - 1].v, x = span < 2.5 * 864e5 ? X(Math.min(t1, Math.max(t0, kstMs(r.d) + 432e5))) : X(kstMs(r.d) + 432e5), hh = Math.abs(dv) / dm * (dh / 2 - 4), bw = Math.min(14, iw / DL.length * .45);
     if(x < m.l || x > m.l + iw) return;
-    g += `<rect x="${x - bw / 2}" y="${dv >= 0 ? mid - hh : mid}" width="${bw}" height="${Math.max(1, hh)}" rx="2" class="${dv < -.01 ? 'tb-dn' : SRC[r.d] === 'heat' ? 'tb-ht' : 'tb-up'}"><title>${md(kstMs(r.d))} ${dv >= 0 ? '+' : '−'}${Math.abs(Math.round(dv * 100))}%p</title></rect>`;
+    const bdd = BDm[r.d], hs = dv > .01 && bdd ? Math.min(1, bdd.heatGain / Math.max(dv, .001)) : 0;
+    if(dv > .01 && hs > 0 && hs < 1){ const hh2 = hh * hs; g += `<rect x="${x - bw / 2}" y="${mid - hh}" width="${bw}" height="${hh2}" class="tb-ht"/><rect x="${x - bw / 2}" y="${mid - hh + hh2}" width="${bw}" height="${hh - hh2}" class="tb-up"><title>${md(kstMs(r.d))} 햇빛 +${Math.round(bdd.sunGain * 100)}%p · 난방 +${Math.round(bdd.heatGain * 100)}%p</title></rect>`; }
+    else g += `<rect x="${x - bw / 2}" y="${dv >= 0 ? mid - hh : mid}" width="${bw}" height="${Math.max(1, hh)}" rx="2" class="${dv < -.01 ? 'tb-dn' : hs >= 1 ? 'tb-ht' : 'tb-up'}"><title>${md(kstMs(r.d))} ${dv >= 0 ? '+' : '−'}${Math.abs(Math.round(dv * 100))}%p</title></rect>`;
     if(W >= 600 || span < 8 * 864e5) g += `<text class="tb-dl" x="${x}" y="${dv >= 0 ? mid - hh - 3 : mid + hh + 10}" text-anchor="middle">${dv >= 0 ? '+' : '−'}${Math.abs(Math.round(dv * 100))}${span < 2.5 * 864e5 ? `%p ${r.d === today ? '오늘' : md(kstMs(r.d))}` : ''}</text>`; });
   // 침실1 난방이 돌던 시간 (시간 단위). 진하게 = HT로 확실 또는 '경계'인데 센서 신호도 있음, 옅게 = HT 기록 없는 시간의 센서 추정
   { const HS = HT.filter(x => x.room === '침실1').sort((x, y) => x.ts - y.ts), htAt = (ts) => { let best = null; for(const x of HS){ if(Math.abs(x.ts - ts) <= 45 * 60e3 && (!best || Math.abs(x.ts - ts) < Math.abs(best.ts - ts))) best = x; } return best; };
@@ -1740,16 +1753,22 @@ function batteryDays(){
     if(sxx > .5){ a = R.reduce((t, r) => t + (r.kwh - mx) * (r.dS - my), 0) / sxx; c = my - a * mx; } }
   const heatDays = new Set((thermoR.heat || []).filter(x => x.room === '침실1' && heatState(x) === 'on').map(x => kstDate(x.ts)));
   D.forEach(r => { r.sunPart = a != null && r.kwh != null ? a * r.kwh : null; r.extra = r.dS != null && r.sunPart != null ? r.dS - (r.sunPart + c) : null;
-    r.src = r.dS == null ? null : r.dS < -.01 ? 'down' : heatDays.has(r.d) || (r.extra != null && r.extra > .08 && (r.kwh ?? 0) < 2.5) ? 'heat' : 'sun'; });
+    r.src = r.dS == null ? null : r.dS < -.01 ? 'down' : heatDays.has(r.d) || (r.extra != null && r.extra > .08 && (r.kwh ?? 0) < 2.5) ? 'heat' : 'sun';
+    // 충전된 날: 햇빛으로 설명 안 되는 몫(extra)이 크거나 HT상 난방이 돈 날이면 그만큼을 난방 몫으로, 나머지는 햇빛 몫
+    // 오늘은 하루가 끝나지 않아 추정에서 빼고 HT 기록만 본다. 햇빛으로 설명 안 되는 몫이 12%p를 넘을 때만 난방 몫으로
+    const helped = heatDays.has(r.d) || (r.d !== kstDate(Date.now()) && r.extra != null && r.extra > .12);
+    r.heatGain = r.dS > .01 && helped ? Math.min(r.dS, Math.max(0, r.extra ?? r.dS)) : 0; r.sunGain = r.dS > .01 ? r.dS - r.heatGain : 0;
+    if(r.dS > .01) r.src = r.heatGain > .01 && r.sunGain > .01 ? 'both' : r.heatGain > .01 ? 'heat' : 'sun'; });
   return D;
 }
 function batteryStrip(el){
   const D = batteryDays(); if(D.length < 2){ el.innerHTML = ''; return; }
-  const today = kstDate(Date.now()), cols = D.map(r => { const f = Math.max(0, Math.min(1.5, r.soc)) / 1.5;
+  const today = kstDate(Date.now()), dmax = Math.max(.1, ...D.map(r => Math.abs(r.dS || 0))), cols = D.map(r => { const f = Math.max(0, Math.min(1.5, r.soc)) / 1.5, k = (v) => (Math.min(1, v / dmax) * 100).toFixed(0);
     const dv = r.dS == null ? '' : `${r.dS >= 0 ? '+' : '−'}${Math.abs(Math.round(r.dS * 100))}`;
-    return `<div class="bd ${r.src || ''}${r.d === today ? ' now' : ''}" title="${md(kstMs(r.d))} · 잔량 ${Math.round(r.soc * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°)${r.dS == null ? '' : ` · ${dv}%p`}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.src === 'heat' ? ' · 난방 도움' : ''}">
-      <span class="bd-c"><i style="height:${(f * 100).toFixed(0)}%"></i><s style="bottom:${(1 / 1.5 * 100).toFixed(1)}%"></s></span><em>${dv}</em><b>${+r.d.slice(8) === 1 || r === D[0] ? md(kstMs(r.d)) : +r.d.slice(8)}</b></div>`; }).join('');
-  el.innerHTML = `<div class="bd-h"><span>날짜별 잔량</span><span class="bd-lg"><i class="sun"></i>햇빛으로 충전 <i class="heat"></i>난방 도움 <i class="down"></i>방전 · 선 = 100%</span></div><div class="bd-row">${cols}</div>`;
+    return `<div class="bd ${r.src || ''}${r.d === today ? ' now' : ''}" style="--bc:${specColor('temp', r.tin)}" title="${md(kstMs(r.d))} · 잔량 ${Math.round(r.soc * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°)${r.dS == null ? '' : ` · ${dv}%p`}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.dS > .01 ? ` · 햇빛 +${Math.round(r.sunGain * 100)}%p${r.heatGain > .01 ? ` · 난방 +${Math.round(r.heatGain * 100)}%p` : ''}` : ''}">
+      <span class="bd-c"><i style="height:${(f * 100).toFixed(0)}%"></i><s style="bottom:${(1 / 1.5 * 100).toFixed(1)}%"></s></span>
+      <span class="bd-d">${r.dS == null ? '' : r.dS > .01 ? `<i class="s" style="height:${k(r.sunGain)}%"></i><i class="h" style="height:${k(r.heatGain)}%"></i>` : `<i class="n" style="height:${k(-r.dS)}%"></i>`}</span><em>${dv}</em><b>${+r.d.slice(8) === 1 || r === D[0] ? md(kstMs(r.d)) : +r.d.slice(8)}</b></div>`; }).join('');
+  el.innerHTML = `<div class="bd-h"><span>날짜별 잔량</span><span class="bd-lg"><i class="sun"></i>햇빛 충전 <i class="heat"></i>난방 충전 <i class="down"></i>방전 · 위 = 잔량(선 100%), 아래 = 그날 변화</span></div><div class="bd-row">${cols}</div>`;
   const row = el.querySelector('.bd-row'); if(row) row.scrollLeft = row.scrollWidth;
 }
 
