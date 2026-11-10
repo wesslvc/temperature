@@ -1084,6 +1084,37 @@ body.zm-on{overflow:hidden}
 .zm-r .ph{color:var(--faint);font-size:12px}
 .zm-r.on{color:var(--ink)}
 #zmC{transition:none}
+/* 자세히 보기 v2: 옆 패널 */
+.zm-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.zm-main{min-height:0;display:flex;flex-direction:column;gap:12px}
+.zm-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.zm-side .zm-r{min-height:44px}
+#zmBat:empty{display:none}
+#zmBat .tb{cursor:default;border:none!important;padding:16px 18px!important;background:var(--card);border-radius:var(--r);box-shadow:inset 0 0 0 1px var(--card-b)}
+#zmBat .tb-t{display:block!important;font-size:15px}
+#zmBat .tb-m b{font-size:40px}
+#zmC{transform-origin:0 50%}
+.zm-sc{scroll-behavior:auto}
+@media (min-width:900px){
+  .zm-body{grid-template-columns:minmax(0,1fr) 300px}
+  .zm-side{order:2}
+  .zm-side .zm-r{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;padding:16px 18px;font-size:13.5px;min-height:0}
+  .zm-side .zm-r>span{white-space:normal;padding-bottom:8px;border-bottom:1px solid var(--hair)}
+  .zm-side .zm-r>span:last-child{border-bottom:none;padding-bottom:0}
+  .zm-side .zm-r>span:first-child{font-size:15px}
+  #zmBat .tb-f{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #zoom.has-bat .zm-side .zm-r{display:none}
+  #zmBat .tb-sc span:nth-child(2){display:none}
+}
+@media (max-width:899px){
+  .zm-body{grid-template-rows:auto minmax(0,1fr)}
+  .zm-side{order:-1;gap:8px}
+  #zmBat .tb{padding:12px 14px!important}
+  #zmBat .tb-f,#zmBat .tb-sc{display:none!important}
+  #zmBat .tb-m{margin-top:6px}
+  #zmBat .tb-m b{font-size:30px}
+  #zmBat .tbx{margin-top:10px}
+}
 </style>
 </head>
 <body>
@@ -1166,9 +1197,11 @@ body.zm-on{overflow:hidden}
 </div>
 <div id="zoom" hidden role="dialog" aria-modal="true" aria-labelledby="zmT">
   <header class="zm-bar"><button class="zm-back" id="zmX" aria-label="닫기"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button><div class="zm-ttl"><b id="zmT"></b><span id="zmS"></span></div><button class="zm-fit" id="zmFit" hidden>전체 보기</button></header>
-  <div class="zm-r" id="zmR" aria-live="polite"></div>
-  <div class="zm-sc" id="zmSc"><div id="zmC"></div></div>
-  <div class="zm-nav" id="zmNav"><div class="zm-mini" id="zmMini"></div><div class="zm-win" id="zmWin"><i class="zh l"></i><i class="zh r"></i></div></div>
+  <div class="zm-body">
+    <div class="zm-main"><div class="zm-sc" id="zmSc"><div id="zmC"></div></div>
+      <div class="zm-nav" id="zmNav"><div class="zm-mini" id="zmMini"></div><div class="zm-win" id="zmWin"><i class="zh l"></i><i class="zh r"></i></div></div></div>
+    <aside class="zm-side" id="zmP"><div id="zmBat"></div><div class="zm-r" id="zmR" aria-live="polite"></div></aside>
+  </div>
 </div>
 <div id="tip"></div>
 
@@ -2007,9 +2040,12 @@ function tbPeek(p, prev, day){
   const card = tbCard(); if(!card) return;
   if(!p){ if(!calSel) tbRestore(); else { const r = batteryDays().find(x => x.d === calSel); if(r) card.outerHTML = thermoRangeCard(true, { a: calSel, b: calSel, D: [r], label: md(kstMs(calSel)) }); } return; }
   if(tbSaved == null) tbSaved = card.outerHTML;
+  tbFill(card, p, prev, day);
+}
+function tbFill(card, p, prev, day, cls = 'tb big peek'){
   const rate = prev && prev !== p ? (p.v - prev.v) / Math.max(.25, (p.ts - prev.ts) / 36e5) : 0, heat = heatUse.ok && heatUse.map[p.d] > 0 && rate > .004;
   const st = p.v > 1 ? 'over' : p.v < 0 ? 'under' : heat ? 'chg heat' : rate > .008 ? 'chg' : rate < -.008 ? 'dis' : 'idle';
-  card.className = `tb big peek ${st}`; const pct = Math.round(p.v * 100), sg = (v, d = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v * 100).toFixed(d)}%p`;
+  card.className = `${cls} ${st}`; const pct = Math.round(p.v * 100), sg = (v, d = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v * 100).toFixed(d)}%p`;
   const q = (s) => card.querySelector(s), fill = q('.tbx-fill');
   q('.tb-s').innerHTML = `<i></i>${when(p.ts)} · ${{ over: '가득 넘음', under: '바닥 아래', 'chg heat': '난방으로 충전', chg: '충전', dis: '소모', idle: '유지' }[st]} ${sg(rate)} / 시간`;
   q('.tb-m').innerHTML = `<b>${pct}<small>%</small></b><span><em>${bWord(p.tin - p.e)}</em>${day ? ` · 그날 평균 ${Math.round(day.level * 100)}%` : ''}</span>`;
@@ -2065,7 +2101,9 @@ function thermoChart(el){
   { const HS = HT.filter(x => x.room === '침실1').sort((x, y) => x.ts - y.ts), htAt = (ts) => { let best = null; for(const x of HS){ if(Math.abs(x.ts - ts) <= 45 * 60e3 && (!best || Math.abs(x.ts - ts) < Math.abs(best.ts - ts))) best = x; } return best; };
     for(let i = 1; i < H.length; i++){ const q = H[i]; if(q.ts < t0 || q.ts > t1) continue; const sig = heatSignal(H[i - 1], q, sunAt(q.ts)), st = heatState(htAt(q.ts));
       const vent = !sig && ventSignal(H[i - 1], q);
-      const cls = st === 'on' || (st === 'edge' && sig) ? 'tb-heat' : st == null && sig ? 'tb-heat guess' : vent ? 'tb-vent' : null; if(!cls) continue;
+      // HT 에너지 사용량이 0인 날은 난방이 안 돈 것 → 센서 추정(습도만 내려감)은 빨강으로 그리지 않는다
+      const dq = kstDate(q.ts), used = heatUse.ok ? (heatUse.map[dq] ?? 0) > 0 : null;
+      const cls = used === false ? (vent ? 'tb-vent' : null) : st === 'on' || (st === 'edge' && sig) ? 'tb-heat' : st == null && sig ? 'tb-heat guess' : vent ? 'tb-vent' : null; if(!cls) continue;
       const a = X(Math.max(t0, q.ts - 18e5)), b = X(Math.min(t1, q.ts + 18e5)); if(b > a) g += `<rect x="${a}" y="${hy}" width="${b - a}" height="${hhgt}" rx="2" class="${cls}"><title>${when(q.ts)} ${cls === 'tb-vent' ? '환기 추정 (온도·이슬점·습도 함께 내려감)' : st === 'on' ? HEAT_TXT.on : st === 'edge' ? HEAT_TXT.seen : HEAT_TXT.guess + ' (햇빛 약함·온도 유지·습도↓·이슬점 그대로)'}</title></rect>`; }
     g += `<text class="ov-rl" x="${m.l - 8}" y="${hy + hhgt}" text-anchor="end">난방</text>`; }
   // 시간축: 이틀 안이면 시각, 아니면 날짜
@@ -2076,7 +2114,7 @@ function thermoChart(el){
   const svg = el.firstChild, cur = svg.querySelector('#tcur');
   svg.querySelector('#thit').onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W; let b = pts[0]; for(const q of pts) if(Math.abs(X(q.ts) - px) < Math.abs(X(b.ts) - px)) b = q;
     cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b.ts)); cur.firstChild.setAttribute('x2', X(b.ts)); cur.lastChild.setAttribute('cx', X(b.ts)); cur.lastChild.setAttribute('cy', Y(b.v));
-    const c = BDc.find(x => x.d === b.d), bi = pts.indexOf(b); if(!el.closest('#zoom')) tbPeek(b, pts[Math.max(0, bi - 1)], c);
+    const c = BDc.find(x => x.d === b.d), bi = pts.indexOf(b); if(!el.closest('#zoom')) tbPeek(b, pts[Math.max(0, bi - 1)], c); else { const zc = $('#zmBat .tb'); if(zc) tbFill(zc, b, pts[Math.max(0, bi - 1)], c, 'tb big zmb'); }
     showTip(e, `<b>${when(b.ts)}</b><br>잔량 ${Math.round(b.v * 100)}% · 실내 ${n1(b.tin)}° / 그날 평소 ${n1(b.e)}°<br>바깥 ${n1(b.tout)}°` + (c ? `<br>그날 충전 +${Math.round(c.charge * 100)}%p${c.drain != null ? ` · 밤 소모 −${Math.round(c.drain * 100)}%p` : ''} · 평균 ${Math.round(c.level * 100)}%` : '')); };
   svg.querySelector('#thit').onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); tbPeek(null); };
 }
@@ -2602,9 +2640,11 @@ function zoomable(el, key, title, fn, host){
 function zmRead(h){ const r = $('#zmR'); if(!r) return; r.innerHTML = '<span>' + h.split('<br>').join('</span><span>') + '</span>'; r.classList.add('on'); }
 function openZoom(key){
   hideTip(); zmKey = key; $('#zoom').hidden = false; document.body.classList.add('zm-on'); $('#zmR').classList.remove('on'); $('#zmR').innerHTML = '<span class="ph">그래프를 누르거나 가리키면 그 시각 값이 여기에</span>';
+  // 잔량 흐름이면 옆(좁은 화면은 위)에 배터리를: 누른 시각의 잔량으로 바뀐다
+  $('#zmBat').innerHTML = key === 'tb' ? thermoCard(true).replace('class="tb', 'class="tb zmb') : ''; $('#zoom').classList.toggle('has-bat', key === 'tb');
   zmZ = innerWidth < 600 ? 3 : 2; drawZoom(1); requestAnimationFrame(() => $('#zoom').classList.add('in')); $('#zmX').focus({ preventScroll: true });
 }
-function closeZoom(){ const z = $('#zoom'); z.classList.remove('in'); hideTip(); zmKey = null; document.body.classList.remove('zm-on'); setTimeout(() => { if(!zmKey){ z.hidden = true; $('#zmC').innerHTML = ''; $('#zmMini').innerHTML = ''; } }, 180); }
+function closeZoom(){ const z = $('#zoom'); z.classList.remove('in'); hideTip(); zmKey = null; document.body.classList.remove('zm-on'); setTimeout(() => { if(!zmKey){ z.hidden = true; $('#zmC').innerHTML = ''; $('#zmMini').innerHTML = ''; $('#zmBat').innerHTML = ''; } }, 200); }
 // at = 보여 줄 창의 가운데(전체 대비 0~1). 1이면 오른쪽 끝(최근)
 function drawZoom(at){
   const z = ZF[zmKey]; if(!z) return; const sc = $('#zmSc'), c = $('#zmC');
@@ -2624,7 +2664,16 @@ function drawZoom(at){
 const zmFrac = () => { const sc = $('#zmSc'); return { a: sc.scrollLeft / sc.scrollWidth, w: Math.min(1, sc.clientWidth / sc.scrollWidth) }; };
 function zmWin(a, w){ const f = zmFrac(), W = $('#zmWin'); a = a ?? f.a; w = w ?? f.w; W.style.left = (a * 100).toFixed(3) + '%'; W.style.width = (w * 100).toFixed(3) + '%'; W.classList.toggle('all', w > .995); }
 // 배율 바꾸기: 새 너비 비율 w, 가운데 at
-const zmSet = (w, at) => { zmZ = Math.max(1, Math.min(16, 1 / Math.max(1 / 16, w))); drawZoom(Math.max(0, Math.min(1, at))); };
+const zmSet = (w, at) => { zmPrev(null); zmZ = Math.max(1, Math.min(16, 1 / Math.max(1 / 16, w))); drawZoom(Math.max(0, Math.min(1, at)));
+  const c = $('#zmC'); c.animate([{ opacity: .55 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' }); };
+// 다시 그리기 전 미리보기: 지금 그림을 가로로 늘이고(at을 화면 가운데로) 미니맵 창도 같이
+let zmRaf = 0;
+function zmPrev(w, at){
+  const c = $('#zmC'), sc = $('#zmSc'); cancelAnimationFrame(zmRaf);
+  if(w == null){ c.style.transform = ''; c.style.transformOrigin = ''; return; }
+  zmRaf = requestAnimationFrame(() => { const f = zmFrac(), k = f.w / w, O = at * sc.scrollWidth, t = sc.scrollLeft + sc.clientWidth / 2 - O;
+    c.style.transformOrigin = `${O}px 50%`; c.style.transform = `translateX(${t.toFixed(1)}px) scaleX(${k.toFixed(4)})`; zmWin(at - w / 2, w); });
+}
 (() => {
   const nav = $('#zmNav'), win = $('#zmWin'), sc = $('#zmSc');
   let drag = null;
@@ -2638,28 +2687,33 @@ const zmSet = (w, at) => { zmZ = Math.max(1, Math.min(16, 1 / Math.max(1 / 16, w
   nav.addEventListener('pointermove', (e) => { if(!drag) return; const x = Math.max(0, Math.min(1, (e.clientX - drag.r.left) / drag.r.width));
     if(drag.m === 'move'){ sc.scrollLeft = drag.s0 + (x - drag.x0) * sc.scrollWidth; return; }
     const min = 1 / 16; if(drag.m === 'l') drag.a = Math.min(x, drag.b - min); else drag.b = Math.max(x, drag.a + min);
-    zmWin(drag.a, drag.b - drag.a); });
+    zmPrev(drag.b - drag.a, (drag.a + drag.b) / 2); });
   const end = () => { if(drag && drag.m !== 'move') zmSet(drag.b - drag.a, (drag.a + drag.b) / 2); drag = null; };
   nav.addEventListener('pointerup', end); nav.addEventListener('pointercancel', end);
   sc.addEventListener('scroll', () => { hideTip(); if(!drag || drag.m === 'move') zmWin(); }, { passive: true });
   // 트랙패드 핀치·Ctrl+휠: 가리킨 곳을 중심으로
   let wt = 0, wz = null;
   sc.addEventListener('wheel', (e) => { if(!e.ctrlKey) return; e.preventDefault(); const f = zmFrac(), r = sc.getBoundingClientRect(), at = f.a + (e.clientX - r.left) / r.width * f.w;
-    wz = wz || { w: f.w, at }; wz.w = Math.max(1 / 16, Math.min(1, wz.w * Math.exp(e.deltaY * .01))); zmWin(wz.at - wz.w / 2, wz.w);
-    clearTimeout(wt); wt = setTimeout(() => { zmSet(wz.w, wz.at); wz = null; }, 120); }, { passive: false });
+    wz = wz || { w: f.w, at }; wz.w = Math.max(1 / 16, Math.min(1, wz.w * Math.exp(e.deltaY * .008))); zmPrev(wz.w, wz.at);
+    clearTimeout(wt); wt = setTimeout(() => { zmSet(wz.w, wz.at); wz = null; }, 180); }, { passive: false });
   // 두 손가락 벌리기·오므리기
   let pin = null;
   // 손가락 사이를 기준으로 바로 늘어나 보이고(미리보기), 떼면 그 배율로 또렷하게 다시 그림
   const c = $('#zmC');
   sc.addEventListener('touchstart', (e) => { if(e.touches.length === 2){ const [p, q] = e.touches, f = zmFrac(), r = sc.getBoundingClientRect(), mx = (p.clientX + q.clientX) / 2 - r.left;
-    pin = { d: Math.hypot(p.clientX - q.clientX, p.clientY - q.clientY), at: f.a + mx / r.width * f.w, w: f.w, k: 1, ox: sc.scrollLeft + mx }; c.style.transformOrigin = `${pin.ox}px 50%`; c.style.willChange = 'transform'; } }, { passive: true });
+    pin = { d: Math.hypot(p.clientX - q.clientX, p.clientY - q.clientY), at: f.a + mx / r.width * f.w, mx: mx / r.width, w: f.w, k: 1 }; c.style.willChange = 'transform'; } }, { passive: true });
   sc.addEventListener('touchmove', (e) => { if(pin && e.touches.length === 2){ e.preventDefault(); const [p, q] = e.touches; pin.k = Math.hypot(p.clientX - q.clientX, p.clientY - q.clientY) / pin.d;
-    const w = Math.max(1 / 16, Math.min(1, pin.w / pin.k)), k = pin.w / w; c.style.transform = `scaleX(${k})`; zmWin(pin.at - w / 2, w); } }, { passive: false });
-  sc.addEventListener('touchend', (e) => { if(pin && e.touches.length < 2){ const w = Math.max(1 / 16, Math.min(1, pin.w / pin.k)), at = pin.at; c.style.transform = ''; c.style.willChange = ''; pin = null; if(Math.abs(w / zmFrac().w - 1) > .04) zmSet(w, at); } }, { passive: true });
+    // 손가락 사이 지점이 손가락 아래 그대로 머물게
+    const w = Math.max(1 / 16, Math.min(1, pin.w / pin.k)), O = pin.at * sc.scrollWidth, k = pin.w / w, t = sc.scrollLeft + pin.mx * sc.clientWidth - O;
+    cancelAnimationFrame(zmRaf); zmRaf = requestAnimationFrame(() => { c.style.transformOrigin = `${O}px 50%`; c.style.transform = `translateX(${t.toFixed(1)}px) scaleX(${k.toFixed(4)})`; zmWin(pin ? pin.at - pin.mx * w : 0, w); }); } }, { passive: false });
+  sc.addEventListener('touchend', (e) => { if(pin && e.touches.length < 2){ const w = Math.max(1 / 16, Math.min(1, pin.w / pin.k)), at = pin.at - pin.mx * w + w / 2; c.style.willChange = ''; pin = null; if(Math.abs(w / zmFrac().w - 1) > .04) zmSet(w, at); else zmPrev(null); } }, { passive: true });
+  // 두 번 톡: 그 지점을 2배로, 가장 크게면 전체로
+  let lastTap = 0, lastX = 0; sc.addEventListener('pointerup', (e) => { if(e.pointerType === 'mouse') return; const now = performance.now();
+    if(now - lastTap < 300 && Math.abs(e.clientX - lastX) < 30){ const f = zmFrac(), r = sc.getBoundingClientRect(), at = f.a + (e.clientX - r.left) / r.width * f.w; if(zmZ >= 15.9) zmSet(1, .5); else zmSet(f.w / 2, at); lastTap = 0; } else { lastTap = now; lastX = e.clientX; } });
   // iOS 사파리의 화면 전체 확대 막기
   ['gesturestart', 'gesturechange'].forEach(t => $('#zoom').addEventListener(t, (e) => e.preventDefault()));
 })();
-$('#zmFit').onclick = () => { zmZ = 1; drawZoom(.5); };
+$('#zmFit').onclick = () => zmSet(1, .5);
 $('#zmX').onclick = closeZoom;
 document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && zmKey) closeZoom(); });
 $('#zoom').addEventListener('pointerdown', (e) => { if(e.pointerType !== 'mouse' && !e.target.closest('#zmNav')){ const t = document.elementFromPoint(e.clientX, e.clientY); if(t && t.onmousemove && /hit$/i.test(t.id || t.getAttribute('class') || '')) t.onmousemove({ clientX: e.clientX, clientY: e.clientY, pointerType: 'touch' }); } });
