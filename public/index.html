@@ -848,6 +848,30 @@ svg .tb-heat{fill:var(--hot);fill-opacity:.6}svg .tb-heat.guess{fill-opacity:.35
 .bd .bd-c i,.bd.sun .bd-c i,.bd.heat .bd-c i,.bd.both .bd-c i,.bd.down .bd-c i{background:var(--bc)!important;opacity:.75!important}
 .bd-d{height:26px!important}
 .bd-d i{border-radius:1px}
+
+/* ---------- 가시성: 100% = 가득 ---------- */
+.tb-m b{font-size:52px!important}
+.tbx{margin-top:20px}
+.tbx-body{height:38px!important;border-radius:11px!important}
+.tbx-fill{border-radius:8px!important;left:4px!important;top:4px!important;bottom:4px!important;max-width:calc(100% - 8px)!important}
+.tbx-cap{width:6px!important;height:16px!important}
+.tbx-cap.on{background:var(--tc)!important;box-shadow:0 0 10px var(--tc)}
+.tbx-over{flex:none;margin-left:8px;font-size:13px;font-weight:700;color:var(--tc)}
+.tbx-50{border-left:1.5px dashed color-mix(in srgb,var(--ink) 55%,transparent)!important;width:0!important;background:none!important}
+.tbx-100{display:none}
+.tb-sc{height:18px!important;margin-top:8px!important;font-size:11.5px!important}
+.tb-sc span:nth-child(2){transform:translateX(-50%);color:var(--sub)}
+.tb-f{font-size:13px!important;margin-top:14px!important}
+.tb-f b{font-size:14px}
+.bd{flex:1 0 20px!important;max-width:34px!important}
+.bd-c{width:16px!important;height:64px!important}
+.bd-c.over{box-shadow:inset 0 0 0 1px var(--hair),0 -3px 0 -1px var(--bc)}
+.bd-c s{opacity:.5!important;border-top:1px dashed var(--ink);height:0!important;background:none!important}
+.bd-d{width:16px!important;height:30px!important}
+.bd em{font-size:10.5px!important;height:13px!important;line-height:13px!important;font-weight:600}
+.bd b{font-size:10.5px!important}
+.bd-h{font-size:14px!important;margin-bottom:12px!important}
+@media(max-width:560px){.tb-m b{font-size:44px!important}.tbx-body{height:32px!important}.tb-sc span:nth-child(2),.tb-sc span:nth-child(3){display:inline!important}.tb-sc span{font-size:10.5px}.tb-sc span:nth-child(3){transform:none!important}}
 </style>
 </head>
 <body>
@@ -1669,10 +1693,10 @@ function thermoCard(big){
   const hs = thermo.heat ? heatState(thermo.heat) : null, heating = hs === 'on' || (hs === 'edge' && (() => { const Hh = thermo.H, q = Hh.at(-1), p = Hh.at(-2); return heatSignal(p, q, sunAt(q && q.ts)); })());
   const pct = Math.round(T.soc * 100), col = heating ? 'var(--hot)' : specColor('temp', T.tin), sg = (v, u = '%p', d = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v * (u === '%p' ? 100 : 1)).toFixed(d)}${u}`;
   const stTxt = (heating ? '난방으로 충전 중' : { chg: '충전 중', dis: '방전 중', idle: '유지' }[T.st]) + (T.rate == null ? '' : ` ${sg(T.rate)} / 하루`);
-  const fillW = Math.max(0, Math.min(1.5, T.soc)) / 1.5 * 100;
+  const fillW = Math.max(0, Math.min(1, T.soc)) * 100, over = T.soc > 1 ? Math.round((T.soc - 1) * 100) : 0;
   const bar = `<div class="tbx"><div class="tbx-body"><div class="tbx-fill" style="width:${fillW.toFixed(1)}%"><i class="tbx-sheen"></i></div>
-      <i class="tbx-100" style="left:${(100 / 1.5).toFixed(2)}%"></i><i class="tbx-50" style="left:${(50 / 1.5).toFixed(2)}%"></i>
-      ${T.st === 'chg' ? `<svg class="tbx-bolt" style="left:max(8px, calc(${fillW.toFixed(1)}% - 22px))" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 5 13.5h6L10 22l9-12.5h-6.2z"/></svg>` : ''}</div><i class="tbx-cap"></i></div>`;
+      <i class="tbx-50" style="left:50%"></i>${[.25, .75].map(v => `<i class="tbx-t" style="left:${v * 100}%"></i>`).join('')}
+      ${T.st === 'chg' ? `<svg class="tbx-bolt" style="left:max(8px, calc(${fillW.toFixed(1)}% - 22px))" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 5 13.5h6L10 22l9-12.5h-6.2z"/></svg>` : ''}</div><i class="tbx-cap${over ? ' on' : ''}"></i>${over ? `<b class="tbx-over">+${over}%</b>` : ''}</div>`;
   const e = T.exp, sunPct = T.sunAvg ? Math.round(T.sun3 / T.sunAvg * 100) : null;
   const tip = `이 바깥 날씨(5일 평균 ${n1(T.tout5)}°)의 우리 집 평소 = ${n1(e)}° → 50%. 1°에 ${BS}%p. 관계식: 실내 ≈ ${T.M.a.toFixed(1)}° + ${T.M.b.toFixed(2)} × 바깥 (${T.M.n}일, 설명력 ${Math.round(T.M.r2 * 100)}%)`;
   const once = !tbAnimated; tbAnimated = true;
@@ -1680,7 +1704,7 @@ function thermoCard(big){
     <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.resid)}</em></span></div>
     ${bar}
-    <div class="tb-sc"><span>0%</span><span style="left:${50 / 1.5}%">평소 ${n1(e)}°</span><span style="left:${100 / 1.5}%">100%</span><span>150%</span></div>
+    <div class="tb-sc"><span>0% · 평소 −2°</span><span style="left:50%">50% · 평소 ${n1(e)}°</span><span>100% · 평소 +2°</span></div>
     <div class="tb-f"><span>지금 <b>${n1(T.tin)}°</b> <i>평소보다 ${sg(T.resid, '°', 1)}</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span>${thermo.heat ? `<span>난방 <b title="월패드는 0.5° 단위, HT는 정수로 줘서 차이가 딱 1°면 실제로는 0.5°일 수 있어요(그땐 안 돎). 그럴 땐 최근 한 시간 센서(온도↑·습도↓·햇빛 약함)로 판단">${(() => { const st = heatState(thermo.heat); if(st !== 'edge') return HEAT_TXT[st] || '–'; const Hh = thermo.H, q = Hh.at(-1), p = Hh.at(-2); return heatSignal(p, q, sunAt(q && q.ts)) ? HEAT_TXT.seen : HEAT_TXT.notseen; })()}</b> <i>설정 ${Number.isInteger(thermo.heat.set_t) ? thermo.heat.set_t : n1(thermo.heat.set_t)}° · 월패드 ${Number.isInteger(thermo.heat.cur_t) ? thermo.heat.cur_t : n1(thermo.heat.cur_t)}°</i></span>` : ''}</div>
   </div>`;
 }
@@ -1726,7 +1750,7 @@ function thermoChart(el){
       const vent = !sig && ventSignal(H[i - 1], q);
       const cls = st === 'on' || (st === 'edge' && sig) ? 'tb-heat' : st == null && sig ? 'tb-heat guess' : vent ? 'tb-vent' : null; if(!cls) continue;
       const a = X(Math.max(t0, q.ts - 18e5)), b = X(Math.min(t1, q.ts + 18e5)); if(b > a) g += `<rect x="${a}" y="${hy}" width="${b - a}" height="${hhgt}" rx="2" class="${cls}"><title>${when(q.ts)} ${cls === 'tb-vent' ? '환기 추정 (온도·이슬점·습도 함께 내려감)' : st === 'on' ? HEAT_TXT.on : st === 'edge' ? HEAT_TXT.seen : HEAT_TXT.guess + ' (햇빛 약함·온도 유지·습도↓·이슬점 그대로)'}</title></rect>`; }
-    g += `<text class="ov-rl" x="${m.l - 8}" y="${hy + hhgt}" text-anchor="end">난방·환기</text>`; }
+    g += `<text class="ov-rl" x="${m.l - 8}" y="${hy + hhgt}" text-anchor="end">${W < 600 ? '난방' : '난방·환기'}</text>`; }
   // 시간축: 이틀 안이면 시각, 아니면 날짜
   const fmtT = (ts) => span < 2.5 * 864e5 ? hhmm(ts) : md(ts), nt = W < 600 ? 3 : 6; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${Hh - 6}" text-anchor="${i === 0 ? 'start' : i === nt ? 'end' : 'middle'}">${fmtT(ts)}</text>`; }
   g += `<g id="tcur" opacity="0"><line y1="${y0}" y2="${y0 + h}" stroke="var(--ink)" stroke-opacity=".35"/><circle r="4" class="od-dot"/></g><rect id="thit" x="${m.l}" y="0" width="${iw}" height="${y0 + h}" fill="transparent"/>`;
@@ -1763,12 +1787,12 @@ function batteryDays(){
 }
 function batteryStrip(el){
   const D = batteryDays(); if(D.length < 2){ el.innerHTML = ''; return; }
-  const today = kstDate(Date.now()), dmax = Math.max(.1, ...D.map(r => Math.abs(r.dS || 0))), cols = D.map(r => { const f = Math.max(0, Math.min(1.5, r.soc)) / 1.5, k = (v) => (Math.min(1, v / dmax) * 100).toFixed(0);
+  const today = kstDate(Date.now()), dmax = Math.max(.1, ...D.map(r => Math.abs(r.dS || 0))), cols = D.map(r => { const f = Math.max(0, Math.min(1, r.soc)), k = (v) => (Math.min(1, v / dmax) * 100).toFixed(0);
     const dv = r.dS == null ? '' : `${r.dS >= 0 ? '+' : '−'}${Math.abs(Math.round(r.dS * 100))}`;
     return `<div class="bd ${r.src || ''}${r.d === today ? ' now' : ''}" style="--bc:${specColor('temp', r.tin)}" title="${md(kstMs(r.d))} · 잔량 ${Math.round(r.soc * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°)${r.dS == null ? '' : ` · ${dv}%p`}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.dS > .01 ? ` · 햇빛 +${Math.round(r.sunGain * 100)}%p${r.heatGain > .01 ? ` · 난방 +${Math.round(r.heatGain * 100)}%p` : ''}` : ''}">
-      <span class="bd-c"><i style="height:${(f * 100).toFixed(0)}%"></i><s style="bottom:${(1 / 1.5 * 100).toFixed(1)}%"></s></span>
+      <span class="bd-c${r.soc > 1 ? ' over' : ''}"><i style="height:${(f * 100).toFixed(0)}%"></i><s style="bottom:50%"></s></span>
       <span class="bd-d">${r.dS == null ? '' : r.dS > .01 ? `<i class="s" style="height:${k(r.sunGain)}%"></i><i class="h" style="height:${k(r.heatGain)}%"></i>` : `<i class="n" style="height:${k(-r.dS)}%"></i>`}</span><em>${dv}</em><b>${+r.d.slice(8) === 1 || r === D[0] ? md(kstMs(r.d)) : +r.d.slice(8)}</b></div>`; }).join('');
-  el.innerHTML = `<div class="bd-h"><span>날짜별 잔량</span><span class="bd-lg"><i class="sun"></i>햇빛 충전 <i class="heat"></i>난방 충전 <i class="down"></i>방전 · 위 = 잔량(선 100%), 아래 = 그날 변화</span></div><div class="bd-row">${cols}</div>`;
+  el.innerHTML = `<div class="bd-h"><span>날짜별 잔량</span><span class="bd-lg"><i class="sun"></i>햇빛 충전 <i class="heat"></i>난방 충전 <i class="down"></i>방전 · 위 = 잔량(가운데 선 = 평소), 아래 = 그날 변화</span></div><div class="bd-row">${cols}</div>`;
   const row = el.querySelector('.bd-row'); if(row) row.scrollLeft = row.scrollWidth;
 }
 
