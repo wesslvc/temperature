@@ -726,6 +726,28 @@ svg rect[id$="hit"],svg rect[id$="Hit"],.panel svg{touch-action:pan-y}
 /* 툴팁: 화면과 같은 어두운 톤, 숫자 정렬 */
 #tip{background:color-mix(in srgb,var(--panel) 92%,transparent)!important;color:var(--ink)!important;border:1px solid var(--rule)!important;box-shadow:0 8px 28px -10px rgba(0,0,0,.6)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);font-variant-numeric:tabular-nums;line-height:1.55;border-radius:12px!important;padding:9px 12px!important;font-size:12.5px!important}
 #tip b{font-weight:700}
+
+/* ---------- 열 배터리·햇빛 다듬기 ---------- */
+.bat-m{font-size:12px;font-weight:600;color:var(--faint);margin-bottom:6px}
+.bat-row{align-items:flex-end}
+.bat-body{height:26px!important;border-radius:9px!important;border:1px solid var(--rule)!important;background:var(--sunk)!important}
+.bat-cap{width:4px!important;height:12px!important;margin-left:4px!important;border-radius:0 3px 3px 0!important;background:var(--rule)!important}
+.bat-fill{left:3px!important;top:3px!important;bottom:3px!important;border-radius:6px!important;background:linear-gradient(90deg,var(--lc),var(--tc))!important;box-shadow:none!important;animation:none!important;opacity:.92}
+.bat-flow,.bat-bolt{display:none!important}
+.bat-ticks i{top:7px!important;bottom:7px!important;background:var(--bg)!important;opacity:.5!important}
+.bat-v{padding-bottom:22px!important}
+.bat-sc{font-size:11px}
+.bat.chg .bat-st{color:var(--sub)!important}.bat.dis .bat-st{color:var(--sub)!important}
+.bat-st::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--faint)}
+.bat.chg .bat-st::before{background:var(--ok)}.bat.dis .bat-st::before{background:var(--hot)}
+.bh.cool .bh-c{border-style:dashed}
+.bh-c{border-width:1px!important;border-radius:4px!important}
+.bh-d{display:none}
+svg .ov-sun{fill:var(--sun);fill-opacity:.55}
+.sd-bar{height:6px!important;border-radius:3px!important}
+.sd-bar i{border-radius:3px!important;background:linear-gradient(90deg,color-mix(in srgb,var(--sun) 35%,transparent),var(--sun))!important;opacity:.8}
+.bh-s{opacity:.9}
+@media(max-width:560px){.bat-row{align-items:stretch!important}.bat-h{flex-wrap:wrap}.bat-m{width:100%;margin-bottom:0}.bat-body{height:22px!important}.bat-v{width:100%}}
 </style>
 </head>
 <body>
@@ -1359,8 +1381,17 @@ async function loadSunIndoor(Hs){
   if(sunIndoor.key === key){ sunIndoor.rows = Array.isArray(rows) ? rows : []; if(panel === 'out') sunAnalysis($('#outSun')); }
 }
 
-/* ---------- 열 배터리: 집이 품은 열을 배터리처럼. 잔량 = 24시간 평균 실내 온도가 20°(0%)~26°(100%) 사이 어디인지 ---------- */
-const BAT_LO = 20, BAT_HI = 26;
+/* ---------- 열 배터리: 집이 품은 열(또는 냉기)을 배터리처럼. 같은 25°라도 계절에 따라 잔량이 다르다 ----------
+   바깥이 그 달 쾌적 범위보다 추우면 '열 배터리': 0% = 쾌적 하한 −3°, 100% = 쾌적 상한 (겨울 20°→25°, 봄·가을 23°→28°)
+   바깥이 더 더우면 '냉기 배터리': 0% = 쾌적 상한 +3°, 100% = 쾌적 하한 (여름 32°→27°). 내려갈수록 충전 */
+const batClamp = (v) => Math.max(0, Math.min(1, v));
+function batSpec(ts, outMean){
+  const c = comfortAt(ts), L = c.t[0], H = c.t[1];
+  const heat = outMean != null ? outMean < (L + H) / 2 : ![5, 6, 7, 8, 9].includes(c.m);
+  return heat ? { heat: true, name: '열 배터리', lo: L - 3, hi: H, c, soc: (v) => batClamp((v - (L - 3)) / (H - (L - 3))) }
+              : { heat: false, name: '냉기 배터리', lo: H + 3, hi: L, c, soc: (v) => batClamp(((H + 3) - v) / ((H + 3) - L)) };
+}
+const outMeanIn = (a, b) => { const S = cache && cache.out && cache.out.series; if(!S) return null; const v = S.filter(p => p.ts >= a && p.ts < b).map(p => p.temp); return v.length >= 6 ? v.reduce((x, y) => x + y, 0) / v.length : null; };
 function sunAnalysis(el){
   const Hs = solarHours();
   if(!Hs.length){ el.innerHTML = '<h3>열 배터리</h3><div class="empty">햇빛 자료를 불러오는 중</div>'; return; }
@@ -1382,43 +1413,46 @@ function sunAnalysis(el){
   // 지금 상태: 최근 24시간 평균과 그 전 24시간 평균
   const now = Date.now(), m24 = (a, b) => { const v = R.filter(r => r.ts + 18e5 > a && r.ts + 18e5 <= b).map(r => r.temp); return v.length >= 12 ? v.reduce((x, y) => x + y, 0) / v.length : null; };
   const T24 = m24(now - 864e5, now), P24 = m24(now - 2 * 864e5, now - 864e5), flow = T24 != null && P24 != null ? T24 - P24 : null;
-  const clamp = (v) => Math.max(0, Math.min(1, v)), soc = T24 == null ? null : clamp((T24 - BAT_LO) / (BAT_HI - BAT_LO)), pct = soc == null ? null : Math.round(soc * 100);
-  const st = flow == null ? 'idle' : flow > .05 ? 'chg' : flow < -.05 ? 'dis' : 'idle';
+  const O24 = outMeanIn(now - 864e5, now), B = batSpec(now, O24);
+  const soc = T24 == null ? null : B.soc(T24), pct = soc == null ? null : Math.round(soc * 100), psoc = P24 == null ? null : B.soc(P24);
+  // 충전/방전은 잔량이 늘었는지로 판단 (냉기 배터리는 시원해질수록 충전)
+  const dSoc = soc != null && psoc != null ? soc - psoc : null, st = dSoc == null ? 'idle' : dSoc > .008 ? 'chg' : dSoc < -.008 ? 'dis' : 'idle';
   const stTxt = { chg: '충전 중', dis: '방전 중', idle: '유지' }[st];
   const today = days.find(r => r.d === kstDate(now)), ref = Math.max(1, ...days.slice(-15).filter(r => r.full).map(r => r.kwh));
-  const runway = rateC != null && rateC < -.05 && T24 != null && T24 > BAT_LO ? (T24 - BAT_LO) / -rateC : null;
-  const tColor = T24 == null ? 'var(--faint)' : specColor('temp', T24), loColor = specColor('temp', BAT_LO);
+  // 남은 날: 열 배터리는 흐린 날 식는 속도로 0%까지, 냉기 배터리는 맑은 날 데워지는 속도로 0%까지
+  const runway = T24 == null ? null : B.heat ? (rateC != null && rateC < -.05 && T24 > B.lo ? (T24 - B.lo) / -rateC : null) : (rateS != null && rateS > .05 && T24 < B.lo ? (B.lo - T24) / rateS : null);
+  const tColor = T24 == null ? 'var(--faint)' : specColor('temp', T24), loColor = specColor('temp', B.lo);
   const ticks = Array.from({ length: 9 }, (_, i) => `<i style="left:${(i + 1) * 10}%"></i>`).join('');
-  const bolt = `<svg class="bat-bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 5 13.5h6L10 22l9-12.5h-6.2z"/></svg>`;
-  // 최근 14일 일평균을 작은 배터리로
-  const hist = days.filter(r => r.mean != null).slice(-14).map(r => { const s = clamp((r.mean - BAT_LO) / (BAT_HI - BAT_LO));
-    return `<div class="bh${r.d === kstDate(now) ? ' now' : ''}" title="${md(kstMs(r.d))} 일평균 ${r.mean.toFixed(1)}° · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡ · 하루 변화 ${sgn(r.dMean, 2)}">
-      <span class="bh-c"><i style="height:${(s * 100).toFixed(0)}%;background:${specColor('temp', r.mean)}"></i></span>
+  const bolt = '';
+  // 최근 14일 일평균을 작은 배터리로 (그날의 계절·바깥 기준)
+  const hist = days.filter(r => r.mean != null).slice(-14).map(r => { const t0 = kstMs(r.d), Bd = batSpec(t0 + 432e5, outMeanIn(t0, t0 + 864e5)), sd = Bd.soc(r.mean);
+    return `<div class="bh${r.d === kstDate(now) ? ' now' : ''}${Bd.heat ? '' : ' cool'}" title="${md(t0)} 일평균 ${r.mean.toFixed(1)}° · ${Bd.name} ${Math.round(sd * 100)}% · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡ · 하루 변화 ${sgn(r.dMean, 2)}">
+      <span class="bh-c"><i style="height:${(sd * 100).toFixed(0)}%;background:${specColor('temp', r.mean)}"></i></span>
       <span class="bh-s" style="opacity:${(.15 + .85 * Math.min(1, r.kwh / ref)).toFixed(2)}"></span>
-      <span class="bh-d ${r.dMean == null || Math.abs(r.dMean) < .05 ? '' : r.dMean > 0 ? 'up' : 'dn'}">${r.dMean == null ? '' : r.dMean > 0 ? '▲' : r.dMean < 0 ? '▼' : ''}</span>
       <span class="bh-l">${+r.d.slice(8)}</span></div>`; }).join('');
   const col = (k, v, sub, cls = '') => `<div class="bs"><span class="k">${k}</span><b class="${cls}">${v}</b><em>${sub}</em></div>`;
   const stats = col('오늘 햇빛', today ? `${today.kwh.toFixed(1)}<small> kWh/㎡</small>` : '–', today ? `맑은 날의 ${Math.round(Math.min(1, today.kwh / ref) * 100)}%${today.full ? '' : ' · 진행 중'}` : '집 위치 위성')
     + col('맑은 날 하루', rateS == null ? '–' : sgn(rateS, 2), sunny.length ? `충전 · ${sunny.length}일 평균` : '자료 모으는 중', rateS > 0 ? 'up' : 'dn')
     + col('흐린 날 하루', rateC == null ? '–' : sgn(rateC, 2), cloudy.length ? `방전 · ${cloudy.length}일 평균` : '자료 모으는 중', rateC > 0 ? 'up' : 'dn');
-  const note = [T24 != null ? `24시간 평균 ${T24.toFixed(1)}°` : null, runway != null ? `흐린 날만 이어지면 약 ${runway < 1.5 ? '하루' : Math.round(runway) + '일'} 뒤 ${BAT_LO}°` : null].filter(Boolean).join(' · ');
+  const note = [T24 != null ? `24시간 평균 ${T24.toFixed(1)}°` : null, O24 != null ? `바깥 ${O24.toFixed(1)}°` : null,
+    runway != null ? `${B.heat ? '흐린 날만' : '맑은 날만'} 이어지면 약 ${runway < 1.5 ? '하루' : Math.round(runway) + '일'} 뒤 ${B.lo}°(0%)` : null].filter(Boolean).join(' · ');
   const battery = `<div class="bat ${st}" style="--k:${soc == null ? 0 : soc.toFixed(3)};--tc:${tColor};--lc:${loColor}">
     <div class="bat-row">
-      <div class="bat-h"><b>${pct == null ? '–' : pct}<small>%</small></b><em class="bat-st">${stTxt} ${flow == null ? '' : sgn(flow, 2) + ' / 24시간'}</em></div>
+      <div class="bat-h"><span class="bat-m">${B.name} · ${B.c.season}</span><b>${pct == null ? '–' : pct}<small>%</small></b><em class="bat-st">${stTxt} ${flow == null ? '' : sgn(flow, 2) + ' / 24시간'}</em></div>
       <div class="bat-v"><div class="bat-body"><div class="bat-fill"><i class="bat-flow"></i></div><div class="bat-ticks">${ticks}</div>${bolt}</div><div class="bat-cap"></div>
-        <div class="bat-sc"><span>${BAT_LO}°</span><span>${(BAT_LO + BAT_HI) / 2}°</span><span>${BAT_HI}°</span></div></div>
+        <div class="bat-sc"><span>${B.lo}° · 0%</span><span>${((B.lo + B.hi) / 2).toFixed(1).replace(/\.0$/, '')}°</span><span>${B.hi}° · 100%</span></div></div>
     </div>
     <div class="bat-stats">${stats}</div>
     ${note ? `<p class="bat-note">${note}</p>` : ''}
     <div class="bat-hist">${hist}</div>
-    <p class="bat-leg"><span><span class="bh-s" style="display:inline-block;margin-right:5px;vertical-align:1px"></span>햇빛 많을수록 진하게</span><span> · ▲ 전날보다 쌓임 ▼ 빠짐 · 잔량 0% = ${BAT_LO}°, 100% = ${BAT_HI}° (일평균)</span></p>
+    <p class="bat-leg"><span><span class="bh-s" style="display:inline-block;margin-right:5px;vertical-align:1px"></span>햇빛 많을수록 진하게</span><span> · 잔량은 그날의 계절 기준 (같은 온도라도 겨울엔 높고 여름엔 낮음)</span></p>
   </div>`;
   const mx = Math.max(.5, ...days.map(r => r.kwh));
-  const rows = days.slice().reverse().slice(0, 21).map(r => `<div class="sd-row${r.full ? '' : ' part'}"><span class="d">${md(kstMs(r.d))}<i>${'일월화수목금토'[new Date(r.d + 'T00:00:00Z').getUTCDay()]}</i></span>
+  const rows = days.slice().reverse().slice(0, 14).map(r => `<div class="sd-row${r.full ? '' : ' part'}"><span class="d">${md(kstMs(r.d))}<i>${'일월화수목금토'[new Date(r.d + 'T00:00:00Z').getUTCDay()]}</i></span>
     <span class="sd-bar" title="${r.kwh.toFixed(2)} kWh/㎡ · 최대 ${Math.round(r.peak)} W/㎡"><i style="width:${(r.kwh / mx * 100).toFixed(1)}%"></i></span>
     <span class="v n">${r.kwh.toFixed(1)}</span>
     <span class="v${r.rise == null ? ' f' : ''}">${r.rise == null ? '–' : sgn(r.rise)}</span><span class="v ${r.dMean == null || Math.abs(r.dMean) < .05 ? 'f' : r.dMean > 0 ? 'up' : 'dn'}">${sgn(r.dMean)}</span></div>`).join('');
-  el.innerHTML = `<h3>열 배터리</h3><p class="cap">벽·바닥·가구가 품은 열을 배터리처럼 봐요. 햇빛이 들면 충전, 바깥으로 새면 방전. 햇빛은 집 위치의 위성 일사량(한국에너지기술연구원)</p>`
+  el.innerHTML = `<h3>열 배터리</h3><p class="cap">벽·바닥·가구가 품은 열을 배터리처럼 봐요. 바깥이 쾌적보다 추운 철엔 따뜻함이 잔량(열 배터리), 더운 철엔 시원함이 잔량(냉기 배터리)이라 같은 온도라도 계절마다 잔량이 달라요. 햇빛은 집 위치 위성 일사량(한국에너지기술연구원)</p>`
     + battery + `<div class="sd-row h"><span>날짜</span><span>햇빛</span><span class="v f">kWh/㎡</span><span class="v f">낮 상승</span><span class="v f">하루 변화</span></div>` + rows;
 }
 
