@@ -797,10 +797,10 @@ svg .tb-raw{fill:none;stroke:var(--ink);stroke-opacity:.28;stroke-width:1}
 .tbx-100{position:absolute;top:0;bottom:0;width:0;border-left:1.5px dashed color-mix(in srgb,var(--ink) 45%,transparent)}
 .tbx-t{position:absolute;top:9px;bottom:9px;width:1px;background:color-mix(in srgb,var(--ink) 18%,transparent)}
 .tbx-sheen{position:absolute;inset:0;opacity:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.38) 50%,transparent 70%);background-size:220% 100%}
-.tb.chg .tbx-sheen{opacity:1;animation:tbxIn 2.2s cubic-bezier(.45,0,.55,1) infinite}
-.tb.dis .tbx-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:18px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.35));animation:tbxOut 2.6s ease-in-out infinite}
-.tbx-bolt{position:absolute;top:50%;width:16px;height:16px;margin-top:-8px;fill:var(--ink);opacity:.85;animation:tbxBolt 2.2s ease-in-out infinite}
-@keyframes tbxIn{from{background-position:120% 0}to{background-position:-100% 0}}
+.tb.chg.anim .tbx-sheen{opacity:1;animation:tbxIn 1.6s cubic-bezier(.45,0,.55,1) 1 forwards}
+.tb.dis .tbx-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:14px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.25))}
+.tbx-bolt{position:absolute;top:50%;width:14px;height:14px;margin-top:-7px;fill:var(--ink);opacity:.75}
+@keyframes tbxIn{0%{background-position:120% 0;opacity:1}90%{opacity:1}100%{background-position:-100% 0;opacity:0}}
 @keyframes tbxOut{0%,100%{opacity:.2}50%{opacity:.7}}
 @keyframes tbxBolt{0%,100%{opacity:.85}50%{opacity:.4}}
 .tb-bar{display:none!important}
@@ -835,7 +835,7 @@ svg .tb-heat{fill:var(--hot);fill-opacity:.6}svg .tb-heat.guess{fill-opacity:.25
 .bd.sun em{color:var(--sub)}.bd.heat em{color:var(--hot)}
 .bd b{font-size:10px;font-weight:500;color:var(--faint);white-space:nowrap}
 .bd.now .bd-c{box-shadow:inset 0 0 0 1px var(--sub)}
-.tb.heat .tbx-fill{background:linear-gradient(90deg,color-mix(in srgb,var(--hot) 55%,var(--sunk)),var(--hot))!important}
+.tb.heat .tbx-fill{background:linear-gradient(90deg,color-mix(in srgb,var(--hot) 80%,#000),var(--hot))!important;opacity:1}
 .tb.heat .tb-s i{background:var(--hot)!important}
 </style>
 </head>
@@ -1646,6 +1646,7 @@ function thermoNow(){
   const hold = holdHours(cur ? cur.temp : c24.tin, oc ? oc.temp : c24.tout, thermo.k);
   return { soc, rate, st, tin: c24.tin, tout: c24.tout, tout5, exp, resid, M, sun3, sunAvg, hold };
 }
+let tbAnimated = false; // 충전 효과는 처음 한 번만
 function thermoCard(big){
   const T = thermoNow(); if(!T) return '';
   const hs = thermo.heat ? heatState(thermo.heat) : null, heating = hs === 'on' || (hs === 'edge' && (() => { const Hh = thermo.H, q = Hh.at(-1), p = Hh.at(-2); return heatSignal(p, q, sunAt(q && q.ts)); })());
@@ -1657,7 +1658,8 @@ function thermoCard(big){
       ${T.st === 'chg' ? `<svg class="tbx-bolt" style="left:max(8px, calc(${fillW.toFixed(1)}% - 22px))" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 5 13.5h6L10 22l9-12.5h-6.2z"/></svg>` : ''}</div><i class="tbx-cap"></i></div>`;
   const e = T.exp, sunPct = T.sunAvg ? Math.round(T.sun3 / T.sunAvg * 100) : null;
   const tip = `이 바깥 날씨(5일 평균 ${n1(T.tout5)}°)의 우리 집 평소 = ${n1(e)}° → 50%. 1°에 ${BS}%p. 관계식: 실내 ≈ ${T.M.a.toFixed(1)}° + ${T.M.b.toFixed(2)} × 바깥 (${T.M.n}일, 설명력 ${Math.round(T.M.r2 * 100)}%)`;
-  return `<div class="tb${big ? ' big' : ''} ${heating ? 'chg heat' : T.st}" style="--tc:${col}" title="${tip}">
+  const once = !tbAnimated; tbAnimated = true;
+  return `<div class="tb${big ? ' big' : ''} ${heating ? 'chg heat' : T.st}${once ? ' anim' : ''}" style="--tc:${col}" title="${tip}">
     <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.resid)}</em></span></div>
     ${bar}
