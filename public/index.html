@@ -1526,9 +1526,9 @@ function sunAnalysis(el){
    집은 바깥과의 온도 차에 비례해 열을 잃는다(뉴턴 냉각): 시간당 식는 정도 = k × (실내 − 바깥).
    k는 최근 14일 밤(해 없는 시간) 실내가 내려간 구간에서 직접 잰다. 그래서 같은 가을이라도
    이상저온(바깥이 더 차가움)이면 더 빨리 비고, 단열이 좋은 집이면 오래 버틴다.
-   잔량 = 난방·냉방 없이 '버틸 수 있는 시간': 실내가 20°(추움)까지 식는 데 걸리는 시간. 더운 철은 28°(더움)까지 데워지는 시간
+   잔량 = 난방·냉방 없이 '버틸 수 있는 시간': 실내가 바닥(22°)까지 식는 데 걸리는 시간. 더운 철은 28°(더움)까지 데워지는 시간
    72시간(사흘) 이상 = 100% */
-const TB = { min: 20, max: 28, full: 72 };
+const TB = { min: 22, max: 28, full: 72 };
 let thermo = { key: '', k: null, n: 0, H: [] };
 async function loadThermo(){
   const b = Date.now(), a = b - 14 * 864e5, key = String(Math.floor(b / 18e5));
@@ -1554,12 +1554,12 @@ function holdHours(tin, tout, k){
 }
 const holdTxt = (t) => t == null ? '–' : t === Infinity ? '계속' : t < 1 ? `${Math.round(t * 60)}분` : t < 48 ? `${Math.round(t)}시간` : `${(t / 24).toFixed(1).replace(/\.0$/, '')}일`;
 // ---- 고정 눈금 배터리 ----
-// 0% = 20° (정부 권장 겨울 난방 온도: 이 아래면 난방이 필요) · 100% = 26° (정부 권장 여름 냉방 온도: 이 위면 냉방이 필요)
-// 0~100% 사이 = 난방도 냉방도 필요 없는 '공짜 구간'. 여름엔 100%를 넘고(29° = 150%) 추운 날이 이어지면 빠진다.
+// 0% = 22° (우리 집 바닥: 기록상 하루 평균이 23° 아래로 내려간 적이 없고 20° 아래로는 안 감) · 100% = 26° (정부 권장 냉방 온도)
+// 1°에 25%p. 여름엔 100%를 넘고(28° = 150%) 추운 날이 이어지면 빠진다. 바닥이 0%라 '햇빛·난방으로 바닥 위에 얼마나 쌓였나'가 잔량.
 // 계절과 상관없이 같은 눈금이라 '지금 집이 절대적으로 따뜻한 편인지'와 '햇빛으로 얼마나 채워지는지'를 바로 비교할 수 있다
-const BT = { lo: 20, hi: 26 };
+const BT = { lo: 22, hi: 26 };
 const bSoc = (t) => (t - BT.lo) / (BT.hi - BT.lo);
-const bWord = (s) => s < 0 ? '난방 필요' : s < .34 ? '서늘한 편' : s < .67 ? '알맞음' : s <= 1 ? '따뜻한 편' : s < 1.5 ? '더운 편 · 냉방 기준 넘음' : '아주 더움';
+const bWord = (s) => s < 0 ? '바닥 아래 · 이례적으로 추움' : s < .25 ? '바닥 근처 · 추운 편' : s < .5 ? '서늘한 편' : s < .75 ? '알맞음' : s <= 1 ? '따뜻한 편' : s < 1.5 ? '더운 편 · 냉방 기준 넘음' : '아주 더움';
 function thermoDays(){
   const H = thermo.H; if(!H.length) return [];
   const g = {}; H.forEach(r => { const d = kstDate(r.ts); (g[d] = g[d] || []).push(r); });
@@ -1599,14 +1599,14 @@ function thermoCard(big){
   const f = [
     `<span>햇빛 충전 <b>${sunY == null ? '–' : sg(sunY)}</b> <i>어제 ${T.yday && T.yday.kwh != null ? T.yday.kwh.toFixed(1) + ' kWh/㎡' : ''}</i></span>`,
     `<span>바깥으로 <b>${leakDay == null ? '–' : sg(-leakDay)}</b> <i>하루 · 바깥 ${n1(T.tout)}°</i></span>`,
-    `<span>난방 없이 ${TB.min}°까지 <b>${holdTxt(T.hold)}</b></span>`].join('');
+    `<span>바닥(${TB.min}°)까지 <b>${holdTxt(T.hold)}</b> <i>햇빛·난방 없이</i></span>`].join('');
   return `<div class="tb${big ? ' big' : ''} ${T.st}" style="--tc:${col}">
     <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.soc)}</em> · 24시간 평균 ${n1(T.tin)}°</span></div>
     ${cells}
-    <div class="tb-sc"><span>${BT.lo}° 난방 기준 · 0%</span><span style="left:${100 / 1.5}%">${BT.hi}° 냉방 기준 · 100%</span><span>${BT.lo + 1.5 * (BT.hi - BT.lo)}° · 150%</span></div>
+    <div class="tb-sc"><span>${BT.lo}° 우리 집 바닥 · 0%</span><span style="left:${100 / 1.5}%">${BT.hi}° 냉방 기준 · 100%</span><span>${BT.lo + 1.5 * (BT.hi - BT.lo)}° · 150%</span></div>
     <div class="tb-f">${f}</div>
-    ${big ? `<p class="tb-n" title="햇빛 충전·바깥 손실은 최근 ${T.B ? T.B.n : 0}일의 하루 잔량 변화를 햇빛량과 실내−바깥 차로 나눠 잰 값. 일사량: 최근 약 12일은 집 위치 위성값(한국에너지기술연구원), 그 전은 Open-Meteo">기준 ${BT.lo}°(정부 권장 난방 온도) = 0%, ${BT.hi}°(권장 냉방 온도) = 100%, 1°에 약 ${Math.round(100 / (BT.hi - BT.lo))}%p.${T.B ? ` 햇빛 1 kWh/㎡에 ${sg(T.B.sun)}, 지금 바깥이면 하루 ${(T.B.leak * (T.tin - T.tout) / T.B.sun).toFixed(1)} kWh/㎡가 들어야 본전.` : ''}</p>` : ''}</div>`;
+    ${big ? `<p class="tb-n" title="햇빛 충전·바깥 손실은 최근 ${T.B ? T.B.n : 0}일의 하루 잔량 변화를 햇빛량과 실내−바깥 차로 나눠 잰 값. 일사량: 최근 약 12일은 집 위치 위성값(한국에너지기술연구원), 그 전은 Open-Meteo">기준 ${BT.lo}°(우리 집 바닥) = 0%, ${BT.hi}°(정부 권장 냉방 온도) = 100%, 1°에 ${Math.round(100 / (BT.hi - BT.lo))}%p.${T.B ? ` 햇빛 1 kWh/㎡에 ${sg(T.B.sun)}, 지금 바깥이면 하루 ${(T.B.leak * (T.tin - T.tout) / T.B.sun).toFixed(1)} kWh/㎡가 들어야 본전.` : ''}</p>` : ''}</div>`;
 }
 // 14일 잔량 흐름 + 햇빛
 function thermoChart(el){
