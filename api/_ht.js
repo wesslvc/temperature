@@ -75,23 +75,32 @@ async function suspect(now, heater) {
   } catch (e) { console.error('suspect', e.message); }
   return why;
 }
+// 해마다 달별 합계 (HT 에너지 '연' 화면). 날짜별(MONTH) 값은 0으로만 와서, 실제 쓴 양은 이 달별 합계로만 보인다
+export async function heatUsageYear(year, sess) {
+  const req = sess || await session(); if (!req) return null;
+  const r = await req(`/proxy/ctoc/ems/usage/history?energyType=HEATING&period=YEAR&date=${year}-06-10`);
+  if (!r.ok) throw new Error('HT 에너지(연) ' + r.status);
+  const d = (await r.json()).data?.usageList?.[0];
+  return d ? (d.usage || []).map(Number) : null;
+}
 export async function heatUseWatch(heater) {
   if (!process.env.HT_ID) return null;
-  const now = Date.now(), today = kstD(now), have = (await rpc('roomtemp_heatuse_series')) || [];
-  const map = Object.fromEntries(have.map((r) => [String(r.d).slice(0, 10), Number(r.v)])), last = Math.max(0, ...have.map((r) => Number(r.at)));
+  const now = Date.now(), today = kstD(now), [have, mon] = await Promise.all([rpc('roomtemp_heatuse_series'), rpc('roomtemp_heatmonth_series')]);
+  const map = Object.fromEntries((have || []).map((r) => [String(r.d).slice(0, 10), Number(r.v)])), mmap = Object.fromEntries((mon || []).map((r) => [r.m, Number(r.v)]));
+  const last = Math.max(0, ...(mon || []).map((r) => Number(r.at)));
   const why = await suspect(now, heater), gap = now - last;
-  if (!(have.length === 0 || (why.length && gap > 55 * 60e3) || gap > 6 * 36e5)) return { checked: false, why };
-  const sess = await session(); if (!sess) return null; // 로그인은 한 번만
-  // 한 세션으로 동시에 여러 달을 물으면 HT가 500을 낸다 → 한 달씩 차례로, 실패하면 한 번 더
-  const one = async (m) => { for (let i = 0; i < 2; i++) { try { const u = await heatUsageMonth(m, sess); return !u ? [] : u.usage.map((v, j) => ({ d: `${m}-${String(j + 1).padStart(2, '0')}`, v })).filter((x) => x.d <= today); } catch (e) { if (i) console.error('heatuse', m, e.message); } } return []; };
-  const pullAll = async (list) => { const out = []; for (const m of list) out.push(...(await one(m))); return out; };
-  const cur = today.slice(0, 7), ms = [cur]; if (+today.slice(8) <= 3) ms.unshift(addM(cur, -1));
-  let rows = await pullAll(ms);
-  const fresh = rows.filter((x) => x.v > 0 && !(map[x.d] > 0));
-  // 새로 뜬 사용량이 있거나 처음이면: 올해 1월부터 전부
-  if (fresh.length || have.length === 0) { const all = []; for (let m = `${today.slice(0, 4)}-01`; m <= cur; m = addM(m, 1)) all.push(m); rows = await pullAll(all); }
-  const reason = (fresh.length ? `새 사용량 ${fresh.map((x) => `${x.d.slice(5)} ${x.v}`).join(', ')} · ` : '') + (why.length ? '의심: ' + why.join(' / ') : '정기');
-  if (!rows.length) return { checked: true, why, stored: 0 };
-  const stored = await rpc('roomtemp_heatuse_ingest', { p_token: process.env.INGEST_TOKEN, p_rows: rows, p_why: reason });
-  return { checked: true, why, fresh: fresh.length, stored };
+  if (!(!(mon || []).length || (why.length && gap > 55 * 60e3) || gap > 6 * 36e5)) return { checked: false, why };
+  const sess = await session(); if (!sess) return null; // 로그인은 한 번만, 요청은 차례로 (동시에 물으면 HT가 500)
+  const tryTwice = async (f) => { for (let i = 0; i < 2; i++) { try { return await f(); } catch (e) { if (i) console.error('heatuse', e.message); } } return null; };
+  const y = today.slice(0, 4), cur = today.slice(0, 7), months = [];
+  for (const yy of (mon || []).length ? [y] : [String(+y - 1), y]) { const u = await tryTwice(() => heatUsageYear(yy, sess)); if (u) u.forEach((v, i) => { const m = `${yy}-${String(i + 1).padStart(2, '0')}`; if (m <= cur) months.push({ m, v }); }); }
+  // 달 합계가 새로 뜨거나 늘면 = 그 사이 난방을 썼다
+  const fresh = months.filter((x) => x.v > (mmap[x.m] ?? 0));
+  const one = async (m) => (await tryTwice(async () => { const u = await heatUsageMonth(m, sess); return !u ? [] : u.usage.map((v, j) => ({ d: `${m}-${String(j + 1).padStart(2, '0')}`, v })).filter((x) => x.d <= today); })) || [];
+  const dm = [cur]; fresh.forEach((x) => { if (!dm.includes(x.m)) dm.push(x.m); });
+  const rows = []; for (const m of dm) rows.push(...(await one(m)));
+  const reason = (fresh.length ? `새 사용량 ${fresh.map((x) => `${x.m} ${mmap[x.m] ?? 0}→${x.v}`).join(', ')} · ` : '') + (why.length ? '의심: ' + why.join(' / ') : '정기');
+  const storedM = months.length ? await rpc('roomtemp_heatmonth_ingest', { p_token: process.env.INGEST_TOKEN, p_rows: months }) : 0;
+  const stored = rows.length ? await rpc('roomtemp_heatuse_ingest', { p_token: process.env.INGEST_TOKEN, p_rows: rows, p_why: reason }) : 0;
+  return { checked: true, why, fresh: fresh.length, months: storedM, stored };
 }

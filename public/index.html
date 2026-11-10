@@ -1898,19 +1898,34 @@ async function loadThermo(){
   renderAll();
 }
 // 날짜별 실제 난방 사용량 (HT 에너지 화면 값). 0이면 그날 난방은 안 돈 것
-let heatUse = { at: 0, map: {}, ok: false };
+let heatUse = { at: 0, map: {}, ok: false, months: {} };
+// 그날 난방을 썼나: HT는 날짜별 값을 0으로만 주고 달 합계만 실제로 준다.
+// 그래서 ① 날짜 값이 있으면 그대로 ② 그 달 합계가 0이면 안 씀 ③ 합계가 있으면 센서 난방 신호가 2시간 이상인 날만 씀
+function heatSigDays(){
+  if(heatUse.sig && heatUse.sig.n === thermo.H.length) return heatUse.sig.d;
+  const H = thermo.H, d = {}; for(let i = 1; i < H.length; i++){ const q = H[i]; if(heatSignal(H[i - 1], q, sunAt(q.ts))){ const k = kstDate(q.ts); d[k] = (d[k] || 0) + 1; } }
+  heatUse.sig = { n: H.length, d }; return d;
+}
+function heatDay(d){
+  if(!heatUse.ok) return null;
+  if(heatUse.map[d] > 0) return true;
+  const M = heatUse.months && heatUse.months[d.slice(0, 7)]; if(!M) return heatUse.months && Object.keys(heatUse.months).length ? false : null;
+  if(!(M.v > 0)) return false;
+  return (heatSigDays()[d] || 0) >= 2;
+}
 async function loadHeatUse(){
   if(Date.now() - heatUse.at < 30 * 60e3) return; heatUse.at = Date.now();
   const map = {}; let ok = false, last = 0;
   // DB(수집이 난방 의심 때 확인해 넣은 값) 먼저, 비어 있으면 HT에서 직접
   const db = await get('/api/outdoor?heatuse=db').catch(() => null);
+  const months = {}; if(db && db.months) db.months.forEach(r => { months[r.m] = r; });
   if(db && db.rows && db.rows.length){ ok = true; db.rows.forEach(r => { map[r.d] = r.v; last = Math.max(last, r.at); }); }
   else {
     const ms = []; for(let m = '2026-09'; m <= kstDate(Date.now()).slice(0, 7); m = addMonths(m, 1)) ms.push(m);
     const rs = await Promise.all(ms.map(m => get(`/api/outdoor?heatuse=${m}`).catch(() => null)));
     rs.forEach((r, i) => { if(!r || !r.usage) return; ok = true; r.usage.forEach((v, j) => { const d = `${ms[i]}-${String(j + 1).padStart(2, '0')}`; if(d <= kstDate(Date.now())) map[d] = v; }); });
   }
-  heatUse = { at: heatUse.at, map, ok, last }; renderAll();
+  heatUse = { at: heatUse.at, map, ok, last, months, sig: null }; renderAll();
 }
 // 선택한 기간에 맞춘 배터리 그래프용 자료 (앞쪽 6일은 24시간·5일 평균 계산용 여유)
 let thermoR = { key: '', H: [], heat: [], t0: 0, t1: 0 };
@@ -2021,7 +2036,7 @@ function thermoRangeCard(big, sel){
   const stTxt = one ? (r0.d === kstDate(Date.now()) ? '오늘' : md(kstMs(r0.d))) + ` · 충전 ${pp(r0.charge)}` : `${D.length}일 · ${net == null ? '' : net >= 0 ? `처음보다 ${pp(net)}` : `처음보다 ${pp(net, '−')}`}`;
   const bar = `<div class="tbx"><div class="tbx-body"><div class="tbx-fill" style="width:${fillW.toFixed(1)}%"></div>${one ? '' : `<i class="tbx-rg" style="left:${loW.toFixed(1)}%;width:${Math.max(.5, hiW - loW).toFixed(1)}%"></i>`}<i class="tbx-50" style="left:50%"></i>${[.25, .75].map(v => `<i class="tbx-t" style="left:${v * 100}%"></i>`).join('')}</div><i class="tbx-cap${lvl > 1 ? ' on' : ''}"></i></div>`;
   const f = one
-    ? `<span>충전 <b>${pp(r0.charge)}</b> <i>${hhmm(r0.loTs)}→${hhmm(r0.hiTs)}</i></span><span>밤 소모 <b>${pp(r0.drain, '−')}</b> <i>다음 날 아침까지</i></span><span>실내 평균 <b>${n1(r0.tin)}°</b> <i>평소 ${n1(r0.e)}°</i></span><span>햇빛 <b>${r0.kwh == null ? '–' : r0.kwh.toFixed(1)}</b> <i>kWh/㎡</i></span><span>난방 <b>${r0.use > 0 ? `${r0.use} 사용` : '안 씀'}</b> <i>${r0.heatGain > .01 ? `충전 중 ${pp(r0.heatGain)}` : ''}</i></span><span>최고 잔량 <b>${pc(r0.hi)}</b> <i>${hhmm(r0.hiTs)}</i></span>`
+    ? `<span>충전 <b>${pp(r0.charge)}</b> <i>${hhmm(r0.loTs)}→${hhmm(r0.hiTs)}</i></span><span>밤 소모 <b>${pp(r0.drain, '−')}</b> <i>다음 날 아침까지</i></span><span>실내 평균 <b>${n1(r0.tin)}°</b> <i>평소 ${n1(r0.e)}°</i></span><span>햇빛 <b>${r0.kwh == null ? '–' : r0.kwh.toFixed(1)}</b> <i>kWh/㎡</i></span><span>난방 <b>${r0.use > 0 ? '씀' : '안 씀'}</b> <i>${r0.heatGain > .01 ? `충전 중 ${pp(r0.heatGain)}` : ''}</i></span><span>최고 잔량 <b>${pc(r0.hi)}</b> <i>${hhmm(r0.hiTs)}</i></span>`
     : `<span>하루 충전 <b>${pp(chg)}</b> <i>평균</i></span><span>밤 소모 <b>${pp(drn, '−')}</b> <i>평균</i></span><span>가장 찬 날 <b>${pc(hi.level)}</b> <i>${md(kstMs(hi.d))}</i></span><span>가장 빈 날 <b>${pc(lo.level)}</b> <i>${md(kstMs(lo.d))}</i></span><span>햇빛 <b>${kwh.toFixed(0)}</b> <i>kWh/㎡ 합</i></span><span>난방 쓴 날 <b>${heatN}일</b> <i>${heatG > .01 ? `충전 중 ${Math.round(heatG / Math.max(.01, heatG + sunG) * 100)}%` : ''}</i></span>`;
   return `<div class="tb rg${big ? ' big' : ''}${st}${sel ? ' peek' : ''}" title="고른 기간(${md(kstMs(R.a))}–${md(kstMs(R.b))})의 날짜별 배터리">
     <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
@@ -2033,7 +2048,7 @@ function thermoRangeCard(big, sel){
 function thermoCard(big){
   if(range !== '24h'){ const rc = thermoRangeCard(big); if(rc) return rc; }
   const T = thermoNow(); if(!T) return '';
-  const todayUse = heatUse.ok ? heatUse.map[kstDate(Date.now())] ?? 0 : null, monthUse = heatUse.ok ? Object.keys(heatUse.map).filter(d => d.slice(0, 7) === kstDate(Date.now()).slice(0, 7)).reduce((a, d) => a + heatUse.map[d], 0) : null;
+  const tdH = heatDay(kstDate(Date.now())), todayUse = tdH == null ? null : tdH ? 1 : 0, monthUse = heatUse.ok ? (heatUse.months[kstDate(Date.now()).slice(0, 7)] || {}).v ?? Object.keys(heatUse.map).filter(d => d.slice(0, 7) === kstDate(Date.now()).slice(0, 7)).reduce((a, d) => a + heatUse.map[d], 0) : null;
   const hs = thermo.heat ? heatState(thermo.heat) : null, heating = todayUse != null ? todayUse > 0 : hs === 'on' || (hs === 'edge' && (() => { const Hh = thermo.H, q = Hh.at(-1), p = Hh.at(-2); return heatSignal(p, q, sunAt(q && q.ts)); })());
   const pct = Math.round(T.soc * 100), col = heating ? 'var(--hot)' : specColor('temp', T.tin), sg = (v, u = '%p', d = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v * (u === '%p' ? 100 : 1)).toFixed(d)}${u}`;
   const stTxt = (heating && T.st !== 'dis' ? '난방으로 충전 중' : { chg: '충전 중', dis: '소모 중', idle: '유지' }[T.st]) + (T.rate == null ? '' : ` ${sg(T.rate, '%p', 0)} / 시간`);
@@ -2051,7 +2066,7 @@ function thermoCard(big){
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.resid)}</em>${T.level != null ? ` · 오늘 평균 ${Math.round(T.level * 100)}%` : ''}</span></div>
     ${bar}
     <div class="tb-sc"><span>0% · 평소 −2°</span><span style="left:50%">50% · 평소 ${n1(e)}°</span><span>100% · 평소 +2°</span></div>
-    <div class="tb-f"><span>오늘 충전 <b>${T.today ? sg(T.today.charge) : '–'}</b> <i>${T.today ? `${hhmm(T.today.loTs)}→${hhmm(T.today.hiTs)}` : ''}</i></span><span>어젯밤 소모 <b>${T.yest && T.yest.drain != null ? sg(-T.yest.drain) : '–'}</b></span><span>지금 <b>${n1(T.tin)}°</b> <i>평소 ${n1(T.exp)}°</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span>${todayUse != null ? `<span>난방 <b>${todayUse > 0 ? `오늘 ${todayUse} 사용` : '오늘 안 씀'}</b> <i>이번 달 ${monthUse}</i></span>` : ''}</div></div>`;
+    <div class="tb-f"><span>오늘 충전 <b>${T.today ? sg(T.today.charge) : '–'}</b> <i>${T.today ? `${hhmm(T.today.loTs)}→${hhmm(T.today.hiTs)}` : ''}</i></span><span>어젯밤 소모 <b>${T.yest && T.yest.drain != null ? sg(-T.yest.drain) : '–'}</b></span><span>지금 <b>${n1(T.tin)}°</b> <i>평소 ${n1(T.exp)}°</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span>${todayUse != null ? `<span>난방 <b>${todayUse > 0 ? '오늘 씀' : '오늘 안 씀'}</b> <i>이번 달 합계 ${monthUse}</i></span>` : ''}</div></div>`;
 }
 // 14일 잔량 흐름 + 햇빛
 // 잔량 흐름에서 가리킨 시각(또는 달력에서 고른 날)의 배터리를 위 카드에 그대로 보여 준다. 손을 떼면 원래대로
@@ -2065,7 +2080,7 @@ function tbPeek(p, prev, day){
   tbFill(card, p, prev, day);
 }
 function tbFill(card, p, prev, day, cls = 'tb big peek'){
-  const rate = prev && prev !== p ? (p.v - prev.v) / Math.max(.25, (p.ts - prev.ts) / 36e5) : 0, heat = heatUse.ok && heatUse.map[p.d] > 0 && rate > .004;
+  const rate = prev && prev !== p ? (p.v - prev.v) / Math.max(.25, (p.ts - prev.ts) / 36e5) : 0, heat = heatDay(p.d) === true && rate > .004;
   const st = p.v > 1 ? 'over' : p.v < 0 ? 'under' : heat ? 'chg heat' : rate > .008 ? 'chg' : rate < -.008 ? 'dis' : 'idle';
   card.className = `${cls} ${st}`; const pct = Math.round(p.v * 100), sg = (v, d = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v * 100).toFixed(d)}%p`;
   const q = (s) => card.querySelector(s), fill = q('.tbx-fill');
@@ -2075,7 +2090,7 @@ function tbFill(card, p, prev, day, cls = 'tb big peek'){
   card.querySelectorAll('.tbx-bolt,.tbx-rg,.tbx-sheen').forEach(n => n.remove());
   const cap = q('.tbx-cap'); if(cap) cap.classList.toggle('on', p.v > 1);
   const mid = q('.tb-sc span:nth-child(2)'); if(mid) mid.textContent = `50% · 평소 ${n1(p.e)}°`;
-  const f = q('.tb-f'); if(f) f.innerHTML = `<span>이 시각 실내 <b>${n1(p.tin)}°</b> <i>평소 ${n1(p.e)}°</i></span><span>바깥 <b>${n1(p.tout)}°</b> <i>${sunAt(p.ts) != null ? `햇빛 ${Math.round(sunAt(p.ts))} W/㎡` : ''}</i></span><span>그날 충전 <b>${day ? '+' + Math.round(day.charge * 100) + '%p' : '–'}</b> <i>${day ? `${hhmm(day.loTs)}→${hhmm(day.hiTs)}` : ''}</i></span><span>그날 밤 소모 <b>${day && day.drain != null ? '−' + Math.round(day.drain * 100) + '%p' : '–'}</b></span><span>그날 햇빛 <b>${day && day.kwh != null ? day.kwh.toFixed(1) : '–'}</b> <i>kWh/㎡</i></span><span>난방 <b>${heatUse.ok ? (heatUse.map[p.d] > 0 ? `${heatUse.map[p.d]} 사용` : '안 씀') : '–'}</b> <i>${md(kstMs(p.d))}</i></span>`;
+  const f = q('.tb-f'); if(f) f.innerHTML = `<span>이 시각 실내 <b>${n1(p.tin)}°</b> <i>평소 ${n1(p.e)}°</i></span><span>바깥 <b>${n1(p.tout)}°</b> <i>${sunAt(p.ts) != null ? `햇빛 ${Math.round(sunAt(p.ts))} W/㎡` : ''}</i></span><span>그날 충전 <b>${day ? '+' + Math.round(day.charge * 100) + '%p' : '–'}</b> <i>${day ? `${hhmm(day.loTs)}→${hhmm(day.hiTs)}` : ''}</i></span><span>그날 밤 소모 <b>${day && day.drain != null ? '−' + Math.round(day.drain * 100) + '%p' : '–'}</b></span><span>그날 햇빛 <b>${day && day.kwh != null ? day.kwh.toFixed(1) : '–'}</b> <i>kWh/㎡</i></span><span>난방 <b>${heatDay(p.d) == null ? '–' : heatDay(p.d) ? '씀' : '안 씀'}</b> <i>${md(kstMs(p.d))}</i></span>`;
 }
 // 달력 칸을 누르면 그날 배터리를 카드에, 같은 칸을 다시 누르면 원래대로
 function calPick(d, cell){
@@ -2102,7 +2117,7 @@ function thermoChart(el){
   [0, .5, 1, 1.5].filter(v => v >= vmin && v <= vmax).forEach(v => { g += `<line class="${v === .5 ? 'tb-100' : 'gl'}" x1="${m.l}" x2="${m.l + iw}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${m.l - 8}" y="${Y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`; });
   const gd = vGrad('temp', 22 + vmin * 4, 22 + vmax * 4, Y(vmin), Y(vmax), .3, true); g += `<defs>${gd.def}</defs>`;
   // 오르는 구간(충전) = 노랑, 난방 쓴 날은 빨강 / 내려가는 구간(소모) = 회색. 날마다 평균 잔량은 짧은 점선
-  const ln = smooth(pts.map(p => [X(p.ts), Y(p.v)])), yb = Y(vmin), hd = (d) => heatUse.ok && heatUse.map[d] > 0;
+  const ln = smooth(pts.map(p => [X(p.ts), Y(p.v)])), yb = Y(vmin), hd = (d) => heatDay(d) === true;
   g += `<path d="${ln}L${X(t1)},${yb}L${X(t0)},${yb}Z" fill="url(#${gd.id})" opacity=".5"/>`;
   // 같은 상태가 이어지는 구간을 한 덩어리로 (조각 사이 실금 없이)
   { let pu = true, run = null; const flush = () => { if(run && run.p.length > 1) g += `<path d="M${run.p.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L')}L${run.p.at(-1)[0].toFixed(1)},${yb}L${run.p[0][0].toFixed(1)},${yb}Z" class="${run.c}"/>`; run = null; };
@@ -2124,7 +2139,7 @@ function thermoChart(el){
     for(let i = 1; i < H.length; i++){ const q = H[i]; if(q.ts < t0 || q.ts > t1) continue; const sig = heatSignal(H[i - 1], q, sunAt(q.ts)), st = heatState(htAt(q.ts));
       const vent = !sig && ventSignal(H[i - 1], q);
       // HT 에너지 사용량이 0인 날은 난방이 안 돈 것 → 센서 추정(습도만 내려감)은 빨강으로 그리지 않는다
-      const dq = kstDate(q.ts), used = heatUse.ok ? (heatUse.map[dq] ?? 0) > 0 : null;
+      const dq = kstDate(q.ts), used = heatDay(dq);
       const cls = used === false ? (vent ? 'tb-vent' : null) : st === 'on' || (st === 'edge' && sig) ? 'tb-heat' : st == null && sig ? 'tb-heat guess' : vent ? 'tb-vent' : null; if(!cls) continue;
       const a = X(Math.max(t0, q.ts - 18e5)), b = X(Math.min(t1, q.ts + 18e5)); if(b > a) g += `<rect x="${a}" y="${hy}" width="${b - a}" height="${hhgt}" rx="2" class="${cls}"><title>${when(q.ts)} ${cls === 'tb-vent' ? '환기 추정 (온도·이슬점·습도 함께 내려감)' : st === 'on' ? HEAT_TXT.on : st === 'edge' ? HEAT_TXT.seen : HEAT_TXT.guess + ' (햇빛 약함·온도 유지·습도↓·이슬점 그대로)'}</title></rect>`; }
     g += `<text class="ov-rl" x="${m.l - 8}" y="${hy + hhgt}" text-anchor="end">난방</text>`; }
@@ -2148,11 +2163,11 @@ function thermoChart(el){
 function batteryDays(){
   if(!thermo.M || !thermo.H.length) return [];
   const kwh = {}; solarHours().forEach(x => { const d = kstDate(x.a + 18e5); kwh[d] = (kwh[d] || 0) + x.w / 1000; });
-  const today = kstDate(Date.now()), C = dayCycles(socPts(thermo.H)), useOK = heatUse.ok, heatDays = new Set(useOK ? Object.keys(heatUse.map).filter(d => heatUse.map[d] > 0) : []);
+  const today = kstDate(Date.now()), C = dayCycles(socPts(thermo.H)), useOK = heatUse.ok, heatDays = new Set(useOK ? C.map(r => r.d).filter(d => heatDay(d) === true) : []);
   const R = C.filter(r => kwh[r.d] != null && !heatDays.has(r.d) && r.d !== today);
   let a = null, c = null; if(R.length >= 8){ const mx = R.reduce((t, r) => t + kwh[r.d], 0) / R.length, my = R.reduce((t, r) => t + r.charge, 0) / R.length, sxx = R.reduce((t, r) => t + (kwh[r.d] - mx) ** 2, 0);
     if(sxx > .5){ a = R.reduce((t, r) => t + (kwh[r.d] - mx) * (r.charge - my), 0) / sxx; c = my - a * mx; } }
-  C.forEach((r, i) => { r.kwh = kwh[r.d] ?? null; r.soc = r.level; r.use = useOK ? heatUse.map[r.d] ?? null : null; r.dS = i ? r.level - C[i - 1].level : null;
+  C.forEach((r, i) => { r.kwh = kwh[r.d] ?? null; r.soc = r.level; r.use = useOK ? (heatDay(r.d) ? 1 : 0) : null; r.useM = useOK ? (heatUse.months[r.d.slice(0, 7)] || {}).v ?? null : null; r.dS = i ? r.level - C[i - 1].level : null;
     const pred = a != null && r.kwh != null ? Math.max(0, a * r.kwh + c) : null;
     r.heatGain = heatDays.has(r.d) ? (pred != null ? Math.min(r.charge, Math.max(0, r.charge - pred)) : r.charge / 2) : 0; r.sunGain = r.charge - r.heatGain;
     r.src = r.charge < .02 ? 'flat' : r.heatGain > .01 && r.sunGain > .01 ? 'both' : r.heatGain > .01 ? 'heat' : 'sun'; });
@@ -2172,7 +2187,7 @@ function batteryStrip(el){
     if(!inM) return '<div class="bc nil out"></div>';
     if(!r) return `<div class="bc nil${d === today ? ' now' : ''}"><b>${day}</b></div>`;
     const f = Math.max(0, Math.min(1, r.level)), sg = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v * 100))}`;
-    const tip = `${md(kstMs(d))} · 평균 잔량 ${Math.round(r.level * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°) · 충전 +${Math.round(r.charge * 100)}%p (${hhmm(r.loTs)}→${hhmm(r.hiTs)})${r.heatGain > .01 ? ` 중 난방 +${Math.round(r.heatGain * 100)}%p` : ''}${r.drain != null ? ` · 밤 소모 −${Math.round(r.drain * 100)}%p` : ''}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.use != null ? ` · 난방 사용량 ${r.use}` : ''}`;
+    const tip = `${md(kstMs(d))} · 평균 잔량 ${Math.round(r.level * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°) · 충전 +${Math.round(r.charge * 100)}%p (${hhmm(r.loTs)}→${hhmm(r.hiTs)})${r.heatGain > .01 ? ` 중 난방 +${Math.round(r.heatGain * 100)}%p` : ''}${r.drain != null ? ` · 밤 소모 −${Math.round(r.drain * 100)}%p` : ''}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.useM != null ? ` · 난방 ${r.use ? '씀' : '안 씀'} (그달 합계 ${r.useM})` : ''}`;
     return `<div class="bc ${r.src}${inM ? '' : ' out'}${d === today ? ' now' : ''}${inSel(d) ? ' sel' : ''}${calSel === d ? ' pick' : ''}${r.level > 1 ? ' over' : ''}" data-d="${d}" style="--bc:${specColor('temp', r.tin)}" title="${tip}">
       <u style="height:${(f * 100).toFixed(0)}%"></u><b>${day}</b><em>${sg(r.charge)}</em>
       <span class="bc-d"><i class="s" style="width:${pc(r.sunGain)}%"></i><i class="h" style="width:${pc(r.heatGain)}%"></i></span>${r.drain != null ? `<span class="bc-d n"><i class="n" style="width:${pc(r.drain)}%"></i></span>` : ''}</div>`; };

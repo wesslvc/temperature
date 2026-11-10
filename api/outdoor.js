@@ -56,9 +56,10 @@ export default async function handler(req, res) {
   // DB에 쌓인 날짜별 사용량 전체 (수집이 난방 의심 때·6시간마다 넣음): /api/outdoor?heatuse=db
   if (req.query.heatuse === 'db') {
     try {
-      const rows = (await rpc('roomtemp_heatuse_series')) || [];
+      const [rows, mon] = await Promise.all([rpc('roomtemp_heatuse_series'), rpc('roomtemp_heatmonth_series')]);
       res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
-      return res.json({ rows: rows.map((r) => ({ d: String(r.d).slice(0, 10), v: Number(r.v), at: Number(r.at), why: r.why })) });
+      return res.json({ rows: (rows || []).map((r) => ({ d: String(r.d).slice(0, 10), v: Number(r.v), at: Number(r.at), why: r.why })),
+        months: (mon || []).map((r) => ({ m: r.m, v: Number(r.v), at: Number(r.at), changed: Number(r.changed_at), prev: r.prev == null ? null : Number(r.prev) })) });
     } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
   }
   if (req.query.heatuse) {

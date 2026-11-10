@@ -4,3 +4,8 @@
 -- public.roomtemp_heatuse_series() : d, v, at(ms), why
 -- 수집(api/collect.js, 30분마다): 센서로 난방이 의심되면 1시간에 한 번, 아니면 6시간에 한 번 이번 달 값을 받아 넣는다.
 --   안 뜨던 사용량(0 → 양수)이 새로 뜨면 올해 1월부터 전부 다시 받아 넣는다
+
+-- 달별 합계 (적용된 마이그레이션 roomtemp_heat_use_month). HT의 날짜별(MONTH) 값은 0으로만 와서 실제 사용량은 '연' 화면 달 합계로만 보인다
+-- roomtemp.heat_use_month(m 'YYYY-MM' pk, v, at = 마지막 확인, changed_at = 값이 바뀐 시각, prev = 바뀌기 전 값)
+-- public.roomtemp_heatmonth_ingest(p_token, p_rows [{m, v}]) / public.roomtemp_heatmonth_series()
+-- 화면: 날짜 값 > 0 이면 그날 씀, 그 달 합계 0 이면 안 씀, 합계가 있으면 센서 난방 신호 2시간 이상인 날만 씀
