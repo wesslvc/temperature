@@ -872,6 +872,101 @@ svg .tb-heat{fill:var(--hot);fill-opacity:.6}svg .tb-heat.guess{fill-opacity:.35
 .bd b{font-size:10.5px!important}
 .bd-h{font-size:14px!important;margin-bottom:12px!important}
 @media(max-width:560px){.tb-m b{font-size:44px!important}.tbx-body{height:32px!important}.tb-sc span:nth-child(2),.tb-sc span:nth-child(3){display:inline!important}.tb-sc span{font-size:10.5px}.tb-sc span:nth-child(3){transform:none!important}}
+
+/* ==========================================================================
+   v3 — 카드 그리드. 길게 펼쳐진 띠 대신 내용별로 묶은 카드, 넓은 화면에선 나란히
+   ========================================================================== */
+:root{--card:var(--panel);--card-b:var(--hair);--r:20px;--cp:22px}
+@media (prefers-color-scheme:dark){:root{--card:#121214;--card-b:rgba(255,255,255,.07)}}
+body{background:var(--bg)}
+.wrap{max-width:1080px!important}
+/* 지금 */
+.hero{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;padding-top:18px!important;align-items:stretch}
+.hero>#now{grid-column:1/-1;min-width:0}
+.hero2{padding:22px var(--cp) 24px!important;border-radius:var(--r)!important;background:var(--card)!important;border:1px solid var(--card-b)!important;overflow:hidden!important}
+.hero2::before{display:block!important;opacity:.45}
+.h2-main{margin-top:18px!important}
+.subh{margin:26px 2px 10px!important}
+.hero .scs{gap:14px!important;margin-top:0!important}
+.hero .sc{background:var(--card)!important;border:1px solid var(--card-b)!important;border-radius:var(--r)!important;padding:18px 18px 0!important;overflow:hidden!important}
+/* 쾌적 시간 · 열 배터리: 두 칸 */
+.scatter{margin-top:0!important;background:var(--card)!important;border:1px solid var(--card-b)!important;border-radius:var(--r)!important;padding:20px var(--cp)!important;min-width:0}
+.hero:has(#ccTog[aria-expanded="true"]) .scatter{grid-column:1/-1}
+.thermo{margin-top:0!important;min-width:0;display:flex}
+.thermo:empty{display:none}
+.thermo .tb{flex:1;border-top:none!important;padding:20px var(--cp)!important;background:var(--card);border:1px solid var(--card-b);border-radius:var(--r);display:flex;flex-direction:column}
+.thermo .tb .tb-f{margin-top:auto;padding-top:14px}
+.hero:not(:has(.thermo .tb)) .scatter{grid-column:1/-1}
+/* 탭 */
+.secnav{margin-top:40px!important;gap:6px!important;border-bottom:none!important;padding:4px;background:var(--sunk);border-radius:14px;width:max-content;max-width:100%}
+.secnav button{padding:8px 14px!important;border-radius:10px;font-size:14px!important;border:none!important;margin:0!important;color:var(--sub)}
+.secnav button::after{display:none!important}
+.secnav button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--card-b)}
+.panel.on{margin-top:14px!important;background:var(--card)!important;border:1px solid var(--card-b)!important;border-radius:var(--r)!important;padding:22px var(--cp)!important}
+#p-out.panel.on{background:none!important;border:none!important;padding:0!important}
+/* AWS vs 실내 */
+.oc-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.oc,.tb-l,.bc-wrap{background:var(--card);border:1px solid var(--card-b);border-radius:var(--r);padding:20px var(--cp) 16px;min-width:0}
+.oc-h{display:grid;grid-template-columns:1fr auto;grid-template-areas:"n n" "m x";gap:6px 16px;align-items:end;margin-bottom:14px}
+.oc-n{grid-area:n;font-size:13px;font-weight:650;color:var(--sub)}
+.oc-m{grid-area:m;display:flex;flex-direction:column;gap:6px;min-width:0}
+.oc-m b{font-size:36px;font-weight:750;letter-spacing:-.045em;line-height:1}
+.oc-m span{font-size:12.5px;color:var(--faint)}.oc-m em{font-style:normal;color:var(--ink);font-weight:650}
+.oc-x{grid-area:x;display:flex;gap:16px;margin:0;text-align:right}
+.oc-x div{display:flex;flex-direction:column;gap:2px}
+.oc-x dt{font-size:11px;color:var(--faint)}.oc-x dd{margin:0;font-size:13px;font-weight:650}.oc-x dd.w{font-size:10.5px;font-weight:500;color:var(--faint)}
+svg .oc-sun{fill:var(--sun)}
+svg .od-dot.o{fill:var(--sub)}
+.oc-lg{display:flex;flex-wrap:wrap;gap:6px 18px;margin:12px 4px 0;font-size:12px;color:var(--faint)}
+.oc-lg span{display:inline-flex;align-items:center}.oc-lg i{display:inline-block;margin-right:6px}
+.oc-lg i.ln{width:16px;height:0;border-top:2.2px solid var(--sub);border-radius:2px}.oc-lg i.ln.o{border-top-width:1.2px}
+.oc-lg i.sw{width:12px;height:10px;border-radius:3px;background:color-mix(in srgb,var(--sub) 25%,transparent)}
+.oc-lg i.sun{width:12px;height:10px;border-radius:3px;background:color-mix(in srgb,var(--sun) 35%,transparent)}
+.sunA{margin-top:28px!important;padding-top:0!important;border-top:none!important}
+.sunA h3{margin:0 4px 12px}
+/* 열 배터리 */
+.tb-g{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:14px;align-items:start}
+.tb-l .tb{padding:0!important;border:none!important;cursor:default}
+.tb-l .tb-chart{margin-top:22px!important;padding-top:18px;border-top:1px solid var(--hair)}
+svg .tb-day{stroke:var(--rule);stroke-dasharray:2 3}
+/* 날짜별 잔량 달력 */
+.bc-h{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;font-weight:650;margin-bottom:12px}
+.bc-r{font-size:12px;font-weight:500;color:var(--faint)}
+.bc-w,.bc-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.bc-w span{font-size:10.5px;color:var(--faint);text-align:center;padding-bottom:4px}
+.bc{position:relative;height:50px;border-radius:9px;background:var(--sunk);overflow:hidden}
+.bc.nil{background:none}
+.bc u{position:absolute;left:0;right:0;bottom:0;text-decoration:none;background:color-mix(in srgb,var(--bc) 15%,transparent);border-top:1.5px solid color-mix(in srgb,var(--bc) 70%,transparent)}
+.bc.over u{border-top-color:var(--ink)}
+.bc::after{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px dashed color-mix(in srgb,var(--ink) 10%,transparent)}.bc.nil::after{display:none}
+.bc b{position:absolute;left:6px;top:4px;font-size:11px;font-weight:600;color:var(--sub)}
+.bc em{position:absolute;right:5px;bottom:10px;line-height:1;font-style:normal;font-size:10px;font-weight:650;color:var(--faint)}
+.bc.sun em{color:var(--sun)}.bc.heat em,.bc.both em{color:var(--hot)}
+.bc-d{position:absolute;left:4px;right:4px;bottom:4px;height:3px;display:flex;border-radius:2px;overflow:hidden}
+.bc-d i{display:block;height:100%}
+.bc-d i.s{background:var(--sun)}.bc-d i.h{background:var(--hot)}.bc-d i.n{background:color-mix(in srgb,var(--sub) 80%,transparent)}
+.bc.now{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.bc-lg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:12px;font-size:11.5px;color:var(--faint)}
+.bc-lg i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.bc-lg i.sun{background:var(--sun)}.bc-lg i.heat{background:var(--hot)}.bc-lg i.down{background:var(--sub)}
+.bc-lg .f{flex-basis:100%}
+@media(max-width:820px){
+  .hero{grid-template-columns:minmax(0,1fr)}
+  .oc-g,.tb-g{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:560px){
+  :root{--cp:16px;--r:18px}
+  .hero .scs{gap:10px!important}
+  .hero .sc{padding:14px 16px 0!important}
+  .secnav{width:auto;overflow-x:auto}
+  .secnav button{padding:7px 11px!important;font-size:13px!important;white-space:nowrap}
+  .panel.on{margin-left:0!important;margin-right:0!important}
+  .oc-m b{font-size:30px}
+  .oc-x{gap:12px}
+  .bc{height:44px;border-radius:8px}
+  .bc em{font-size:9.5px;right:4px}.bc b{left:5px;font-size:10.5px}
+  .oc-h{grid-template-columns:1fr;grid-template-areas:"n" "m" "x"}.oc-x{text-align:left;margin-top:6px;gap:18px}
+}
 </style>
 </head>
 <body>
@@ -1415,70 +1510,64 @@ function rangeChart(el, rows, u, M){
 /* ---------- AWS vs 실내 탭: 두 선을 같은 축에, 사이를 채우고 차이를 겹쳐 표시 ---------- */
 function outPanel(el, sumEl){
   const S = cache && cache.out && cache.out.series, pts = (cache && cache.hist && cache.hist.points || []).filter(p => p.temp != null && p.hum != null);
-  if(!S || S.length < 2 || pts.length < 2){ el.innerHTML = '<div class="empty">바깥 자료를 불러오는 중</div>'; sumEl.innerHTML = ''; return; }
-  const step = Math.max(1, Math.ceil(pts.length / 500));
+  sumEl.innerHTML = '';
+  if(!S || S.length < 2 || pts.length < 2){ el.innerHTML = '<div class="empty">바깥 자료를 불러오는 중</div>'; return; }
+  const step = Math.max(1, Math.ceil(pts.length / 400));
   const D = pts.filter((_, i) => i % step === 0 || i === pts.length - 1).filter(p => p.ts >= S[0].ts - 36e5 && p.ts <= S.at(-1).ts + 36e5)
     .map(p => { const ot = valAt(S, p.ts, 'temp'), oh = valAt(S, p.ts, 'hum'); return { ts: p.ts, it: p.temp, ih: p.hum, ot, oh, dt: p.temp - ot, dh: p.hum - oh }; });
-  if(D.length < 2){ el.innerHTML = '<div class="empty">겹치는 기간의 바깥 자료가 없습니다</div>'; sumEl.innerHTML = ''; return; }
+  if(D.length < 2){ el.innerHTML = '<div class="empty">겹치는 기간의 바깥 자료가 없습니다</div>'; return; }
   const avg = (k) => D.reduce((a, r) => a + r[k], 0) / D.length, ext = (k, best) => D.reduce((a, r) => best(r[k], a[k]) ? r : a);
   const sg = (v, dec, u) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(dec)}${u}`;
-  // 요약: 기온과 습도를 같은 구조로 나란히 (평균 차이 크게, 실내·AWS 평균, 가장 벌어짐·좁음)
-  const col = (name, k, ik, ok, dec, u, vu) => { const mx = ext(k, (x, y) => x > y), mn = ext(k, (x, y) => x < y);
-    return `<div class="os-c"><span class="k">${name} 차이 평균</span><b>${sg(avg(k), dec, u)}</b><em>실내 ${avg(ik).toFixed(dec)}${vu} · AWS ${avg(ok).toFixed(dec)}${vu}</em>
-      <div class="os-x"><span>최대 <b>${sg(mx[k], dec, u)}</b> <i>${when(mx.ts)}</i></span><span>최소 <b>${sg(mn[k], dec, u)}</b> <i>${when(mn.ts)}</i></span></div></div>`; };
-  sumEl.innerHTML = col('기온', 'dt', 'it', 'ot', 1, '°', '°') + col('습도', 'dh', 'ih', 'oh', 0, '%p', '%');
-  const narrow = (el.clientWidth || 1112) < 600, W = Math.max(320, el.clientWidth || 1112), m = {l:44, r: narrow ? 58 : 76}, iw = W - m.l - m.r, t0 = D[0].ts, t1 = D.at(-1).ts, span = t1 - t0 || 1, X = ts => m.l + (ts - t0) / span * iw;
-  // 두 선(실내·AWS)을 같은 축에 값의 색으로, 사이는 아주 옅게. 오른쪽 여백에 마지막 값과 그 차이를 괄호로, 아래 얇은 띠에 차이의 흐름
-  const PH = narrow ? 150 : 180, RB = 26, GAP = RB + 92;
-  const panels = [{i:'it', o:'ot', d:'dt', cm:'out', y:40, h:PH, u:'°', dec:1, name:'기온'}, {i:'ih', o:'oh', d:'dh', cm:'hum', y:40 + PH + GAP, h:PH, u:'%', dec:0, name:'습도'}];
-  const SUN = sunIn(D[0].ts, D.at(-1).ts), SH = narrow ? 64 : 84, sunY = panels[1].y + PH + GAP;
-  const H = (SUN.length ? sunY + SH : panels[1].y + panels[1].h + RB) + 46;
+  const P = [{ i: 'it', o: 'ot', d: 'dt', cm: 'out', u: '°', du: '°', dec: 1, name: '기온' }, { i: 'ih', o: 'oh', d: 'dh', cm: 'hum', u: '%', du: '%p', dec: 0, name: '습도' }];
+  // 카드 머리: 지금 차이(크게) · 기간 평균 · 가장 벌어짐/좁음. 기온·습도 같은 구조로 나란히
+  const head = (p) => { const le = D.at(-1), mx = ext(p.d, (x, y) => x > y), mn = ext(p.d, (x, y) => x < y), f = (v) => p.dec ? v.toFixed(1) + '°' : Math.round(v) + '%';
+    return `<div class="oc-h"><div class="oc-n">${p.name}</div>
+      <div class="oc-m"><b>${sg(le[p.d], p.dec, p.du)}</b><span>실내 <em>${f(le[p.i])}</em> · AWS <em>${f(le[p.o])}</em></span></div>
+      <dl class="oc-x"><div><dt>평균</dt><dd>${sg(avg(p.d), p.dec, p.du)}</dd></div><div><dt>최대</dt><dd>${sg(mx[p.d], p.dec, p.du)}</dd><dd class="w">${when(mx.ts)}</dd></div><div><dt>최소</dt><dd>${sg(mn[p.d], p.dec, p.du)}</dd><dd class="w">${when(mn.ts)}</dd></div></dl></div>`; };
+  el.innerHTML = `<div class="oc-g">${P.map((p, k) => `<div class="oc">${head(p)}<div class="oc-c" id="occ${k}"></div></div>`).join('')}</div>
+    <p class="oc-lg"><span><i class="ln"></i>실내</span><span><i class="ln o"></i>${OUT.name}</span><span><i class="sw"></i>사이 = 차이</span><span><i class="sun"></i>햇빛 든 시간</span></p>`;
+  const SUN = sunIn(D[0].ts, D.at(-1).ts);
+  P.forEach((p, k) => outChart($('#occ' + k), p, D, SUN, sg));
+}
+// 실내·AWS 두 선과 그 사이(차이)를 한 축에. 햇빛은 배경에 옅게만. 아래 얇은 띠 = 차이의 흐름
+// 햇빛 배경: 시간별 일사량을 가로 그라데이션 한 장으로 (줄무늬 없이 부드럽게)
+let sunBgN = 0;
+function sunBg(Hs, X, x0, x1, y, h, mx){
+  const S = Hs.filter(x => x.w != null).map(x => ({ o: (X((x.a + x.b) / 2) - x0) / (x1 - x0), a: Math.min(.17, x.w / mx * .17) })).filter(x => x.o > -.05 && x.o < 1.05);
+  if(!S.some(x => x.a > .01)) return '';
+  const id = 'sbg' + (++sunBgN), st = S.map(x => `<stop offset="${Math.max(0, Math.min(1, x.o)).toFixed(4)}" stop-color="var(--sun)" stop-opacity="${x.a.toFixed(3)}"/>`).join('');
+  return `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x0}" x2="${x1}" y1="0" y2="0">${st}</linearGradient></defs><rect x="${x0}" y="${y}" width="${x1 - x0}" height="${h}" fill="url(#${id})"/>`;
+}
+function outChart(el, P, D, SUN, sg){
+  const W = Math.max(280, el.clientWidth || 520), narrow = W < 420, m = { l: 34, r: 8 }, iw = W - m.l - m.r, t0 = D[0].ts, t1 = D.at(-1).ts, span = t1 - t0 || 1, X = ts => m.l + (ts - t0) / span * iw;
+  const y0 = 8, PH = narrow ? 150 : 170, RB = 22, ry = y0 + PH + 14, H = ry + RB + 22;
+  const all = D.flatMap(r => [r[P.i], r[P.o]]), mn = Math.min(...all), mx = Math.max(...all), sc = niceScale(mn - (mx - mn) * .04, mx + (mx - mn) * .04);
+  const Y = v => y0 + PH - (v - sc.lo) / (sc.hi - sc.lo) * PH;
   let g = '';
-  panels.forEach(P => {
-    const all = D.flatMap(r => [r[P.i], r[P.o]]), mn = Math.min(...all), mx = Math.max(...all), sc = niceScale(mn - (mx - mn) * .04, mx + (mx - mn) * .04);
-    P.Y = v => P.y + P.h - (v - sc.lo) / (sc.hi - sc.lo) * P.h;
-    (sc.ticks.length > 5 ? sc.ticks.filter((_, i) => i % 2 === 0) : sc.ticks).forEach(t => { const yy = P.Y(t); g += `<line class="gl" x1="${m.l}" x2="${m.l+iw}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
-    const gs = vGrad(P.cm, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi), 1), gf = vGrad(P.cm, sc.lo, sc.hi, P.Y(sc.lo), P.Y(sc.hi), .1); g += `<defs>${gs.def}${gf.def}</defs>`;
-    const li = D.map(r => [X(r.ts), P.Y(r[P.i])]), lo = D.map(r => [X(r.ts), P.Y(r[P.o])]);
-    g += `<path d="${smooth(li) + smooth(lo.slice().reverse(), false)}Z" fill="url(#${gf.id})"/>`;
-    g += `<path d="${smooth(lo)}" class="ov-o" stroke="url(#${gs.id})"/><path d="${smooth(li)}" class="ov-i" stroke="url(#${gs.id})"/>`;
-    // 오른쪽 여백: 마지막 두 값과 그 사이 괄호, 괄호 옆에 차이
-    const le = D.at(-1), yi = P.Y(le[P.i]), yo = P.Y(le[P.o]), bx = m.l + iw + 10, f = (v) => P.u === '°' ? v.toFixed(1) + '°' : Math.round(v) + '%';
-    const top = Math.min(yi, yo), bot = Math.max(yi, yo);
-    g += `<path d="M${bx},${top}h4V${bot}h-4" class="ov-b"/>`;
-    g += `<text class="ov-v" x="${bx + 9}" y="${yi + (yi < yo ? -4 : 12)}">${f(le[P.i])}</text><text class="ov-v o" x="${bx + 9}" y="${yo + (yo > yi ? 12 : -4)}">${f(le[P.o])}</text>`;
-    if(bot - top > 34) g += `<text class="ov-d" x="${bx + 9}" y="${(top + bot) / 2 + 4}">${sg(le[P.d], P.dec, P.u === '°' ? '°' : '%p')}</text>`;
-    g += `<g class="plab"><text x="${m.l-36}" y="${P.y-18}">${P.name}</text></g>`;
-    // 차이 띠 (기온 패널 아래에만): 차이가 클수록 높게, 0 기준
-    { const ry = P.y + P.h + 18, dv = D.map(r => r[P.d]), d0 = Math.min(...dv), d1 = Math.max(...dv), RY = v => ry + RB - (3 + (v - d0) / Math.max(d1 - d0, .1) * (RB - 3)), du = P.u === '°' ? '°' : '%p';
-      if(d0 < 0 && d1 > 0) g += `<line x1="${m.l}" x2="${m.l+iw}" y1="${RY(0)}" y2="${RY(0)}" class="od-zero"/>`;
-      // 차이의 오르내림이 보이도록 최소~최대 범위로 맞춤
-      g += `<path d="${smooth(D.map(r => [X(r.ts), RY(r[P.d])]))}L${X(t1)},${ry + RB}L${X(t0)},${ry + RB}Z" class="ov-rb"/><path d="${smooth(D.map(r => [X(r.ts), RY(r[P.d])]))}" class="ov-rbl"/><text class="ov-rl" x="${m.l-8}" y="${ry + RB - 4}" text-anchor="end">차이</text>`;
-      g += `<text class="ov-rl" x="${bx}" y="${ry + 8}">${sg(d1, P.dec, du)}</text><text class="ov-rl" x="${bx}" y="${ry + RB}">${sg(d0, P.dec, du)}</text>`; }
-  });
-  // 햇빛 패널: 집 위치 1시간 평균 일사량(W/㎡)을 막대로
-  if(SUN.length){
-    const mx = Math.max(100, ...SUN.map(h => h.w)), sc = niceScale(0, mx), Ys = v => sunY + SH - v / sc.hi * SH, yb = sunY + SH;
-    [0, sc.hi].forEach(t => { const yy = Ys(t); g += `<line class="gl" x1="${m.l}" x2="${m.l+iw}" y1="${yy}" y2="${yy}"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${t ? Math.round(t) : 0}</text>`; });
-    SUN.forEach(h => { if(!(h.w > .5)) return; const x0 = Math.max(m.l, X(h.a)), x1 = Math.min(m.l + iw, X(h.b)); if(x1 - x0 < .2) return;
-      const w = (x1 - x0) > 3 ? (x1 - x0) - 1 : x1 - x0, y = Ys(h.w); g += `<rect class="ov-sun" x="${x0.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${(yb - y).toFixed(1)}" rx="${w > 4 ? 1.5 : 0}"/>`; });
-    const today = sunDays(SUN).at(-1);
-    g += `<g class="plab"><text x="${m.l-36}" y="${sunY-18}">햇빛 · W/㎡</text></g>`;
-    if(today) g += `<text class="ov-v" x="${m.l + iw + 10}" y="${sunY + 12}">${today.kwh.toFixed(1)}</text><text class="ov-rl" x="${m.l + iw + 10}" y="${sunY + 26}">kWh/㎡</text><text class="ov-rl" x="${m.l + iw + 10}" y="${sunY + 40}">${md(kstMs(today.d))}${today.full ? '' : ' 진행'}</text>`;
-  }
-  const fmt = ts => span < 2*864e5 ? hhmm(ts) : span < 7*864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
-  const nt = W < 600 ? 3 : 6; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${H-6}" text-anchor="${i == 0 ? 'start' : i == nt ? 'end' : 'middle'}">${fmt(ts)}</text>`; }
-  g += `<text class="od-l" x="${m.l+iw}" y="22" text-anchor="end">굵은 선 실내 · 가는 선 ${OUT.name}${SUN.length && !narrow ? ' · 막대 일사량' : ''}</text>`;
-  g += `<g id="ocur" opacity="0"><line y1="24" y2="${H-24}" stroke="var(--ink)" stroke-opacity=".35"/><circle id="oc1" r="4" class="od-dot"/><circle id="oc2" r="4" class="od-dot"/><circle id="oc3" r="4" class="od-dot"/><circle id="oc4" r="4" class="od-dot"/></g><rect id="ohit" x="${m.l}" y="0" width="${iw}" height="${H-24}" fill="transparent"/>`;
+  // 햇빛: 그 시간 배경을 일사량에 비례해 옅게
+  g += sunBg(SUN, X, m.l, m.l + iw, y0, PH, Math.max(300, ...SUN.map(h => h.w)));
+  (sc.ticks.length > 5 ? sc.ticks.filter((_, i) => i % 2 === 0) : sc.ticks).forEach(t => { const yy = Y(t); g += `<line class="gl" x1="${m.l}" x2="${m.l + iw}" y1="${yy}" y2="${yy}"/><text x="${m.l - 6}" y="${yy + 4}" text-anchor="end">${tickLabel(t, sc.step)}${P.u}</text>`; });
+  const gs = vGrad(P.cm, sc.lo, sc.hi, Y(sc.lo), Y(sc.hi), 1), gf = vGrad(P.cm, sc.lo, sc.hi, Y(sc.lo), Y(sc.hi), .12); g += `<defs>${gs.def}${gf.def}</defs>`;
+  const li = D.map(r => [X(r.ts), Y(r[P.i])]), lo = D.map(r => [X(r.ts), Y(r[P.o])]);
+  g += `<path d="${smooth(li) + smooth(lo.slice().reverse(), false)}Z" fill="url(#${gf.id})"/>`;
+  g += `<path d="${smooth(lo)}" class="ov-o" stroke="url(#${gs.id})"/><path d="${smooth(li)}" class="ov-i" stroke="url(#${gs.id})"/>`;
+  const le = D.at(-1); g += `<circle cx="${X(le.ts)}" cy="${Y(le[P.i])}" r="3" class="od-dot"/><circle cx="${X(le.ts)}" cy="${Y(le[P.o])}" r="2.5" class="od-dot o"/>`;
+  // 차이 띠: 최소~최대 범위로 맞춰 오르내림이 보이게
+  const dv = D.map(r => r[P.d]), d0 = Math.min(...dv), d1 = Math.max(...dv), RY = v => ry + RB - (2 + (v - d0) / Math.max(d1 - d0, .1) * (RB - 2));
+  const rl = smooth(D.map(r => [X(r.ts), RY(r[P.d])]));
+  g += `<path d="${rl}L${X(t1)},${ry + RB}L${X(t0)},${ry + RB}Z" class="ov-rb"/><path d="${rl}" class="ov-rbl"/><text class="ov-rl" x="${m.l - 6}" y="${ry + RB - 4}" text-anchor="end">차이</text>`;
+  const fmt = ts => span < 2 * 864e5 ? hhmm(ts) : span < 7 * 864e5 ? `${md(ts)} ${new Date(ts).getHours()}시` : md(ts);
+  const nt = narrow ? 2 : 3; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${H - 4}" text-anchor="${i == 0 ? 'start' : i == nt ? 'end' : 'middle'}">${fmt(ts)}</text>`; }
+  g += `<g class="ocur" opacity="0"><line y1="${y0}" y2="${ry + RB}" stroke="var(--ink)" stroke-opacity=".35"/><circle r="4" class="od-dot"/><circle r="3.5" class="od-dot o"/></g><rect class="ohit" id="${el.id}hit" x="${m.l}" y="0" width="${iw}" height="${ry + RB}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
-  const svg = el.firstChild, cur = svg.querySelector('#ocur');
-  svg.querySelector('#ohit').onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
+  const svg = el.firstChild, cur = svg.querySelector('.ocur'), [c1, c2] = cur.querySelectorAll('circle'), hit = svg.querySelector('.ohit');
+  hit.onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
     let b = D[0]; for(const q of D) if(Math.abs(X(q.ts) - px) < Math.abs(X(b.ts) - px)) b = q;
     cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b.ts)); cur.firstChild.setAttribute('x2', X(b.ts));
-    [['#oc1', 0, 'it'], ['#oc2', 0, 'ot'], ['#oc3', 1, 'ih'], ['#oc4', 1, 'oh']].forEach(([id, pi, k]) => { const c = svg.querySelector(id); c.setAttribute('cx', X(b.ts)); c.setAttribute('cy', panels[pi].Y(b[k])); });
-    const sp = SUN.find(h => b.ts >= h.a && b.ts < h.b);
-    showTip(e, `<b>${when(b.ts)}</b><br>기온 실내 ${n1(b.it)}° · AWS ${n1(b.ot)}° <span style="opacity:.6">(${sg(b.dt, 1, '°')})</span><br>습도 실내 ${n0(b.ih)}% · AWS ${n0(b.oh)}% <span style="opacity:.6">(${sg(b.dh, 0, '%p')})</span>` + (sp ? `<br>일사량 ${Math.round(sp.w)} W/㎡` : '')); };
-  svg.querySelector('#ohit').onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); };
+    c1.setAttribute('cx', X(b.ts)); c1.setAttribute('cy', Y(b[P.i])); c2.setAttribute('cx', X(b.ts)); c2.setAttribute('cy', Y(b[P.o]));
+    const sp = SUN.find(h => b.ts >= h.a && b.ts < h.b), f = (v) => P.dec ? n1(v) + '°' : n0(v) + '%';
+    showTip(e, `<b>${when(b.ts)}</b><br>${P.name} 실내 ${f(b[P.i])} · AWS ${f(b[P.o])} <span style="opacity:.6">(${sg(b[P.d], P.dec, P.du)})</span>` + (sp && sp.w > 20 ? `<br>햇빛 ${Math.round(sp.w)} W/㎡` : '')); };
+  hit.onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); };
 }
 
 /* ---------- 햇빛: 집 위치 위성 일사량 (한국에너지기술연구원, 1시간 평균 W/㎡, hm = 그 1시간의 시작) ---------- */
@@ -1581,7 +1670,7 @@ function sunAnalysis(el){
     <span class="sd-bar" title="${r.kwh.toFixed(2)} kWh/㎡ · 최대 ${Math.round(r.peak)} W/㎡"><i style="width:${(r.kwh / mx * 100).toFixed(1)}%"></i></span>
     <span class="v n">${r.kwh.toFixed(1)}</span>
     <span class="v${r.rise == null ? ' f' : ''}">${r.rise == null ? '–' : sgn(r.rise)}</span><span class="v ${r.dMean == null || Math.abs(r.dMean) < .05 ? 'f' : r.dMean > 0 ? 'up' : 'dn'}">${sgn(r.dMean)}</span></div>`).join('');
-  el.innerHTML = `<h3>열 배터리</h3>` + thermoCard(true) + `<div id="tbDays" class="bd-wrap"></div><div id="tbChart" class="tb-chart"></div>`;
+  el.innerHTML = `<h3>열 배터리</h3><div class="tb-g"><div class="tb-l">${thermoCard(true)}<div id="tbChart" class="tb-chart"></div></div><div id="tbDays" class="bc-wrap"></div></div>`;
   loadThermo(); loadThermoRange(); batteryStrip($('#tbDays')); thermoChart($('#tbChart'));
 }
 
@@ -1715,13 +1804,13 @@ function thermoCard(big){
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.resid)}</em></span></div>
     ${bar}
     <div class="tb-sc"><span>0% · 평소 −2°</span><span style="left:50%">50% · 평소 ${n1(e)}°</span><span>100% · 평소 +2°</span></div>
-    <div class="tb-f"><span>지금 <b>${n1(T.tin)}°</b> <i>평소보다 ${sg(T.resid, '°', 1)}</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span>${todayUse != null ? `<span>난방 <b>${todayUse > 0 ? `오늘 ${todayUse} 사용` : '오늘 안 씀'}</b> <i>이번 달 ${monthUse}</i></span>` : ''}</div>`;
+    <div class="tb-f"><span>지금 <b>${n1(T.tin)}°</b> <i>평소보다 ${sg(T.resid, '°', 1)}</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span>${todayUse != null ? `<span>난방 <b>${todayUse > 0 ? `오늘 ${todayUse} 사용` : '오늘 안 씀'}</b> <i>이번 달 ${monthUse}</i></span>` : ''}</div></div>`;
 }
 // 14일 잔량 흐름 + 햇빛
 function thermoChart(el){
   const R = thermoR.H.length ? thermoR : null, H = R ? R.H : thermo.H; if(H.length < 6){ el.innerHTML = '<div class="empty">자료 모으는 중</div>'; return; }
   const HT = (R ? R.heat : []).filter(x => x && x.room), hasHeat = true;
-  const W = Math.max(320, el.clientWidth || 1112), m = { l: 44, r: 8 }, iw = W - m.l - m.r, y0 = 28, h = 150, sy = y0 + h + 16, sh = 30, hy = sy + sh + (hasHeat ? 10 : 0), hhgt = hasHeat ? 8 : 0, dy = hy + hhgt + 16, dh = 44, Hh = dy + dh + 24;
+  const W = Math.max(320, el.clientWidth || 1112), m = { l: 44, r: 8 }, iw = W - m.l - m.r, y0 = 26, h = W < 600 ? 150 : 180, hy = y0 + h + 16, hhgt = hasHeat ? 6 : 0, Hh = hy + hhgt + 24;
   // 시각별 잔량 = 그때까지 24시간 평균 실내가 '그때 바깥(5일 평균)의 평소'보다 얼마나 높은지
   if(!thermo.M){ el.innerHTML = '<div class="empty">집과 바깥의 관계를 재는 중 (기록이 14일 이상 필요)</div>'; return; }
   const o5 = (t) => { const v = H.filter(q => q.ts > t - 5 * 864e5 && q.ts <= t).map(q => q.tout); const d = kstDate(t); return v.length >= 72 ? v.reduce((a, b) => a + b, 0) / v.length : out5(thermo.dout, d); };
@@ -1736,23 +1825,12 @@ function thermoChart(el){
   const gd = vGrad('temp', 22 + vmin * 4, 22 + vmax * 4, Y(vmin), Y(vmax), .3, true); g += `<defs>${gd.def}</defs>`;
   const raw = smooth(pts.map(p => [X(p.ts), Y(p.raw)])), avg = smooth(pts.map(p => [X(p.ts), Y(p.v)]));
   g += `<path d="${avg}L${X(t1)},${Y(vmin)}L${X(t0)},${Y(vmin)}Z" fill="url(#${gd.id})"/><path d="${raw}" class="tb-raw"/><path d="${avg}" class="od-line"/>`;
-  g += `<g class="plab"><text x="${m.l - 36}" y="${y0 - 12}">잔량 (24시간 평균)</text></g><text class="od-l" x="${m.l + iw}" y="${y0 - 12}" text-anchor="end">점선 = 평소(50%)</text>`;
-  const Hs = solarHours().filter(x => x.b > t0 && x.a < t1), mx = Math.max(300, ...Hs.map(x => x.w));
-  Hs.forEach(x => { const a = X(Math.max(t0, x.a)), b = X(Math.min(t1, x.b)), hh = x.w / mx * sh; if(hh > .5) g += `<rect x="${a}" y="${sy + sh - hh}" width="${Math.max(.8, b - a - .4)}" height="${hh}" class="ov-sun"/>`; });
-  g += `<text class="ov-rl" x="${m.l - 8}" y="${sy + sh - 2}" text-anchor="end">햇빛</text>`;
-  // 날짜별 충전·방전: 그날 평균 잔량이 전날보다 얼마나 변했나
-  const dd = {}; all.forEach(p => { const d = kstDate(p.ts); (dd[d] = dd[d] || []).push(p.raw); });
-  const today = kstDate(Date.now());
-  const DL = Object.keys(dd).sort().filter(d => dd[d].length >= (d === today ? 3 : 18)).map(d => ({ d, v: dd[d].reduce((a, b) => a + b, 0) / dd[d].length }));
-  const mid = dy + dh / 2, dm = Math.max(.1, ...DL.slice(1).map((r, i) => Math.abs(r.v - DL[i].v)));
-  g += `<line x1="${m.l}" x2="${m.l + iw}" y1="${mid}" y2="${mid}" class="gl"/><text class="ov-rl" x="${m.l - 8}" y="${mid + 4}" text-anchor="end">하루</text>`;
-  const inR = (d) => kstMs(d) + 864e5 > t0 && kstMs(d) < t1, span = t1 - t0, BDm = Object.fromEntries(batteryDays().map(r => [r.d, r]));
-  DL.forEach((r, i) => { if(!i || !inR(r.d)) return; const dv = r.v - DL[i - 1].v, x = span < 2.5 * 864e5 ? X(Math.min(t1, Math.max(t0, kstMs(r.d) + 432e5))) : X(kstMs(r.d) + 432e5), hh = Math.abs(dv) / dm * (dh / 2 - 4), bw = Math.min(14, iw / DL.length * .45);
-    if(x < m.l || x > m.l + iw) return;
-    const bdd = BDm[r.d], hs = dv > .01 && bdd ? Math.min(1, bdd.heatGain / Math.max(dv, .001)) : 0;
-    if(dv > .01 && hs > 0 && hs < 1){ const hh2 = hh * hs; g += `<rect x="${x - bw / 2}" y="${mid - hh}" width="${bw}" height="${hh2}" class="tb-ht"/><rect x="${x - bw / 2}" y="${mid - hh + hh2}" width="${bw}" height="${hh - hh2}" class="tb-up"><title>${md(kstMs(r.d))} 햇빛 +${Math.round(bdd.sunGain * 100)}%p · 난방 +${Math.round(bdd.heatGain * 100)}%p</title></rect>`; }
-    else g += `<rect x="${x - bw / 2}" y="${dv >= 0 ? mid - hh : mid}" width="${bw}" height="${Math.max(1, hh)}" rx="2" class="${dv < -.01 ? 'tb-dn' : hs >= 1 ? 'tb-ht' : 'tb-up'}"><title>${md(kstMs(r.d))} ${dv >= 0 ? '+' : '−'}${Math.abs(Math.round(dv * 100))}%p</title></rect>`;
-    if(W >= 600 || span < 8 * 864e5) g += `<text class="tb-dl" x="${x}" y="${dv >= 0 ? mid - hh - 3 : mid + hh + 10}" text-anchor="middle">${dv >= 0 ? '+' : '−'}${Math.abs(Math.round(dv * 100))}${span < 2.5 * 864e5 ? `%p ${r.d === today ? '오늘' : md(kstMs(r.d))}` : ''}</text>`; });
+  g += `<g class="plab"><text x="${m.l - 36}" y="${y0 - 12}">잔량 흐름</text></g><text class="od-l" x="${m.l + iw}" y="${y0 - 12}" text-anchor="end">${W < 600 ? '점선 50% · 노란 바탕 햇빛' : '점선 = 평소(50%) · 노란 바탕 = 햇빛 · 아래 빨강 = 난방'}</text>`;
+  // 햇빛은 배경에 옅게 (따로 막대 없이), 날짜 경계는 점선
+  const today = kstDate(Date.now()), span = t1 - t0, Hs = solarHours().filter(x => x.b > t0 && x.a < t1), mx = Math.max(300, ...Hs.map(x => x.w));
+  let bg = sunBg(Hs, X, m.l, m.l + iw, y0, h, mx);
+  if(span > 864e5 * 1.2 && span < 864e5 * 16) for(let d = kstMs(kstDate(t0)) + 864e5; d < t1; d += 864e5) bg += `<line class="tb-day" x1="${X(d)}" x2="${X(d)}" y1="${y0}" y2="${y0 + h}"/>`;
+  g = bg + g;
   // 침실1 난방이 돌던 시간 (시간 단위). 진하게 = HT로 확실 또는 '경계'인데 센서 신호도 있음, 옅게 = HT 기록 없는 시간의 센서 추정
   { const HS = HT.filter(x => x.room === '침실1').sort((x, y) => x.ts - y.ts), htAt = (ts) => { let best = null; for(const x of HS){ if(Math.abs(x.ts - ts) <= 45 * 60e3 && (!best || Math.abs(x.ts - ts) < Math.abs(best.ts - ts))) best = x; } return best; };
     for(let i = 1; i < H.length; i++){ const q = H[i]; if(q.ts < t0 || q.ts > t1) continue; const sig = heatSignal(H[i - 1], q, sunAt(q.ts)), st = heatState(htAt(q.ts));
@@ -1798,13 +1876,19 @@ function batteryDays(){
 }
 function batteryStrip(el){
   const D = batteryDays(); if(D.length < 2){ el.innerHTML = ''; return; }
-  const today = kstDate(Date.now()), dmax = Math.max(.1, ...D.map(r => Math.abs(r.dS || 0))), cols = D.map(r => { const f = Math.max(0, Math.min(1, r.soc)), k = (v) => (Math.min(1, v / dmax) * 100).toFixed(0);
-    const dv = r.dS == null ? '' : `${r.dS >= 0 ? '+' : '−'}${Math.abs(Math.round(r.dS * 100))}`;
-    return `<div class="bd ${r.src || ''}${r.d === today ? ' now' : ''}" style="--bc:${specColor('temp', r.tin)}" title="${md(kstMs(r.d))} · 잔량 ${Math.round(r.soc * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°)${r.dS == null ? '' : ` · ${dv}%p`}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.dS > .01 ? ` · 햇빛·생활열 +${Math.round(r.sunGain * 100)}%p${r.heatGain > .01 ? ` · 난방 +${Math.round(r.heatGain * 100)}%p` : ''}` : ''}${r.use != null ? ` · 난방 사용량 ${r.use}` : ''}">
-      <span class="bd-c${r.soc > 1 ? ' over' : ''}"><i style="height:${(f * 100).toFixed(0)}%"></i><s style="bottom:50%"></s></span>
-      <span class="bd-d">${r.dS == null ? '' : r.dS > .01 ? `<i class="s" style="height:${k(r.sunGain)}%"></i><i class="h" style="height:${k(r.heatGain)}%"></i>` : `<i class="n" style="height:${k(-r.dS)}%"></i>`}</span><em>${dv}</em><b>${+r.d.slice(8) === 1 || r === D[0] ? md(kstMs(r.d)) : +r.d.slice(8)}</b></div>`; }).join('');
-  el.innerHTML = `<div class="bd-h"><span>날짜별 잔량</span><span class="bd-lg"><i class="sun"></i>햇빛·생활열 충전 <i class="heat"></i>난방 충전 (HT 에너지 사용량 있는 날) <i class="down"></i>방전</span></div><div class="bd-row">${cols}</div>`;
-  const row = el.querySelector('.bd-row'); if(row) row.scrollLeft = row.scrollWidth;
+  // 달력: 월요일 시작 7칸. 칸 채움 = 그날 잔량, 칸 아래 막대 = 그날 변화(햇빛·생활열 노랑 / 난방 빨강 / 방전 회색)
+  const today = kstDate(Date.now()), dmax = Math.max(.1, ...D.map(r => Math.abs(r.dS || 0))), wd = (d) => (new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7;
+  const pc = (v) => (Math.min(1, Math.abs(v) / dmax) * 100).toFixed(0);
+  const cell = (r) => { const f = Math.max(0, Math.min(1, r.soc)), dv = r.dS == null ? '' : `${r.dS >= 0 ? '+' : '−'}${Math.abs(Math.round(r.dS * 100))}`, day = +r.d.slice(8);
+    const bar = r.dS == null ? '' : r.dS > .01 ? `<i class="s" style="width:${pc(r.sunGain)}%"></i><i class="h" style="width:${pc(r.heatGain)}%"></i>` : r.dS < -.01 ? `<i class="n" style="width:${pc(r.dS)}%"></i>` : '';
+    const tip = `${md(kstMs(r.d))} · 잔량 ${Math.round(r.soc * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°)${r.dS == null ? '' : ` · 하루 ${dv}%p`}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.dS > .01 ? ` · 햇빛·생활열 +${Math.round(r.sunGain * 100)}%p${r.heatGain > .01 ? ` · 난방 +${Math.round(r.heatGain * 100)}%p` : ''}` : ''}${r.use != null ? ` · 난방 사용량 ${r.use}` : ''}`;
+    return `<div class="bc ${r.src || ''}${r.d === today ? ' now' : ''}${r.soc > 1 ? ' over' : ''}" style="--bc:${specColor('temp', r.tin)}" title="${tip}">
+      <u style="height:${(f * 100).toFixed(0)}%"></u><b>${day === 1 ? (+r.d.slice(5, 7)) + '월' : day}</b><em>${dv}</em><span class="bc-d">${bar}</span></div>`; };
+  const pad = Array.from({ length: wd(D[0].d) }, () => '<div class="bc nil"></div>').join('');
+  el.innerHTML = `<div class="bc-h"><span>날짜별 잔량</span><span class="bc-r">${md(kstMs(D[0].d))} – 오늘</span></div>
+    <div class="bc-w">${'월화수목금토일'.split('').map(x => `<span>${x}</span>`).join('')}</div>
+    <div class="bc-g">${pad}${D.map(cell).join('')}</div>
+    <p class="bc-lg"><span><i class="sun"></i>햇빛·생활열</span><span><i class="heat"></i>난방</span><span><i class="down"></i>방전</span><span class="f">채움 = 잔량 · 아래 막대 = 그날 변화</span></p>`;
 }
 
 /* ---------- 하루 패턴 ---------- */
