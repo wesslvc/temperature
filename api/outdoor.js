@@ -1,4 +1,5 @@
 import { rpc } from './_db.js';
+import { SDOT_SERIAL, sdotLatest, sdotPage, storeSun } from './_sdot.js';
 // 기상청 AWS 매분자료 (기본: 강동 402). 키는 서버 환경변수에만 둔다.
 // /api/outdoor?from=&to=      → DB에 쌓인 자료 (구간 길이에 따라 1·10·60분 평균)
 // /api/outdoor?backfill=YYYY-MM-DD (Bearer INGEST_TOKEN) → 그 날 1분 자료를 DB에 저장
@@ -50,6 +51,31 @@ export async function storeOutdoor(t0, t1) {
 }
 
 export default async function handler(req, res) {
+  // 집 앞 S-DoT 조도(햇빛) 구간 조회: /api/outdoor?sun=1&from=&to=  (1시간 자료, 함수 개수 제한 때문에 이 파일에 둠)
+  if (req.query.sun) {
+    try {
+      const now = Date.now(), from = Number(req.query.from) || now - 7 * 864e5, to = Math.min(Number(req.query.to) || now, now);
+      const rows = await rpc('roomtemp_sun_series', { p_from: new Date(from).toISOString(), p_to: new Date(to).toISOString() });
+      res.setHeader('Cache-Control', to < now - 36e5 ? 's-maxage=3600' : 's-maxage=300, stale-while-revalidate=600');
+      return res.json({ serial: SDOT_SERIAL(), name: 'S-DoT 고덕로 360', series: (rows || []).map((r) => ({ ts: Number(r.ts), illu: r.illu == null ? null : Number(r.illu), illuMax: r.illu_max == null ? null : Number(r.illu_max), uv: r.uv == null ? null : Number(r.uv) })) });
+    } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
+  }
+  // S-DoT 관리용 (Bearer INGEST_TOKEN): ?sdot=now → 지금 받아 저장, ?sdot=probe → 과거 자료를 주는 서비스 탐색
+  if (req.query.sdot) {
+    const given = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!process.env.INGEST_TOKEN || given !== process.env.INGEST_TOKEN) return res.status(401).json({ error: 'unauthorized' });
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      if (req.query.sdot === 'now') { const L = await sdotLatest(Number(req.query.pages) || 4); return res.json({ ...L, stored: await storeSun(L.rows) }); }
+      if (req.query.sdot === 'probe') {
+        const svc = String(req.query.svc || 'sDoTEnv'), extra = String(req.query.extra || '');
+        const p = await sdotPage(svc, Number(req.query.a) || 1, Number(req.query.b) || 5, extra);
+        const mine = p.rows.filter((r) => JSON.stringify(r).toUpperCase().includes(SDOT_SERIAL()));
+        return res.json({ svc, extra, code: p.code, message: p.message, total: p.total, n: p.rows.length, keys: p.rows[0] ? Object.keys(p.rows[0]) : [], first: p.rows[0] || null, last: p.rows.at(-1) || null, mine: mine.length, mineTimes: mine.map((r) => r.SENSING_TIME).slice(0, 50) });
+      }
+      return res.status(400).json({ error: 'sdot=now|probe' });
+    } catch (e) { return res.status(502).json({ error: e.message }); }
+  }
   // DB 구간 조회
   if (req.query.from) {
     try {

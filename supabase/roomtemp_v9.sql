@@ -1,0 +1,5 @@
+-- 집 앞 S-DoT 조도(햇빛) 1시간 자료 (적용된 마이그레이션 roomtemp_sun_sdot 의 요약)
+-- roomtemp.sun(ts pk, serial, illu_min/avg/max lx, uv_min/avg/max, temp, hum, data_no)
+-- public.roomtemp_sun_ingest(p_token, p_rows jsonb)  : ingest_token 확인 후 upsert (data_no 큰 값=지연 보정 최종값 우선)
+-- public.roomtemp_sun_series(p_from, p_to)           : ts(ms), illu(평균), illu_max, uv(평균)
+-- 수집: api/collect.js(pg_cron 30분마다)가 서울 열린데이터광장 sDoTEnv 를 조회해 저장 (api/_sdot.js)
