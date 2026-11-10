@@ -1554,7 +1554,8 @@ async function loadThermo(){
   const di = {}; (st && st.daily || []).forEach(r => { if(r.temp != null) di[r.d] = r.temp; });
   const dg = {}; (oa && oa.series || OS).forEach(p => { const d = kstDate(p.ts); (dg[d] = dg[d] || []).push(p.temp); });
   const dout = {}; Object.keys(dg).forEach(d => { if(dg[d].length >= 18) dout[d] = dg[d].reduce((x, y) => x + y, 0) / dg[d].length; });
-  thermo = { key, H, n: ks.length, k: ks.length >= 8 ? ks[Math.floor(ks.length / 2)] : null, di, dout, M: fitHouse(di, dout) };
+  const hn = await get(`/api/outdoor?heat=1&from=${b - 2 * 36e5}&to=${b}`).catch(() => null), hl = (hn && hn.series || []).filter(x => x.room === '침실1').at(-1) || null;
+  thermo = { key, H, n: ks.length, k: ks.length >= 8 ? ks[Math.floor(ks.length / 2)] : null, di, dout, M: fitHouse(di, dout), heat: hl };
   renderAll();
 }
 // 선택한 기간에 맞춘 배터리 그래프용 자료 (앞쪽 6일은 24시간·5일 평균 계산용 여유)
@@ -1626,7 +1627,7 @@ function thermoCard(big){
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.resid)}</em></span></div>
     ${bar}
     <div class="tb-sc"><span>0%</span><span style="left:${50 / 1.5}%">평소 ${n1(e)}°</span><span style="left:${100 / 1.5}%">100%</span><span>150%</span></div>
-    <div class="tb-f"><span>지금 <b>${n1(T.tin)}°</b> <i>평소보다 ${sg(T.resid, '°', 1)}</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span></div>
+    <div class="tb-f"><span>지금 <b>${n1(T.tin)}°</b> <i>평소보다 ${sg(T.resid, '°', 1)}</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span>${thermo.heat ? `<span>난방 <b>${!thermo.heat.power ? '꺼짐' : thermo.heat.cur_t < thermo.heat.set_t ? '가동 중' : '대기'}</b> <i>설정 ${n1(thermo.heat.set_t)}°</i></span>` : ''}</div>
   </div>`;
 }
 // 14일 잔량 흐름 + 햇빛
@@ -1663,9 +1664,9 @@ function thermoChart(el){
     if(x < m.l || x > m.l + iw) return;
     g += `<rect x="${x - bw / 2}" y="${dv >= 0 ? mid - hh : mid}" width="${bw}" height="${Math.max(1, hh)}" rx="2" class="${dv >= 0 ? 'tb-up' : 'tb-dn'}"><title>${md(kstMs(r.d))} ${dv >= 0 ? '+' : '−'}${Math.abs(Math.round(dv * 100))}%p</title></rect>`;
     if(W >= 600 || span < 8 * 864e5) g += `<text class="tb-dl" x="${x}" y="${dv >= 0 ? mid - hh - 3 : mid + hh + 10}" text-anchor="middle">${dv >= 0 ? '+' : '−'}${Math.abs(Math.round(dv * 100))}${span < 2.5 * 864e5 ? `%p ${r.d === today ? '오늘' : md(kstMs(r.d))}` : ''}</text>`; });
-  // 난방이 돌던 시간 (방 하나라도 현재 온도 < 설정 온도)
+  // 침실1 난방이 돌던 시간 (켜져 있고 현재 온도 < 설정 온도)
   if(hasHeat){ const by = {}; HT.forEach(x => { (by[x.ts] = by[x.ts] || []).push(x); }); const ks = Object.keys(by).map(Number).sort((a, b) => a - b);
-    ks.forEach((k, i) => { const call = by[k].some(x => x.power && x.cur_t != null && x.set_t != null && x.cur_t < x.set_t); if(!call) return; const a = X(Math.max(t0, k)), b = X(Math.min(t1, ks[i + 1] || k + 18e5)); if(b > a) g += `<rect x="${a}" y="${hy}" width="${b - a}" height="${hhgt}" rx="2" class="tb-heat"/>`; });
+    ks.forEach((k, i) => { const call = by[k].some(x => x.room === '침실1' && x.power && x.cur_t != null && x.set_t != null && x.cur_t < x.set_t); if(!call) return; const a = X(Math.max(t0, k)), b = X(Math.min(t1, ks[i + 1] || k + 18e5)); if(b > a) g += `<rect x="${a}" y="${hy}" width="${b - a}" height="${hhgt}" rx="2" class="tb-heat"/>`; });
     g += `<text class="ov-rl" x="${m.l - 8}" y="${hy + hhgt}" text-anchor="end">난방</text>`; }
   // 시간축: 이틀 안이면 시각, 아니면 날짜
   const fmtT = (ts) => span < 2.5 * 864e5 ? hhmm(ts) : md(ts), nt = W < 600 ? 3 : 6; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${Hh - 6}" text-anchor="${i === 0 ? 'start' : i === nt ? 'end' : 'middle'}">${fmtT(ts)}</text>`; }

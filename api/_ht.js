@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 import { rpc } from './_db.js';
-// HT 홈서비스(현대HT 월패드)에서 방별 난방 상태를 읽는다. 읽기만 하고 조작하지 않는다.
+// HT 홈서비스(현대HT 월패드)에서 침실1 난방 상태를 읽는다. 읽기만 하고 조작하지 않는다.
 // 계정: 환경변수 HT_ID / HT_PW (코드·저장소에 넣지 않음), 세대: HT_HOUSE = 'siteId/동/호'
 // 로그인 흐름(웹앱과 같음): /login (아이디·비밀번호를 웹앱과 같은 방식으로 암호화) → /getctoctoken → /proxy/ctoc/heaters/{id}
 const B = 'https://www2.hthomeservice.com', PASS = 'hTsEcret';
-const ROOMS = { '012411': '거실', '012412': '안방', '012413': '침실1', '012414': '침실2' };
+// 침실1(센서가 있는 방)만 본다. 바꾸려면 HT_ROOM=기기ID (거실 012411, 안방 012412, 침실1 012413, 침실2 012414)
+const ROOMS = { [process.env.HT_ROOM || '012413']: '침실1' };
 
 // 웹앱의 CryptoJS.AES.encrypt(text, PASS)와 같은 형식 (OpenSSL Salted__ + MD5 키 유도, AES-256-CBC)
 function enc(text) {
@@ -29,7 +30,7 @@ async function session() {
   return req;
 }
 
-// 지금 방별 난방 상태: [{ ts, room, power, mode, set_t, cur_t }]
+// 지금 난방 상태: [{ ts, room, power, mode, set_t, cur_t }]
 export async function heatNow() {
   const req = await session(); if (!req) return null;
   const ts = Date.now(), out = [];
