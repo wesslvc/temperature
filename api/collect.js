@@ -2,12 +2,17 @@ import { rpc } from './_db.js';
 import { cfgGet, readSensor } from './_st.js';
 import { resetTuya, sharedTuya } from './_tuya.js';
 import { storeOutdoor } from './outdoor.js';
-import { heatFill } from './_ht.js';
+import { heatFill, heatUseWatch } from './_ht.js';
 import { ghiFill } from './_ghi.js';
 
 // 바깥(기상청 AWS) 최근 2시간을 함께 저장. 실패해도 실내 수집에는 영향 없음
 // 방별 난방 상태(HT 홈서비스). 계정이 없거나 실패해도 실내 수집에는 영향 없음
-const heatSave = () => heatFill().catch((e) => { console.error('heating', e.message); return null; });
+// 침실1 난방 상태를 저장하고, 난방이 의심되면 HT 에너지 사용량도 확인해 DB에 넣는다
+const heatSave = async () => {
+  const h = await heatFill().catch((e) => { console.error('heating', e.message); return null; });
+  const use = await heatUseWatch(h && h.rows && h.rows[0]).catch((e) => { console.error('heatuse', e.message); return null; });
+  return h || use ? { rooms: h && h.rooms, stored: h && h.stored, use } : null;
+};
 const outdoorFill = () => storeOutdoor(Date.now() - 2 * 36e5, Date.now()).catch((e) => { console.error('outdoor', e.message); return null; });
 // 집 위치 위성 일사량(햇빛): 정시 호출 때만. 서비스가 최근 약 12일치만 주므로 꾸준히 쌓아 둔다. 실패해도 실내 수집에는 영향 없음
 const sunFillSafe = () => ghiFill().catch((e) => { console.error('ghi', e.message); return null; });

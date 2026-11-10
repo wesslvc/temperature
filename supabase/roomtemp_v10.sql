@@ -1,0 +1,6 @@
+-- 날짜별 난방 사용량 (HT 에너지 화면 값, 적용된 마이그레이션 roomtemp_heat_use 의 요약)
+-- roomtemp.heat_use(d date pk, v numeric, at timestamptz = 마지막 확인 시각, why text = 확인한 이유)
+-- public.roomtemp_heatuse_ingest(p_token, p_rows jsonb [{d, v}], p_why) : ingest_token 확인 후 upsert (at 은 늘 갱신)
+-- public.roomtemp_heatuse_series() : d, v, at(ms), why
+-- 수집(api/collect.js, 30분마다): 센서로 난방이 의심되면 1시간에 한 번, 아니면 6시간에 한 번 이번 달 값을 받아 넣는다.
+--   안 뜨던 사용량(0 → 양수)이 새로 뜨면 올해 1월부터 전부 다시 받아 넣는다

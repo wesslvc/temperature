@@ -53,6 +53,14 @@ export async function storeOutdoor(t0, t1) {
 
 export default async function handler(req, res) {
   // 날짜별 난방 사용량(HT 에너지, 단지 계량기): /api/outdoor?heatuse=YYYY-MM
+  // DB에 쌓인 날짜별 사용량 전체 (수집이 난방 의심 때·6시간마다 넣음): /api/outdoor?heatuse=db
+  if (req.query.heatuse === 'db') {
+    try {
+      const rows = (await rpc('roomtemp_heatuse_series')) || [];
+      res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=900');
+      return res.json({ rows: rows.map((r) => ({ d: String(r.d).slice(0, 10), v: Number(r.v), at: Number(r.at), why: r.why })) });
+    } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
+  }
   if (req.query.heatuse) {
     const m = String(req.query.heatuse); if (!/^\d{4}-\d{2}$/.test(m)) return res.status(400).json({ error: 'heatuse=YYYY-MM' });
     try {
