@@ -1627,7 +1627,7 @@ function thermoCard(big){
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.resid)}</em></span></div>
     ${bar}
     <div class="tb-sc"><span>0%</span><span style="left:${50 / 1.5}%">평소 ${n1(e)}°</span><span style="left:${100 / 1.5}%">100%</span><span>150%</span></div>
-    <div class="tb-f"><span>지금 <b>${n1(T.tin)}°</b> <i>평소보다 ${sg(T.resid, '°', 1)}</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span>${thermo.heat ? `<span>난방 <b>${!thermo.heat.power ? '꺼짐' : thermo.heat.cur_t < thermo.heat.set_t ? '가동 중' : '대기'}</b> <i>설정 ${n1(thermo.heat.set_t)}°</i></span>` : ''}</div>
+    <div class="tb-f"><span>지금 <b>${n1(T.tin)}°</b> <i>평소보다 ${sg(T.resid, '°', 1)}</i></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>3일 햇빛 <b>${sunPct == null ? '–' : sunPct + '%'}</b> <i>평소 대비</i></span>${thermo.heat ? `<span>난방 <b>${!thermo.heat.power ? '꺼짐' : thermo.heat.cur_t < thermo.heat.set_t ? '가동 중' : '대기'}</b> <i>설정 ${Number.isInteger(thermo.heat.set_t) ? thermo.heat.set_t : n1(thermo.heat.set_t)}° · 월패드 ${Number.isInteger(thermo.heat.cur_t) ? thermo.heat.cur_t : n1(thermo.heat.cur_t)}°</i></span>` : ''}</div>
   </div>`;
 }
 // 14일 잔량 흐름 + 햇빛
