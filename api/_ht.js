@@ -45,3 +45,12 @@ export async function heatFill() {
   const rows = await heatNow(); if (!rows || !rows.length) return null;
   return { rooms: rows.length, stored: await rpc('roomtemp_heat_ingest', { p_token: process.env.INGEST_TOKEN, p_rows: rows }) };
 }
+
+// 그 달의 날짜별 난방 사용량 (HT 에너지 화면과 같은 값, 단지 계량기 기준). month = 'YYYY-MM' → { start, usage: [1일, 2일, ...] }
+export async function heatUsageMonth(month) {
+  const req = await session(); if (!req) return null;
+  const r = await req(`/proxy/ctoc/ems/usage/history?energyType=HEATING&period=MONTH&date=${month}-10`);
+  if (!r.ok) throw new Error('HT 에너지 ' + r.status);
+  const d = (await r.json()).data?.usageList?.[0];
+  return d ? { start: d.startDate, usage: (d.usage || []).map(Number) } : null;
+}
