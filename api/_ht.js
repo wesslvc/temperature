@@ -47,8 +47,8 @@ export async function heatFill() {
 }
 
 // 그 달의 날짜별 난방 사용량 (HT 에너지 화면과 같은 값, 단지 계량기 기준). month = 'YYYY-MM' → { start, usage: [1일, 2일, ...] }
-export async function heatUsageMonth(month) {
-  const req = await session(); if (!req) return null;
+export async function heatUsageMonth(month, sess) {
+  const req = sess || await session(); if (!req) return null;
   const r = await req(`/proxy/ctoc/ems/usage/history?energyType=HEATING&period=MONTH&date=${month}-10`);
   if (!r.ok) throw new Error('HT 에너지 ' + r.status);
   const d = (await r.json()).data?.usageList?.[0];
@@ -81,7 +81,8 @@ export async function heatUseWatch(heater) {
   const map = Object.fromEntries(have.map((r) => [String(r.d).slice(0, 10), Number(r.v)])), last = Math.max(0, ...have.map((r) => Number(r.at)));
   const why = await suspect(now, heater), gap = now - last;
   if (!(have.length === 0 || (why.length && gap > 55 * 60e3) || gap > 6 * 36e5)) return { checked: false, why };
-  const pull = async (m) => { const u = await heatUsageMonth(m); return !u ? [] : u.usage.map((v, i) => ({ d: `${m}-${String(i + 1).padStart(2, '0')}`, v })).filter((x) => x.d <= today); };
+  const sess = await session(); if (!sess) return null; // 로그인은 한 번만
+  const pull = async (m) => { const u = await heatUsageMonth(m, sess); return !u ? [] : u.usage.map((v, i) => ({ d: `${m}-${String(i + 1).padStart(2, '0')}`, v })).filter((x) => x.d <= today); };
   const cur = today.slice(0, 7), ms = [cur]; if (+today.slice(8) <= 3) ms.unshift(addM(cur, -1));
   let rows = (await Promise.all(ms.map(pull))).flat();
   const fresh = rows.filter((x) => x.v > 0 && !(map[x.d] > 0));
