@@ -748,6 +748,30 @@ svg .ov-sun{fill:var(--sun);fill-opacity:.55}
 .sd-bar i{border-radius:3px!important;background:linear-gradient(90deg,color-mix(in srgb,var(--sun) 35%,transparent),var(--sun))!important;opacity:.8}
 .bh-s{opacity:.9}
 @media(max-width:560px){.bat-row{align-items:stretch!important}.bat-h{flex-wrap:wrap}.bat-m{width:100%;margin-bottom:0}.bat-body{height:22px!important}.bat-v{width:100%}}
+
+/* ---------- 열 배터리 카드 ---------- */
+.thermo{margin-top:40px}
+.tb{cursor:pointer;padding:18px 0 4px;border-top:1px solid var(--rule)}
+.tb.big{cursor:default;border-top:none;padding-top:6px}
+.tb-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.tb-t{font-size:24px;font-weight:750;letter-spacing:-.035em}
+.tb.big .tb-t{display:none}
+.tb-s{font-size:12.5px;font-weight:600;color:var(--sub)}
+.tb-s i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--faint)}
+.tb.chg .tb-s i{background:var(--ok)}.tb.dis .tb-s i{background:var(--hot)}
+.tb-m{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-top:14px}
+.tb-m b{font-size:44px;font-weight:750;letter-spacing:-.045em;line-height:1}
+.tb-m span{font-size:13px;color:var(--faint)}
+.tb-bar{display:grid;grid-template-columns:repeat(12,1fr) auto;gap:3px;align-items:center;margin-top:16px}
+.tb-bar i{height:10px;border-radius:3px;background:var(--sunk)}
+.tb-bar i.on{background:var(--tc);opacity:.9}
+.tb-bar em{font-style:normal;font-size:12px;font-weight:650;color:var(--sub);margin-left:8px;min-width:36px;text-align:right}
+.tb-f{display:flex;gap:6px 24px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--faint)}
+.tb-f b{color:var(--sub);font-weight:650;margin-left:3px}
+.tb-n{margin-top:12px;font-size:12px;line-height:1.6;color:var(--faint)}
+.tb-chart{margin-top:26px}
+.tb:not(.big):hover .tb-t{text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--rule)}
+@media(max-width:560px){.tb-t{font-size:22px}.tb-m b{font-size:38px}.tb-m{gap:4px 10px}}
 </style>
 </head>
 <body>
@@ -781,6 +805,7 @@ svg .ov-sun{fill:var(--sun);fill-opacity:.55}
       <div id="scatter"></div>
       <div id="rates"></div>
     </div>
+    <div class="thermo" id="thermo"></div>
   </section>
 
   <nav class="secnav" id="secTabs">
@@ -1452,8 +1477,87 @@ function sunAnalysis(el){
     <span class="sd-bar" title="${r.kwh.toFixed(2)} kWh/㎡ · 최대 ${Math.round(r.peak)} W/㎡"><i style="width:${(r.kwh / mx * 100).toFixed(1)}%"></i></span>
     <span class="v n">${r.kwh.toFixed(1)}</span>
     <span class="v${r.rise == null ? ' f' : ''}">${r.rise == null ? '–' : sgn(r.rise)}</span><span class="v ${r.dMean == null || Math.abs(r.dMean) < .05 ? 'f' : r.dMean > 0 ? 'up' : 'dn'}">${sgn(r.dMean)}</span></div>`).join('');
-  el.innerHTML = `<h3>열 배터리</h3><p class="cap">벽·바닥·가구가 품은 열을 배터리처럼 봐요. 바깥이 쾌적보다 추운 철엔 따뜻함이 잔량(열 배터리), 더운 철엔 시원함이 잔량(냉기 배터리)이라 같은 온도라도 계절마다 잔량이 달라요. 햇빛은 집 위치 위성 일사량(한국에너지기술연구원)</p>`
-    + battery + `<div class="sd-row h"><span>날짜</span><span>햇빛</span><span class="v f">kWh/㎡</span><span class="v f">낮 상승</span><span class="v f">하루 변화</span></div>` + rows;
+  el.innerHTML = `<h3>열 배터리</h3>` + thermoCard(true) + `<div class="bat-stats">${stats}</div><div id="tbChart" class="tb-chart"></div>`;
+  loadThermo(); thermoChart($('#tbChart'));
+}
+
+
+/* ---------- 열 배터리 (실측 기반) ----------
+   집은 바깥과의 온도 차에 비례해 열을 잃는다(뉴턴 냉각): 시간당 식는 정도 = k × (실내 − 바깥).
+   k는 최근 14일 밤(해 없는 시간) 실내가 내려간 구간에서 직접 잰다. 그래서 같은 가을이라도
+   이상저온(바깥이 더 차가움)이면 더 빨리 비고, 단열이 좋은 집이면 오래 버틴다.
+   잔량 = 난방·냉방 없이 '버틸 수 있는 시간': 실내가 20°(추움)까지 식는 데 걸리는 시간. 더운 철은 28°(더움)까지 데워지는 시간
+   72시간(사흘) 이상 = 100% */
+const TB = { min: 20, max: 28, full: 72 };
+let thermo = { key: '', k: null, n: 0, H: [] };
+async function loadThermo(){
+  const b = Date.now(), a = b - 14 * 864e5, key = String(Math.floor(b / 18e5));
+  if(thermo.key === key) return; thermo.key = key;
+  const [ind, od] = await Promise.all([get(`/api/heatmap?range=r:${a}:${b}&by=d`).catch(() => []), get(`/api/outdoor?from=${a}&to=${b}&b=60`).catch(() => null)]);
+  const OS = od && od.series || []; if(!Array.isArray(ind) || !ind.length || OS.length < 24){ thermo.key = ''; return; }
+  const H = ind.filter(r => r.temp != null).map(r => { const ts = kstMs(r.d) + r.h * 36e5 + 18e5; return { ts, h: r.h, tin: r.temp, tout: valAt(OS, ts, 'temp') }; }).sort((x, y) => x.ts - y.ts);
+  // 밤(19~06시)에 실내가 내려간 한 시간들에서 k를 잰다. 난방이 켜진 시간(오른 시간)은 빠진다
+  const ks = [];
+  for(let i = 1; i < H.length; i++){ const p = H[i - 1], q = H[i]; if(q.ts - p.ts > 1.5 * 36e5) continue;
+    const night = q.h >= 19 || q.h <= 6, gap = (p.tin + q.tin) / 2 - (p.tout + q.tout) / 2, d = q.tin - p.tin;
+    if(night && Math.abs(gap) > 4 && d * Math.sign(gap) < 0) ks.push(-d / gap); }
+  ks.sort((x, y) => x - y);
+  thermo = { key, H, n: ks.length, k: ks.length >= 8 ? ks[Math.floor(ks.length / 2)] : null };
+  renderAll();
+}
+// 지금 상태로 버틸 수 있는 시간(시간). 무한이면 Infinity
+function holdHours(tin, tout, k){
+  if(tin == null || tout == null || !k) return null;
+  if(tout < tin){ if(tin <= TB.min) return 0; if(tout >= TB.min) return Infinity; return Math.log((tin - tout) / (TB.min - tout)) / k; }
+  if(tout > tin){ if(tin >= TB.max) return 0; if(tout <= TB.max) return Infinity; return Math.log((tout - tin) / (tout - TB.max)) / k; }
+  return Infinity;
+}
+const holdTxt = (t) => t == null ? '–' : t === Infinity ? '계속' : t < 1 ? `${Math.round(t * 60)}분` : t < 48 ? `${Math.round(t)}시간` : `${(t / 24).toFixed(1).replace(/\.0$/, '')}일`;
+function thermoNow(){
+  const c = cache; if(!c || !c.cur) return null;
+  const tin = c.cur.temp, oc = c.out && c.out.cur, S = c.out && c.out.series, tout = oc ? oc.temp : S && S.length ? S.at(-1).temp : null, k = thermo.k;
+  const t = holdHours(tin, tout, k), soc = t == null ? null : t === Infinity ? 1 : Math.min(1, t / TB.full), heat = tout == null || tout < tin;
+  // 최근 3시간 실내 변화로 충전/방전
+  const P = (c.hist && c.hist.points || []).filter(p => p.temp != null), p3 = P.length ? P.reduce((a, p) => Math.abs(p.ts - (c.cur.ts - 3 * 36e5)) < Math.abs(a.ts - (c.cur.ts - 3 * 36e5)) ? p : a) : null;
+  const d3 = p3 ? tin - p3.temp : null, gain = d3 == null ? null : heat ? d3 : -d3, st = gain == null ? 'idle' : gain > .15 ? 'chg' : gain < -.15 ? 'dis' : 'idle';
+  return { tin, tout, k, t, soc, heat, st, d3 };
+}
+function thermoCard(big){
+  const T = thermoNow(); if(!T || T.tout == null) return '';
+  const tau = T.k ? Math.round(1 / T.k) : null, pct = T.soc == null ? null : Math.round(T.soc * 100);
+  const goal = T.heat ? `${TB.min}°까지 식는 데` : `${TB.max}°까지 데워지는 데`, col = T.soc == null ? 'var(--faint)' : specColor('temp', T.tin);
+  const stTxt = { chg: T.heat ? '충전 중 · 데워지는 중' : '충전 중 · 식는 중', dis: '방전 중', idle: '유지' }[T.st];
+  const cells = Array.from({ length: 12 }, (_, i) => `<i class="${T.soc != null && (i + .5) / 12 <= T.soc ? 'on' : ''}"></i>`).join('');
+  return `<div class="tb${big ? ' big' : ''} ${T.st}" style="--tc:${col}">
+    <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
+    <div class="tb-m"><b>${holdTxt(T.t)}</b><span>${T.t === Infinity ? (T.heat ? `바깥이 ${TB.min}° 이상이라 식지 않아요` : `바깥이 ${TB.max}° 이하라 더워지지 않아요`) : `난방·냉방 없이 버티는 시간 · ${goal}`}</span></div>
+    <div class="tb-bar" title="잔량 ${pct == null ? '–' : pct}% (사흘 이상 버티면 100%)">${cells}<em>${pct == null ? '' : pct + '%'}</em></div>
+    <div class="tb-f"><span>실내 <b>${n1(T.tin)}°</b></span><span>바깥 <b>${n1(T.tout)}°</b></span><span>열 유지력 <b>${tau ? `${tau}시간` : '측정 중'}</b>${tau ? '' : ''}</span></div>
+    ${big ? `<p class="tb-n">열 유지력 = 바깥과의 차가 37%로 줄어드는 데 걸리는 시간(시간상수). 최근 14일 밤 ${thermo.n}개 구간에서 잰 값이라 날씨가 같아도 집 상태가 바뀌면 달라져요. 햇빛이 들면 그만큼 더 버팁니다.</p>` : ''}</div>`;
+}
+// 14일 동안 '버틸 수 있는 시간' 흐름 + 햇빛
+function thermoChart(el){
+  const H = thermo.H, k = thermo.k; if(!H.length || !k){ el.innerHTML = '<div class="empty">열 유지력을 재는 중 (밤 자료가 더 필요해요)</div>'; return; }
+  const W = Math.max(320, el.clientWidth || 1112), m = { l: 44, r: 8 }, iw = W - m.l - m.r, y0 = 28, h = 150, sy = y0 + h + 18, sh = 34, Hh = sy + sh + 26;
+  const t0 = H[0].ts, t1 = H.at(-1).ts, X = (ts) => m.l + (ts - t0) / (t1 - t0 || 1) * iw, cap = 168, Y = (v) => y0 + h - Math.min(v, cap) / cap * h;
+  const pts = H.map(r => ({ ts: r.ts, v: holdHours(r.tin, r.tout, k) })).filter(r => r.v != null).map(r => ({ ts: r.ts, v: r.v === Infinity ? cap : r.v }));
+  let g = '';
+  [0, 48, 96, 144].forEach(v => { g += `<line class="gl" x1="${m.l}" x2="${m.l + iw}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${m.l - 8}" y="${Y(v) + 4}" text-anchor="end">${v ? v / 24 + '일' : '0'}</text>`; });
+  const ln = smooth(pts.map(r => [X(r.ts), Y(r.v)])), gd = vGrad('temp', 20, 26, Y(0), Y(cap), .22, true); g += `<defs>${gd.def}</defs>`;
+  g += `<path d="${ln}L${X(pts.at(-1).ts)},${Y(0)}L${X(pts[0].ts)},${Y(0)}Z" class="od-area"/><path d="${ln}" class="od-line"/>`;
+  g += `<g class="plab"><text x="${m.l - 36}" y="${y0 - 12}">버틸 수 있는 시간</text></g><text class="od-l" x="${m.l + iw}" y="${y0 - 12}" text-anchor="end">72시간 이상 = 100% · 7일 이상은 위에 붙음</text>`;
+  // 햇빛 (1시간 막대)
+  const Hs = solarHours().filter(x => x.b > t0 && x.a < t1), mx = Math.max(300, ...Hs.map(x => x.w));
+  Hs.forEach(x => { const a = X(Math.max(t0, x.a)), b = X(Math.min(t1, x.b)), hh = x.w / mx * sh; if(hh > .5) g += `<rect x="${a}" y="${sy + sh - hh}" width="${Math.max(.8, b - a - .4)}" height="${hh}" class="ov-sun"/>`; });
+  g += `<text class="ov-rl" x="${m.l - 8}" y="${sy + sh - 2}" text-anchor="end">햇빛</text>`;
+  for(let i = 0; i <= 14; i += (W < 600 ? 7 : 2)){ const ts = t0 + (t1 - t0) * i / 14; g += `<text x="${X(ts)}" y="${Hh - 6}" text-anchor="${i === 0 ? 'start' : i === 14 ? 'end' : 'middle'}">${md(ts)}</text>`; }
+  g += `<g id="tcur" opacity="0"><line y1="${y0}" y2="${y0 + h}" stroke="var(--ink)" stroke-opacity=".35"/><circle r="4" class="od-dot"/></g><rect id="thit" x="${m.l}" y="0" width="${iw}" height="${y0 + h}" fill="transparent"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}">${g}</svg>`;
+  const svg = el.firstChild, cur = svg.querySelector('#tcur');
+  svg.querySelector('#thit').onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W; let b = H[0]; for(const q of H) if(Math.abs(X(q.ts) - px) < Math.abs(X(b.ts) - px)) b = q;
+    const v = holdHours(b.tin, b.tout, k); cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b.ts)); cur.firstChild.setAttribute('x2', X(b.ts)); cur.lastChild.setAttribute('cx', X(b.ts)); cur.lastChild.setAttribute('cy', Y(v === Infinity ? cap : v ?? 0));
+    showTip(e, `<b>${when(b.ts)}</b><br>버틸 수 있는 시간 ${holdTxt(v)}<br>실내 ${n1(b.tin)}° · 바깥 ${n1(b.tout)}°`); };
+  svg.querySelector('#thit').onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); };
 }
 
 /* ---------- 하루 패턴 ---------- */
@@ -1834,6 +1938,7 @@ function renderAll(){
   if(panel === 'day'){ const oh = outHourly(); hourly($('#hourly'), oh ? st.hourly.map(r => ({ ...r, out: oh[r.h] })) : st.hourly); }
   if(panel === 'heat') drawHeat();
   if(panel === 'out'){ outPanel($('#outT'), $('#outS')); sunAnalysis($('#outSun')); }
+  loadThermo(); $('#thermo').innerHTML = thermoCard(false); const tg = $('#thermo .tb'); if(tg) tg.onclick = () => { showPanel('out'); setTimeout(() => $('#outSun') && $('#outSun').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); };
 }
 function showPanel(name){
   panel = name; try { localStorage.panel = name; } catch {}
