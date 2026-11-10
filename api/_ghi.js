@@ -21,16 +21,34 @@ async function page(day, n) {
 }
 async function pool(tasks, n) { const out = []; let i = 0; await Promise.all(Array.from({ length: Math.min(n, tasks.length) }, async () => { while (i < tasks.length) { const k = i++; out[k] = await tasks[k](); } })); return out; }
 
+const retry = (day, n) => page(day, n).catch(() => new Promise((ok) => setTimeout(ok, 1200)).then(() => page(day, n)));
+const toRow = (x, lat, lon) => { const hm = String(x.hm).padStart(4, '0');
+  return { ts: Date.parse(`${x.yr}-${String(x.mm).padStart(2, '0')}-${String(x.day).padStart(2, '0')}T${hm.slice(0, 2)}:${hm.slice(2)}:00+09:00`), ghi: Number(x.ghi), lat, lon }; };
+const ok = (r) => Number.isFinite(r.ts) && Number.isFinite(r.ghi);
+
 // day: 'YYYYMMDD' (한국 날짜) → [{ ts, ghi, lat, lon }]
+// 응답은 시간 순 → 같은 시간 안에서 경도 순이라, 우리 격자는 시간마다 같은 자리(k)에 온다. 한 시간의 격자 수(B)를 확인해
+// 필요한 페이지만 받는다(보통 하루 11번). 확인이 안 되면 전부 받아 고른다.
 export async function ghiDay(day) {
+  const lat = GHI_LAT(), lon = GHI_LON(), mine = (x) => x && R3(x.lat) === lat && R3(x.lot) === lon;
   const first = await page(day, 1); if (!first.total) return [];
-  const n = Math.ceil(first.total / PER);
-  const rest = await pool(Array.from({ length: n - 1 }, (_, i) => () => page(day, i + 2).then((p) => p.items).catch(() => new Promise((ok) => setTimeout(ok, 1200)).then(() => page(day, i + 2)).then((p) => p.items))), 2); // 초당 호출 제한이 있어 2개씩만
-  const lat = GHI_LAT(), lon = GHI_LON();
-  return [first.items, ...rest].flat().filter((x) => R3(x.lat) === lat && R3(x.lot) === lon && x.ghi !== '' && x.ghi != null).map((x) => {
-    const hm = String(x.hm).padStart(4, '0');
-    return { ts: Date.parse(`${x.yr}-${String(x.mm).padStart(2, '0')}-${String(x.day).padStart(2, '0')}T${hm.slice(0, 2)}:${hm.slice(2)}:00+09:00`), ghi: Number(x.ghi), lat, lon };
-  }).filter((r) => Number.isFinite(r.ts) && Number.isFinite(r.ghi));
+  const total = first.total, k = first.items.findIndex(mine);
+  if (k >= 0) {
+    const cache = new Map([[1, first.items]]), at = async (idx) => { const p = Math.floor(idx / PER) + 1; if (!cache.has(p)) cache.set(p, (await retry(day, p)).items); return cache.get(p)[idx % PER]; };
+    const h0 = first.items[k].hm, cands = [];
+    for (let B = 20; B <= 400; B++) if (total % B === 0 && total / B >= 6 && total / B <= 18) cands.push(B);
+    for (const B of cands) {
+      const x = await at(B + k).catch(() => null);
+      if (!(mine(x) && x.hm !== h0)) continue;
+      const out = [first.items[k]];
+      for (let i = 1; i < total / B; i++) { const y = await at(i * B + k).catch(() => null); if (!mine(y)) { out.length = 0; break; } out.push(y); }
+      if (out.length) return out.filter((x) => x.ghi !== '' && x.ghi != null).map((x) => toRow(x, lat, lon)).filter(ok);
+    }
+  }
+  // 전부 받아 고르기 (초당 호출 제한이 있어 2개씩만)
+  const n = Math.ceil(total / PER);
+  const rest = await pool(Array.from({ length: n - 1 }, (_, i) => () => retry(day, i + 2).then((p) => p.items)), 2);
+  return [first.items, ...rest].flat().filter((x) => mine(x) && x.ghi !== '' && x.ghi != null).map((x) => toRow(x, lat, lon)).filter(ok);
 }
 export const storeGhi = (rows) => rows.length ? rpc('roomtemp_ghi_ingest', { p_token: process.env.INGEST_TOKEN, p_rows: rows }) : 0;
 const kstDay = (ms) => new Date(ms + 9 * 36e5).toISOString().slice(0, 10).replace(/-/g, '');
