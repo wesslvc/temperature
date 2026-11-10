@@ -1001,6 +1001,27 @@ svg .tb-cd{fill:var(--sub);fill-opacity:.12}
 @media(max-width:560px){.tb-l .tb-f{grid-template-columns:repeat(2,minmax(0,1fr))}}
 svg .tb-lvl{stroke:var(--ink);stroke-opacity:.45;stroke-width:1.2;stroke-dasharray:3 2}
 @media(max-width:820px){.tb-g{grid-template-columns:minmax(0,1fr)!important}}
+/* 쾌적 시간 미리보기: 한 원 */
+.cc-one{display:flex;align-items:center;justify-content:center;gap:28px;margin-top:10px}
+.cc-one .cc{width:168px;height:168px;flex:none}
+.cc-one ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;min-width:120px}
+.cc-one li{display:grid;grid-template-columns:10px 1fr auto;align-items:center;gap:10px;font-size:13px;color:var(--sub)}
+.cc-one li i{width:10px;height:10px;border-radius:50%;background:var(--tint)}
+.cc-one li b{font-size:22px;font-weight:750;letter-spacing:-.03em;color:var(--ink)}
+.cc-one li b small{font-size:12px;font-weight:600;color:var(--faint);margin-left:1px}
+.cc-one li:last-child{padding-top:10px;border-top:1px solid var(--hair)}
+.cc-one.intro svg .cc-seg{animation:ccSeg .35s ease-out backwards;animation-delay:calc(var(--i)*6ms)}
+@media(max-width:560px){.cc-one{gap:18px}.cc-one .cc{width:140px;height:140px}.cc-one ul{min-width:104px}}
+/* 열 배터리 색: 충전 초록 · 소모 주황 · 난방 분홍 · 100% 넘음 빨강 · 0% 아래 파랑 */
+:root{--b-chg:#22a861;--b-dis:#f08a24;--b-heat:#e85d9c;--b-over:#e03b3b;--b-under:#3b82e0;--b-idle:#8f8f96}
+.tb{--bcol:var(--b-idle)}
+.tb.chg{--bcol:var(--b-chg)}.tb.dis{--bcol:var(--b-dis)}.tb.heat{--bcol:var(--b-heat)}.tb.over{--bcol:var(--b-over)}.tb.under{--bcol:var(--b-under)}
+.tb .tbx-fill,.tb.heat .tbx-fill{background:linear-gradient(90deg,color-mix(in srgb,var(--bcol) 70%,#000),var(--bcol))!important;opacity:1!important}
+.tb .tb-s i,.tb.chg .tb-s i,.tb.dis .tb-s i,.tb.heat .tb-s i{background:var(--bcol)!important}
+.tb .tb-s{color:var(--ink)}
+.tb .tbx-cap.on{background:var(--bcol)!important}
+.tb .tb-m b{color:var(--ink)}
+.tb.over .tb-m b,.tb.under .tb-m b{color:var(--bcol)}
 </style>
 </head>
 <body>
@@ -1314,7 +1335,16 @@ function comfortClock(el, pts, o, base){
     if(d != null && Math.abs(d) >= .5) g += `<text class="cc-d" x="${c}" y="${c+26}" text-anchor="middle">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(0)}%p</text>`;
     return `<figure class="cc-big" style="--tint:${TINT[k]}"><svg class="cc" viewBox="-14 -14 ${S+28} ${S+28}">${g}</svg><figcaption>${name}</figcaption></figure>`; };
   // 고리가 차례로 켜지는 모션은 페이지를 처음 열 때(새로고침)만
-  let html = `<div class="ccs${ccOpen ? '' : ' min'}${ccAnimNext ? ' intro' : ''}">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>`;
+  // 간단히: 세 고리를 한 원에 (바깥 온도 · 가운데 습도 · 안쪽 둘 다), 가운데 숫자 = 둘 다
+  const one = () => { const S = 180, c = S / 2, R = [[78, 88, 'temp'], [64, 74, 'hum'], [50, 60, 'both']]; let g = '';
+    R.forEach(([r0, r1, k]) => { for(let h = 0; h < 24; h++){ const [a, n] = H[k][h], sh = n ? a / n : null;
+      g += `<path d="${arc(c, c, r0, r1, h / 24 * 2 * Math.PI + .012, (h + 1) / 24 * 2 * Math.PI - .012)}" fill="${sh == null ? 'var(--sunk)' : TINT[k]}" fill-opacity="${sh == null ? 1 : (.08 + .9 * sh).toFixed(3)}" class="cc-seg" style="--i:${h}"><title>${{ temp: '온도', hum: '습도', both: '둘 다' }[k]} ${h}시 · ${sh == null ? '기록 없음' : `쾌적 ${Math.round(sh * 100)}%`}</title></path>`; } });
+    if(live){ const a = (nowH + .5) / 24 * 2 * Math.PI, q = (r, da) => `${(c + r * Math.sin(a + da)).toFixed(1)},${(c - r * Math.cos(a + da)).toFixed(1)}`; g += `<path d="M${q(90, 0)}L${q(96, .04)}L${q(96, -.04)}Z" fill="var(--ink)"/>`; }
+    const v = (rk) => o && o[rk] != null ? Math.round(o[rk]) : null, vb = v('comfort');
+    g += `<text class="cc-p" x="${c}" y="${c + 9}" text-anchor="middle">${vb == null ? '–' : vb}<tspan class="cc-u">${vb == null ? '' : '%'}</tspan></text><text class="cc-d" x="${c}" y="${c + 25}" text-anchor="middle">둘 다</text>`;
+    const row = (k, name, rk) => `<li style="--tint:${TINT[k]}"><i></i><span>${name}</span><b>${v(rk) == null ? '–' : v(rk)}<small>%</small></b></li>`;
+    return `<div class="cc-one${ccAnimNext ? ' intro' : ''}"><svg class="cc" viewBox="-8 -8 ${S + 16} ${S + 16}">${g}</svg><ul>${row('temp', '온도', 'comfort_t')}${row('hum', '습도', 'comfort_h')}${row('both', '둘 다', 'comfort')}</ul></div>`; };
+  let html = ccOpen ? `<div class="ccs${ccAnimNext ? ' intro' : ''}">${clock('temp', '온도', 'comfort_t')}${clock('hum', '습도', 'comfort_h')}${clock('both', '둘 다', 'comfort')}</div>` : one();
   // 날짜 달력: 하루 중 온·습도가 모두 쾌적했던 시간 비율
   const days = Object.keys(D).sort();
   if(ccOpen && days.length >= 3){
@@ -1331,7 +1361,7 @@ function comfortClock(el, pts, o, base){
   el.innerHTML = html; el.dataset.ready = 1;
   if(anim && ccFlag){ const h1 = el.offsetHeight; ccFlag = false;
     el.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 260, easing: 'cubic-bezier(.3,.7,.3,1)' });
-    el.firstElementChild && el.querySelectorAll('.ccs > *, .cal').forEach((n, i) => n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, delay: i*30, easing: 'ease-out', fill: 'backwards' })); }
+    el.firstElementChild && el.querySelectorAll('.ccs > *, .cc-one > *, .cal').forEach((n, i) => n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, delay: i*30, easing: 'ease-out', fill: 'backwards' })); }
 }
 
 /* ---------- scatter: 온도 × 습도 ---------- */
@@ -1859,7 +1889,9 @@ function thermoCard(big){
   const e = T.exp, sunPct = T.sunAvg ? Math.round(T.sun3 / T.sunAvg * 100) : null;
   const tip = `일평균 회귀: 실내 ≈ ${T.M.a.toFixed(1)}° + ${T.M.b.toFixed(2)} × 바깥 5일 평균 (${T.M.n}일, 설명력 ${Math.round(T.M.r2 * 100)}%). 오늘 바깥 ${n1(T.tout5)}° → 평소 ${n1(e)}° = 50%. 1°에 ${BS}%p. 낮엔 차오르고 밤엔 쓴다${T.level != null ? ` · 오늘 평균 ${Math.round(T.level * 100)}%` : ''}`;
   const once = !tbAnimated; tbAnimated = true;
-  return `<div class="tb${big ? ' big' : ''} ${heating ? 'chg heat' : T.st}${once ? ' anim' : ''}" style="--tc:${col}" title="${tip}">
+  // 색: 100% 넘음 빨강 > 0% 아래 파랑 > 난방 중 분홍 > 충전 초록 > 소모 주황
+  const lvl = T.soc > 1 ? ' over' : T.soc < 0 ? ' under' : '', hot = heating && T.st !== 'dis';
+  return `<div class="tb${big ? ' big' : ''} ${hot ? 'chg heat' : T.st}${lvl}${once ? ' anim' : ''}" style="--tc:${col}" title="${tip}">
     <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
     <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.resid)}</em>${T.level != null ? ` · 오늘 평균 ${Math.round(T.level * 100)}%` : ''}</span></div>
     ${bar}
