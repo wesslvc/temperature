@@ -814,7 +814,7 @@ svg .tb-raw{fill:none;stroke:var(--ink);stroke-opacity:.28;stroke-width:1}
 svg .tb-up{fill:var(--sun);fill-opacity:.85}svg .tb-ht{fill:var(--hot);fill-opacity:.8}svg .tb-dn{fill:var(--sub);fill-opacity:.55}
 svg text.tb-dl{fill:var(--faint)!important;font-size:10px!important}
 .tb-f i{margin-left:2px}
-svg .tb-heat{fill:var(--hot);fill-opacity:.6}svg .tb-heat.guess{fill-opacity:.25}
+svg .tb-heat{fill:var(--hot);fill-opacity:.6}svg .tb-heat.guess{fill-opacity:.35}svg .tb-vent{fill:var(--cold);fill-opacity:.45}
 
 /* 날짜별 잔량 (전체 기록) */
 .bd-wrap{margin-top:26px}
@@ -1602,7 +1602,13 @@ const HEAT_TXT = { on: '가동 중', edge: '가동 경계', idle: '대기', off:
 function heatSignal(p, q, sunW){
   if(!p || !q || q.ts - p.ts > 1.6 * 36e5 || p.hin == null || q.hin == null) return false;
   const dT = q.tin - p.tin, dH = q.hin - p.hin, dD = p.dew != null && q.dew != null ? Math.abs(q.dew - p.dew) : 0;
-  return (sunW == null || sunW < 80) && dT >= .15 && dH <= -.8 && dD <= .6;
+  // 바닥 난방은 온도를 끌어올리기보다 '안 떨어지게' 버티는 편이라, 온도가 그대로(−0.02° 이상)여도 습도만 내려가면 난방으로 본다
+  return (sunW == null || sunW < 80) && dT >= -.02 && dH <= -.5 && dD <= .6;
+}
+// 환기 신호: 온도·이슬점이 함께 내려가고 습도도 내려감 = 바깥의 차고 건조한 공기가 들어옴
+function ventSignal(p, q){
+  if(!p || !q || q.ts - p.ts > 1.6 * 36e5 || p.dew == null || q.dew == null || p.hin == null) return false;
+  return q.tin - p.tin <= -.1 && q.dew - p.dew <= -.5 && q.hin - p.hin <= -.5;
 }
 const sunAt = (ts) => { const x = solarHours().find(x => ts >= x.a && ts < x.b); return x ? x.w : null; };
 // 바깥 5일 평균 (그날까지)
@@ -1704,9 +1710,10 @@ function thermoChart(el){
   // 침실1 난방이 돌던 시간 (시간 단위). 진하게 = HT로 확실 또는 '경계'인데 센서 신호도 있음, 옅게 = HT 기록 없는 시간의 센서 추정
   { const HS = HT.filter(x => x.room === '침실1').sort((x, y) => x.ts - y.ts), htAt = (ts) => { let best = null; for(const x of HS){ if(Math.abs(x.ts - ts) <= 45 * 60e3 && (!best || Math.abs(x.ts - ts) < Math.abs(best.ts - ts))) best = x; } return best; };
     for(let i = 1; i < H.length; i++){ const q = H[i]; if(q.ts < t0 || q.ts > t1) continue; const sig = heatSignal(H[i - 1], q, sunAt(q.ts)), st = heatState(htAt(q.ts));
-      const cls = st === 'on' || (st === 'edge' && sig) ? 'tb-heat' : st == null && sig ? 'tb-heat guess' : null; if(!cls) continue;
-      const a = X(Math.max(t0, q.ts - 18e5)), b = X(Math.min(t1, q.ts + 18e5)); if(b > a) g += `<rect x="${a}" y="${hy}" width="${b - a}" height="${hhgt}" rx="2" class="${cls}"><title>${when(q.ts)} ${st === 'on' ? HEAT_TXT.on : st === 'edge' ? HEAT_TXT.seen : HEAT_TXT.guess}</title></rect>`; }
-    g += `<text class="ov-rl" x="${m.l - 8}" y="${hy + hhgt}" text-anchor="end">난방</text>`; }
+      const vent = !sig && ventSignal(H[i - 1], q);
+      const cls = st === 'on' || (st === 'edge' && sig) ? 'tb-heat' : st == null && sig ? 'tb-heat guess' : vent ? 'tb-vent' : null; if(!cls) continue;
+      const a = X(Math.max(t0, q.ts - 18e5)), b = X(Math.min(t1, q.ts + 18e5)); if(b > a) g += `<rect x="${a}" y="${hy}" width="${b - a}" height="${hhgt}" rx="2" class="${cls}"><title>${when(q.ts)} ${cls === 'tb-vent' ? '환기 추정 (온도·이슬점·습도 함께 내려감)' : st === 'on' ? HEAT_TXT.on : st === 'edge' ? HEAT_TXT.seen : HEAT_TXT.guess + ' (햇빛 약함·온도 유지·습도↓·이슬점 그대로)'}</title></rect>`; }
+    g += `<text class="ov-rl" x="${m.l - 8}" y="${hy + hhgt}" text-anchor="end">난방·환기</text>`; }
   // 시간축: 이틀 안이면 시각, 아니면 날짜
   const fmtT = (ts) => span < 2.5 * 864e5 ? hhmm(ts) : md(ts), nt = W < 600 ? 3 : 6; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${Hh - 6}" text-anchor="${i === 0 ? 'start' : i === nt ? 'end' : 'middle'}">${fmtT(ts)}</text>`; }
   g += `<g id="tcur" opacity="0"><line y1="${y0}" y2="${y0 + h}" stroke="var(--ink)" stroke-opacity=".35"/><circle r="4" class="od-dot"/></g><rect id="thit" x="${m.l}" y="0" width="${iw}" height="${y0 + h}" fill="transparent"/>`;
