@@ -1022,6 +1022,29 @@ svg .tb-lvl{stroke:var(--ink);stroke-opacity:.45;stroke-width:1.2;stroke-dasharr
 .tb .tbx-cap.on{background:var(--bcol)!important}
 .tb .tb-m b{color:var(--ink)}
 .tb.over .tb-m b,.tb.under .tb-m b{color:var(--bcol)}
+/* 크게 보기 */
+.zbtn{display:flex;align-items:center;gap:5px;margin:0 0 6px auto;height:28px;padding:0 11px 0 9px;border-radius:999px;font-size:12px;font-weight:600;color:var(--sub);box-shadow:inset 0 0 0 1px var(--rule);background:none;transition:color .15s,background .15s}
+.zbtn:hover{color:var(--ink);background:var(--sunk)}
+.zbtn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#zoom{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:var(--bg);padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+#zoom[hidden]{display:none}
+body.zm-on{overflow:hidden}
+.zm-bar{display:flex;align-items:center;gap:12px;padding:4px 4px 12px}
+.zm-bar b{flex:1;min-width:0;font-size:15px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zm-x{height:32px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:650;background:var(--ink);color:var(--bg)}
+.zm-sc{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--card);border:1px solid var(--card-b);border-radius:var(--r);padding:16px 0}
+#zmC{min-height:100%;padding:0 12px;box-sizing:border-box}
+#zoom svg,#zoom svg rect{touch-action:pan-x pan-y!important}
+.zm-tip{margin:10px 4px 0;font-size:11.5px;color:var(--faint);text-align:center}
+#zoom .zbtn{display:none}
+#tip{z-index:70}
+.tbx-rg{position:absolute;top:3px;bottom:3px;border-radius:6px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 55%,transparent)}
+.bc.sel{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 45%,transparent)}
+.bc.sel.now{box-shadow:inset 0 0 0 2px var(--ink)}
+.bc-s{position:relative}
+.bc-sl{position:absolute;left:0;right:0;top:-9px;margin:auto;width:max-content;padding:0 8px;background:var(--card);font-style:normal;font-size:11px;color:var(--sub)}
+.zm-ax{position:sticky;left:0;width:0;height:0;overflow:visible;z-index:2;pointer-events:none}
+.zm-ax svg{display:block;overflow:hidden!important;background:linear-gradient(90deg,var(--card) 82%,transparent);padding-right:10px;box-sizing:content-box}
 </style>
 </head>
 <body>
@@ -1101,6 +1124,11 @@ svg .tb-lvl{stroke:var(--ink);stroke-opacity:.45;stroke-width:1.2;stroke-dasharr
     <div id="hourly"></div>
   </div>
 
+</div>
+<div id="zoom" hidden role="dialog" aria-modal="true" aria-labelledby="zmT">
+  <div class="zm-bar"><b id="zmT"></b><div class="seg" id="zmSeg"><button data-z="1">1×</button><button data-z="2">2×</button><button data-z="4">4×</button><button data-z="8">8×</button></div><button class="zm-x" id="zmX" aria-label="닫기">닫기</button></div>
+  <div class="zm-sc" id="zmSc"><div id="zmC"></div></div>
+  <p class="zm-tip">옆으로 밀어 보기 · 눌러서 값 보기 · 폰을 가로로 돌리면 더 넓게</p>
 </div>
 <div id="tip"></div>
 
@@ -1406,12 +1434,13 @@ function scatter(el, pts, cur, marks){
 
 /* ---------- 추이 (온도/습도 2단) ---------- */
 function trend(el, pts, marks){
-  lastTrend = [el, pts, marks];
+  if(el.id !== 'zmC') lastTrend = [el, pts, marks];
   if(pts.length < 2){ el.innerHTML = '<div class="empty">아직 그릴 만큼의 데이터가 없습니다. 수집이 시작되면 이곳에 나타납니다.</div>'; return; }
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
   const panels = [{k:'temp',lo:'tmin',hi:'tmax',c:'var(--t)',s:'var(--t-soft)',y:34,h:170,u:'°'},{k:'hum',lo:'hmin',hi:'hmax',c:'var(--h)',s:'var(--h-soft)',y:252,h:140,u:'%'},{k:'dew',lo:'dmin',hi:'dmax',c:'var(--d)',s:'var(--d-soft)',y:436,h:116,u:'°'}];
+  const zf = zk(el, 580); if(zf > 1) panels.forEach(P => { P.y = Math.round(P.y * zf); P.h = Math.round(P.h * zf); });
   const OSx = cache && cache.out && cache.out.series ? cache.out.series.filter(q => q.ts >= pts[0].ts - 36e5 && q.ts <= pts.at(-1).ts + 36e5) : [], OP = null; // 실내·바깥 비교는 '바깥' 탭으로 옮김
-  const BOT = OP ? OP.y + OP.h : 436+116, H = BOT+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
+  const BOT = OP ? OP.y + OP.h : panels.at(-1).y + panels.at(-1).h, H = BOT+28, t0 = pts[0].ts, t1 = pts.at(-1).ts, span = t1-t0 || 1;
   const REV = false, XT = ts => m.l + (REV ? t1-ts : ts-t0)/span*iw, X = p => XT(p.ts), ord = a => REV ? a.slice().reverse() : a;
   let g = '';
   panels.forEach(P => {
@@ -1463,6 +1492,7 @@ function trend(el, pts, marks){
   if(selTs && selTs >= t0 && selTs <= t1){ const sx = XT(selTs).toFixed(1); g += `<line x1="${sx}" x2="${sx}" y1="20" y2="${BOT}" stroke="var(--ink)" stroke-width="1.6"/><path d="M${sx-5},0 L${+sx+5},0 L${sx},7 Z" fill="var(--ink)"/>`; }
   g += `<g id="cur" opacity="0"><line y1="20" y2="${BOT}" stroke="var(--ink)" stroke-opacity=".4"/><circle id="d1" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d2" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d3" r="4.5" stroke="var(--panel)" stroke-width="2"/><circle id="d4" r="4" fill="var(--ink)" stroke="var(--panel)" stroke-width="2" opacity="${OP ? 1 : 0}"/></g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  zoomable(el, 'trend', '추이', (e) => trend(e, pts, marks));
   const svg = el.firstChild, cur = svg.querySelector('#cur'), hit = svg.querySelector('#hit');
   hit.onmousemove = e => {
     const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W;
@@ -1551,7 +1581,7 @@ const UW = { d:'', w:'주 ', m:'월 ' };
 function rangeChart(el, rows, u, M){
   const K = MK[M]; rows = rows.slice(-UNITS[u][2]);
   if(!rows.length){ el.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
-  const W = Math.max(320, el.clientWidth || 400), H = W < 600 ? 220 : 250, m = {l:40,r:6,t:16,b:28}, iw = W-m.l-m.r, ih = H-m.t-m.b;
+  const W = Math.max(320, el.clientWidth || 400), H = Math.round((W < 600 ? 220 : 250) * zk(el, W < 600 ? 220 : 250)), m = {l:40,r:6,t:16,b:28}, iw = W-m.l-m.r, ih = H-m.t-m.b;
   const sc = niceScale(Math.min(...rows.map(r => r[K.lo])) - K.pad/2, Math.max(...rows.map(r => r[K.hi])) + K.pad/2), lo = sc.lo, hi = sc.hi;
   const Y = v => m.t+ih-(v-lo)/(hi-lo)*ih, bw = iw/rows.length; let g = '';
   sc.ticks.forEach(v => { const yy = Y(v); g += `<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}"/><text x="${m.l-6}" y="${yy+4}" text-anchor="end">${tickLabel(v, sc.step)}${K.u}</text>`; });
@@ -1565,6 +1595,7 @@ function rangeChart(el, rows, u, M){
     if(labels){ g += `<text x="${cx}" y="${Y(r[K.hi])-4}" text-anchor="middle" style="font-weight:600;fill:var(--sub)">${K.fmt(r[K.hi])}</text><text x="${cx}" y="${Y(r[K.lo])+13}" text-anchor="middle" style="font-weight:600;fill:var(--sub)">${K.fmt(r[K.lo])}</text>`; }
     if(i%step===0) g += `<text x="${cx}" y="${H-8}" text-anchor="middle">${rowLabel(u, r.d, false)}</text>`; });
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  zoomable(el, 'range', '구간 집계', (e) => rangeChart(e, rows, u, M));
   el.querySelectorAll('rect[data-i]').forEach(r => { const d = rows[r.dataset.i], w = UW[u];
     r.onmousemove = e => showTip(e, `<b>${rowLabel(u, d.d, true)}</b><br>${w}최고 ${K.fmt(d[K.hi])}${K.u}` + (u !== 'd' && d[K.ahi] != null ? `<br>일 최고 평균 ${K.fmt(d[K.ahi])}${K.u}` : '') + `<br>평균 ${K.fmt(d[K.av])}${K.u}` + (u !== 'd' && d[K.alo] != null ? `<br>일 최저 평균 ${K.fmt(d[K.alo])}${K.u}` : '') + `<br>${w}최저 ${K.fmt(d[K.lo])}${K.u}`);
     r.onmouseleave = hideTip; r.onclick = () => { hideTip(); setRange(rowRange(u, d.d)); }; });
@@ -1604,7 +1635,7 @@ function sunBg(Hs, X, x0, x1, y, h, mx){
 }
 function outChart(el, P, D, SUN, sg){
   const W = Math.max(280, el.clientWidth || 520), narrow = W < 420, m = { l: 34, r: 8 }, iw = W - m.l - m.r, t0 = D[0].ts, t1 = D.at(-1).ts, span = t1 - t0 || 1, X = ts => m.l + (ts - t0) / span * iw;
-  const y0 = 8, PH = narrow ? 150 : 170, RB = 22, ry = y0 + PH + 14, H = ry + RB + 22;
+  const y0 = 8, PH = Math.round((narrow ? 150 : 170) * zk(el, (narrow ? 150 : 170) + 58)), RB = 22, ry = y0 + PH + 14, H = ry + RB + 22;
   const all = D.flatMap(r => [r[P.i], r[P.o]]), mn = Math.min(...all), mx = Math.max(...all), sc = niceScale(mn - (mx - mn) * .04, mx + (mx - mn) * .04);
   const Y = v => y0 + PH - (v - sc.lo) / (sc.hi - sc.lo) * PH;
   let g = '';
@@ -1624,6 +1655,7 @@ function outChart(el, P, D, SUN, sg){
   const nt = narrow ? 2 : 3; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${H - 4}" text-anchor="${i == 0 ? 'start' : i == nt ? 'end' : 'middle'}">${fmt(ts)}</text>`; }
   g += `<g class="ocur" opacity="0"><line y1="${y0}" y2="${ry + RB}" stroke="var(--ink)" stroke-opacity=".35"/><circle r="4" class="od-dot"/><circle r="3.5" class="od-dot o"/></g><rect class="ohit" id="${el.id}hit" x="${m.l}" y="0" width="${iw}" height="${ry + RB}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  zoomable(el, 'out-' + P.d, `${P.name} · AWS vs 실내`, (e) => outChart(e, P, D, SUN, sg));
   const svg = el.firstChild, cur = svg.querySelector('.ocur'), [c1, c2] = cur.querySelectorAll('circle'), hit = svg.querySelector('.ohit');
   hit.onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
     let b = D[0]; for(const q of D) if(Math.abs(X(q.ts) - px) < Math.abs(X(b.ts) - px)) b = q;
@@ -1876,7 +1908,34 @@ function thermoNow(){
   return { soc, rate, st, tin, tout: oc ? oc.temp : now.tout, tout5, exp, resid, M, sun3, sunAvg, hold, today, yest, level: today ? today.level : null };
 }
 let tbAnimated = false; // 충전 효과는 처음 한 번만
+// 고른 기간의 배터리 요약 (현재가 아닐 때). 그 기간 날짜들의 평균 잔량·하루 충전·밤 소모
+function rangeDays(){
+  const P = cache && cache.hist && cache.hist.points; if(!P || !P.length) return null;
+  const a = kstDate(P[0].ts), b = kstDate(P.at(-1).ts); return { a, b, D: batteryDays().filter(r => r.d >= a && r.d <= b) };
+}
+function thermoRangeCard(big){
+  const R = rangeDays(); if(!R || !R.D.length) return '';
+  const D = R.D, mean = (f) => { const v = D.map(f).filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+  const lvl = mean(r => r.level), chg = mean(r => r.charge), drn = mean(r => r.drain), hi = D.reduce((x, y) => y.level > x.level ? y : x), lo = D.reduce((x, y) => y.level < x.level ? y : x);
+  const net = D.length > 1 ? D.at(-1).level - D[0].level : null, heatN = D.filter(r => r.heatGain > .01 || r.use > 0).length, heatG = D.reduce((s, r) => s + r.heatGain, 0), sunG = D.reduce((s, r) => s + r.sunGain, 0);
+  const kwh = D.reduce((s, r) => s + (r.kwh || 0), 0), one = D.length === 1, r0 = D[0];
+  const st = lvl > 1 ? ' over' : lvl < 0 ? ' under' : heatG > .01 && heatG >= sunG ? ' chg heat' : one ? (r0.charge > (r0.drain ?? 0) ? ' chg' : ' dis') : net == null ? '' : net > .02 ? ' chg' : net < -.02 ? ' dis' : '';
+  const pc = (v) => v == null ? '–' : Math.round(v * 100) + '%', pp = (v, s = '+') => v == null ? '–' : `${s}${Math.abs(Math.round(v * 100))}%p`;
+  const fillW = Math.max(0, Math.min(1, lvl)) * 100, loW = Math.max(0, Math.min(1, lo.level)) * 100, hiW = Math.max(0, Math.min(1, hi.level)) * 100;
+  const stTxt = one ? (r0.d === kstDate(Date.now()) ? '오늘' : md(kstMs(r0.d))) + ` · 충전 ${pp(r0.charge)}` : `${D.length}일 · ${net == null ? '' : net >= 0 ? `처음보다 ${pp(net)}` : `처음보다 ${pp(net, '−')}`}`;
+  const bar = `<div class="tbx"><div class="tbx-body"><div class="tbx-fill" style="width:${fillW.toFixed(1)}%"></div>${one ? '' : `<i class="tbx-rg" style="left:${loW.toFixed(1)}%;width:${Math.max(.5, hiW - loW).toFixed(1)}%"></i>`}<i class="tbx-50" style="left:50%"></i>${[.25, .75].map(v => `<i class="tbx-t" style="left:${v * 100}%"></i>`).join('')}</div><i class="tbx-cap${lvl > 1 ? ' on' : ''}"></i></div>`;
+  const f = one
+    ? `<span>충전 <b>${pp(r0.charge)}</b> <i>${hhmm(r0.loTs)}→${hhmm(r0.hiTs)}</i></span><span>밤 소모 <b>${pp(r0.drain, '−')}</b> <i>다음 날 아침까지</i></span><span>실내 평균 <b>${n1(r0.tin)}°</b> <i>평소 ${n1(r0.e)}°</i></span><span>햇빛 <b>${r0.kwh == null ? '–' : r0.kwh.toFixed(1)}</b> <i>kWh/㎡</i></span><span>난방 <b>${r0.use > 0 ? `${r0.use} 사용` : '안 씀'}</b> <i>${r0.heatGain > .01 ? `충전 중 ${pp(r0.heatGain)}` : ''}</i></span><span>최고 잔량 <b>${pc(r0.hi)}</b> <i>${hhmm(r0.hiTs)}</i></span>`
+    : `<span>하루 충전 <b>${pp(chg)}</b> <i>평균</i></span><span>밤 소모 <b>${pp(drn, '−')}</b> <i>평균</i></span><span>가장 찬 날 <b>${pc(hi.level)}</b> <i>${md(kstMs(hi.d))}</i></span><span>가장 빈 날 <b>${pc(lo.level)}</b> <i>${md(kstMs(lo.d))}</i></span><span>햇빛 <b>${kwh.toFixed(0)}</b> <i>kWh/㎡ 합</i></span><span>난방 쓴 날 <b>${heatN}일</b> <i>${heatG > .01 ? `충전 중 ${Math.round(heatG / Math.max(.01, heatG + sunG) * 100)}%` : ''}</i></span>`;
+  return `<div class="tb rg${big ? ' big' : ''}${st}" title="고른 기간(${md(kstMs(R.a))}–${md(kstMs(R.b))})의 날짜별 배터리">
+    <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
+    <div class="tb-m"><b>${Math.round(lvl * 100)}<small>%</small></b><span><em>${rangeLabel(range)} 평균</em>${one ? '' : ` · ${pc(lo.level)}–${pc(hi.level)}`}</span></div>
+    ${bar}
+    <div class="tb-sc"><span>0% · 평소 −2°</span><span style="left:50%">50% · 평소</span><span>100% · 평소 +2°</span></div>
+    <div class="tb-f">${f}</div></div>`;
+}
 function thermoCard(big){
+  if(range !== '24h'){ const rc = thermoRangeCard(big); if(rc) return rc; }
   const T = thermoNow(); if(!T) return '';
   const todayUse = heatUse.ok ? heatUse.map[kstDate(Date.now())] ?? 0 : null, monthUse = heatUse.ok ? Object.keys(heatUse.map).filter(d => d.slice(0, 7) === kstDate(Date.now()).slice(0, 7)).reduce((a, d) => a + heatUse.map[d], 0) : null;
   const hs = thermo.heat ? heatState(thermo.heat) : null, heating = todayUse != null ? todayUse > 0 : hs === 'on' || (hs === 'edge' && (() => { const Hh = thermo.H, q = Hh.at(-1), p = Hh.at(-2); return heatSignal(p, q, sunAt(q && q.ts)); })());
@@ -1902,7 +1961,7 @@ function thermoCard(big){
 function thermoChart(el){
   const R = thermoR.H.length ? thermoR : null, H = R ? R.H : thermo.H; if(H.length < 6){ el.innerHTML = '<div class="empty">자료 모으는 중</div>'; return; }
   const HT = (R ? R.heat : []).filter(x => x && x.room), hasHeat = true;
-  const W = Math.max(320, el.clientWidth || 1112), m = { l: 44, r: 8 }, iw = W - m.l - m.r, y0 = 26, h = W < 600 ? 150 : 180, hy = y0 + h + 16, hhgt = hasHeat ? 6 : 0, Hh = hy + hhgt + 24;
+  const W = Math.max(320, el.clientWidth || 1112), m = { l: 44, r: 8 }, iw = W - m.l - m.r, y0 = 26, h = Math.round((W < 600 ? 150 : 180) * zk(el, (W < 600 ? 150 : 180) + 72)), hy = y0 + h + 16, hhgt = hasHeat ? 6 : 0, Hh = hy + hhgt + 24;
   // 시각별 잔량 = 그때까지 24시간 평균 실내가 '그때 바깥(5일 평균)의 평소'보다 얼마나 높은지
   if(!thermo.M){ el.innerHTML = '<div class="empty">집과 바깥의 관계를 재는 중 (기록이 14일 이상 필요)</div>'; return; }
   const pts = socPts(H).map(p => ({ ...p, v: p.soc, raw: p.soc }));
@@ -1942,6 +2001,7 @@ function thermoChart(el){
   const fmtT = (ts) => span < 2.5 * 864e5 ? hhmm(ts) : md(ts), nt = W < 600 ? 3 : 6; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${Hh - 6}" text-anchor="${i === 0 ? 'start' : i === nt ? 'end' : 'middle'}">${fmtT(ts)}</text>`; }
   g += `<g id="tcur" opacity="0"><line y1="${y0}" y2="${y0 + h}" stroke="var(--ink)" stroke-opacity=".35"/><circle r="4" class="od-dot"/></g><rect id="thit" x="${m.l}" y="0" width="${iw}" height="${y0 + h}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}">${g}</svg>`;
+  zoomable(el, 'tb', '열 배터리 · 잔량 흐름', (e) => thermoChart(e));
   const svg = el.firstChild, cur = svg.querySelector('#tcur');
   svg.querySelector('#thit').onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W; let b = pts[0]; for(const q of pts) if(Math.abs(X(q.ts) - px) < Math.abs(X(b.ts) - px)) b = q;
     cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b.ts)); cur.firstChild.setAttribute('x2', X(b.ts)); cur.lastChild.setAttribute('cx', X(b.ts)); cur.lastChild.setAttribute('cy', Y(b.v));
@@ -1968,10 +2028,13 @@ function batteryDays(){
   return C;
 }
 // 달력: 한 달씩 넘겨 본다. 늘 6주(42칸)라 높이가 고정
-let bcMon = null;
+let bcMon = null, bcRange = '';
 function batteryStrip(el){
   const D = batteryDays(); if(D.length < 2){ el.innerHTML = ''; return; }
-  const today = kstDate(Date.now()), first = D[0].d.slice(0, 7), last = today.slice(0, 7); if(!bcMon || bcMon > last || bcMon < first) bcMon = last;
+  const today = kstDate(Date.now()), first = D[0].d.slice(0, 7), last = today.slice(0, 7), RG = range === '24h' ? null : rangeDays();
+  // 기간을 바꾸면 그 기간 끝 달로
+  const rk = range + ':' + (RG ? RG.b : ''); if(bcRange !== rk){ bcRange = rk; bcMon = RG ? RG.b.slice(0, 7) : last; }
+  if(!bcMon || bcMon > last || bcMon < first) bcMon = last; const inSel = (d) => RG && d >= RG.a && d <= RG.b;
   const by = Object.fromEntries(D.map(r => [r.d, r])), cmx = Math.max(.1, ...D.map(r => Math.max(r.charge, r.drain || 0))), pc = (v) => (Math.min(1, Math.abs(v) / cmx) * 100).toFixed(0);
   const wd = (d) => (new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7, start = addDays(bcMon + '-01', -wd(bcMon + '-01'));
   const cell = (d) => { const r = by[d], inM = d.slice(0, 7) === bcMon, day = +d.slice(8);
@@ -1979,15 +2042,15 @@ function batteryStrip(el){
     if(!r) return `<div class="bc nil${d === today ? ' now' : ''}"><b>${day}</b></div>`;
     const f = Math.max(0, Math.min(1, r.level)), sg = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v * 100))}`;
     const tip = `${md(kstMs(d))} · 평균 잔량 ${Math.round(r.level * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°) · 충전 +${Math.round(r.charge * 100)}%p (${hhmm(r.loTs)}→${hhmm(r.hiTs)})${r.heatGain > .01 ? ` 중 난방 +${Math.round(r.heatGain * 100)}%p` : ''}${r.drain != null ? ` · 밤 소모 −${Math.round(r.drain * 100)}%p` : ''}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.use != null ? ` · 난방 사용량 ${r.use}` : ''}`;
-    return `<div class="bc ${r.src}${inM ? '' : ' out'}${d === today ? ' now' : ''}${r.level > 1 ? ' over' : ''}" style="--bc:${specColor('temp', r.tin)}" title="${tip}">
+    return `<div class="bc ${r.src}${inM ? '' : ' out'}${d === today ? ' now' : ''}${inSel(d) ? ' sel' : ''}${r.level > 1 ? ' over' : ''}" style="--bc:${specColor('temp', r.tin)}" title="${tip}">
       <u style="height:${(f * 100).toFixed(0)}%"></u><b>${day}</b><em>${sg(r.charge)}</em>
       <span class="bc-d"><i class="s" style="width:${pc(r.sunGain)}%"></i><i class="h" style="width:${pc(r.heatGain)}%"></i></span>${r.drain != null ? `<span class="bc-d n"><i class="n" style="width:${pc(r.drain)}%"></i></span>` : ''}</div>`; };
   const cells = Array.from({ length: 42 }, (_, i) => cell(addDays(start, i))).join('');
-  const inMon = D.filter(r => r.d.slice(0, 7) === bcMon), avg = (k) => inMon.length ? inMon.reduce((t, r) => t + (r[k] || 0), 0) / inMon.length : null;
+  const inMon = RG ? D.filter(r => inSel(r.d)) : D.filter(r => r.d.slice(0, 7) === bcMon), avg = (k) => inMon.length ? inMon.reduce((t, r) => t + (r[k] || 0), 0) / inMon.length : null;
   el.innerHTML = `<div class="bc-h"><button class="bc-nav" data-m="-1" ${bcMon <= first ? 'disabled' : ''} aria-label="이전 달">‹</button><span>${+bcMon.slice(0, 4)}년 ${+bcMon.slice(5)}월</span><button class="bc-nav" data-m="1" ${bcMon >= last ? 'disabled' : ''} aria-label="다음 달">›</button></div>
     <div class="bc-w">${'월화수목금토일'.split('').map(x => `<span>${x}</span>`).join('')}</div>
     <div class="bc-g">${cells}</div>
-    <div class="bc-s"><span>평균 잔량 <b>${avg('level') == null ? '–' : Math.round(avg('level') * 100) + '%'}</b></span><span>하루 충전 <b>${avg('charge') == null ? '–' : '+' + Math.round(avg('charge') * 100) + '%p'}</b></span><span>난방 쓴 날 <b>${inMon.filter(r => r.heatGain > .01 || r.use > 0).length}일</b></span></div>
+    <div class="bc-s">${RG ? `<em class="bc-sl">${rangeLabel(range)}</em>` : ''}<span>평균 잔량 <b>${avg('level') == null ? '–' : Math.round(avg('level') * 100) + '%'}</b></span><span>하루 충전 <b>${avg('charge') == null ? '–' : '+' + Math.round(avg('charge') * 100) + '%p'}</b></span><span>난방 쓴 날 <b>${inMon.filter(r => r.heatGain > .01 || r.use > 0).length}일</b></span></div>
     <p class="bc-lg"><span><i class="sun"></i>햇빛·생활열 충전</span><span><i class="heat"></i>난방 충전</span><span><i class="down"></i>밤 소모</span><span class="f">채움 = 그날 평균 잔량 · 숫자 = 그날 충전</span></p>`;
   el.querySelectorAll('.bc-nav').forEach(b => b.onclick = () => { bcMon = addMonths(bcMon, +b.dataset.m); batteryStrip(el); });
 }
@@ -1998,6 +2061,7 @@ function hourly(el, rows){
   // 축 하나에 한 지표만: 온도·습도·이슬점을 같은 시간축 위에 위아래로 나눠 그린다
   const W = Math.max(320, el.clientWidth || 1112), m = {l:44,r:8}, iw = W-m.l-m.r;
   const panels = [{k:'temp',c:'var(--t)',y:34,h:120,u:'°',name:'온도'},{k:'hum',c:'var(--h)',y:192,h:100,u:'%',name:'습도'},{k:'dew',c:'var(--d)',y:332,h:90,u:'°',name:'이슬점'},{k:'out',y:472,h:100,u:'°',name:`바깥 기온 · ${OUT.name}`}].filter(P => rows.some(r => r[P.k] != null));
+  { const f = zk(el, 600); if(f > 1) panels.forEach(P => { P.y = Math.round(P.y * f); P.h = Math.round(P.h * f); }); }
   const last = panels.at(-1), H = last.y + last.h + 28;
   const X = r => m.l + r.h/23*iw;
   let g = '', labs = '';
@@ -2013,6 +2077,7 @@ function hourly(el, rows){
   for(let h=0;h<24;h+=(W < 600 ? 6 : 3)) g += `<text x="${X({h})}" y="${H-6}" text-anchor="${h===0?'start':'middle'}">${h}시</text>`;
   g += labs + `<g id="cur" opacity="0"><line y1="20" y2="${last.y+last.h}" stroke="var(--ink)" stroke-opacity=".35"/>${panels.map(P => `<circle data-k="${P.k}" r="4.5" stroke="var(--panel)" stroke-width="2"/>`).join('')}</g><rect id="hit" x="${m.l}" y="0" width="${iw}" height="${H-20}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
+  zoomable(el, 'day', '하루 패턴', (e) => hourly(e, rows));
   const svg = el.firstChild, cur = svg.querySelector('#cur');
   svg.querySelector('#hit').onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX-r.left)/r.width*W;
     let b = rows[0]; for(const q of rows) if(Math.abs(X(q)-px) < Math.abs(X(b)-px)) b = q;
@@ -2444,17 +2509,44 @@ $('#hmSeg').onclick = e => { const bb = e.target.dataset.b; if(!bb) return; heat
 $('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); fx('#rangeT', '#tbl'); };
 $('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); fx('#rangeT', '#tbl'); };
 $('#ccTog').onclick = () => { ccOpen = !ccOpen; try { localStorage.setItem('ccOpen', ccOpen ? '1' : '0'); } catch {} if(ccArgs){ const a = ccArgs.slice(0, 4); ccFlag = true; comfortClock(...a); } };
+// ---- 크게 보기: 그래프를 넓은 화면에 다시 그려 옆으로 밀어 본다 ----
+const ZF = {}; let zmKey = null, zmZ = 2;
+// 크게 보기에서는 세로도 화면 높이에 맞춰 늘린다 (기본 높이 base → 배율)
+const zk = (el, base) => el && el.id === 'zmC' ? Math.max(1, Math.min(3, (($('#zmSc').clientHeight || 600) - 40) / base)) : 1;
+function zoomable(el, key, title, fn){
+  ZF[key] = { title, fn }; if(el.id === 'zmC' || el.closest('#zoom')) return;
+  let b = el.previousElementSibling; if(!(b && b.classList.contains('zbtn'))){ b = document.createElement('button'); b.className = 'zbtn'; b.type = 'button'; b.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9"/></svg><span>크게 보기</span>'; el.before(b); }
+  b.onclick = (e) => { e.stopPropagation(); openZoom(key); };
+}
+function openZoom(key){ zmKey = key; const z = $('#zoom'); z.hidden = false; document.body.classList.add('zm-on'); hideTip(); drawZoom(true); $('#zmX').focus({ preventScroll: true }); }
+function closeZoom(){ $('#zoom').hidden = true; document.body.classList.remove('zm-on'); hideTip(); zmKey = null; $('#zmC').innerHTML = ''; }
+function drawZoom(first){
+  const z = ZF[zmKey]; if(!z) return; const sc = $('#zmSc'), c = $('#zmC'), frac = sc.scrollWidth > sc.clientWidth ? (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth : 1;
+  $('#zmT').textContent = z.title; document.querySelectorAll('#zmSeg button').forEach(b => b.classList.toggle('on', +b.dataset.z === zmZ));
+  c.style.width = Math.round(sc.clientWidth * zmZ) + 'px'; z.fn(c);
+  // 옆으로 밀어도 왼쪽 눈금·이름은 붙어 있게: 왼쪽 44칸을 복제해 고정
+  const sv = c.querySelector('svg'); if(sv && zmZ > 1){ const vb = sv.viewBox.baseVal, k = sv.getBoundingClientRect().width / vb.width, cl = sv.cloneNode(true);
+    cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(n => n.removeAttribute('id')); cl.setAttribute('viewBox', `0 0 44 ${vb.height}`); cl.style.width = (44 * k) + 'px'; cl.style.height = (vb.height * k) + 'px';
+    const ax = document.createElement('div'); ax.className = 'zm-ax'; ax.appendChild(cl); c.prepend(ax); }
+  // 처음엔 최근(오른쪽 끝)부터, 배율을 바꾸면 보던 곳 그대로
+  sc.scrollLeft = first ? sc.scrollWidth : frac * sc.scrollWidth - sc.clientWidth / 2;
+}
+$('#zmSeg').onclick = (e) => { const v = +e.target.dataset.z; if(v){ zmZ = v; drawZoom(false); } };
+$('#zmX').onclick = closeZoom;
+document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && zmKey) closeZoom(); });
+$('#zmSc').addEventListener('scroll', () => hideTip(), { passive: true });
+$('#zoom').addEventListener('pointerdown', (e) => { if(e.pointerType !== 'mouse'){ const t = document.elementFromPoint(e.clientX, e.clientY); if(t && t.onmousemove && /hit$/i.test(t.id || t.getAttribute('class') || '')) t.onmousemove({ clientX: e.clientX, clientY: e.clientY, pointerType: 'touch' }); } });
 // 폰: 그래프 위에서 손가락을 가로로 끌면 값 확인(세로로는 그대로 스크롤). 손을 떼면 잠시 뒤 툴팁 닫힘
 const scrub = (x, y) => { const t = document.elementFromPoint(x, y); if(t && t.onmousemove && /hit$/i.test(t.id)) t.onmousemove({ clientX: x, clientY: y, pointerType: 'touch' }); };
-document.addEventListener('pointermove', e => { if(e.pointerType !== 'mouse') scrub(e.clientX, e.clientY); }, { passive: true });
-document.addEventListener('touchmove', e => { const t = e.touches[0]; if(t) scrub(t.clientX, t.clientY); }, { passive: true });
+document.addEventListener('pointermove', e => { if(e.pointerType !== 'mouse' && !zmKey) scrub(e.clientX, e.clientY); }, { passive: true });
+document.addEventListener('touchmove', e => { const t = e.touches[0]; if(t && !zmKey) scrub(t.clientX, t.clientY); }, { passive: true });
 let tipT = 0; const tipOff = () => { clearTimeout(tipT); tipT = setTimeout(() => { hideTip(); document.querySelectorAll('svg rect[id$="hit"]').forEach(r => r.onmouseleave && r.onmouseleave()); }, 1600); };
 document.addEventListener('pointerup', e => { if(e.pointerType !== 'mouse') tipOff(); }, { passive: true });
 addEventListener('scroll', () => { if(!matchMedia('(hover: none)').matches) hideTip(); }, { passive: true });
 $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(pn); };
 $('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 직접 선택 ▴' : '기간 직접 선택 ▾'; };
 (async () => { try { const b = await get('/api/bounds'); if(b.first){ dataFirst = kstDate(b.first); dataLast = kstDate(Math.max(b.last, Date.now())); } } catch {} syncPick(); })();
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 200); });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { renderAll(); if(zmKey) drawZoom(false); }, 200); });
 if('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 showPanel(panel); load(); loadHeat(); setInterval(load, 30000); setInterval(loadHeat, 300000);
 </script>
