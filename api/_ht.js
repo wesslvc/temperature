@@ -82,13 +82,16 @@ export async function heatUseWatch(heater) {
   const why = await suspect(now, heater), gap = now - last;
   if (!(have.length === 0 || (why.length && gap > 55 * 60e3) || gap > 6 * 36e5)) return { checked: false, why };
   const sess = await session(); if (!sess) return null; // 로그인은 한 번만
-  const pull = async (m) => { const u = await heatUsageMonth(m, sess); return !u ? [] : u.usage.map((v, i) => ({ d: `${m}-${String(i + 1).padStart(2, '0')}`, v })).filter((x) => x.d <= today); };
+  // 한 세션으로 동시에 여러 달을 물으면 HT가 500을 낸다 → 한 달씩 차례로, 실패하면 한 번 더
+  const one = async (m) => { for (let i = 0; i < 2; i++) { try { const u = await heatUsageMonth(m, sess); return !u ? [] : u.usage.map((v, j) => ({ d: `${m}-${String(j + 1).padStart(2, '0')}`, v })).filter((x) => x.d <= today); } catch (e) { if (i) console.error('heatuse', m, e.message); } } return []; };
+  const pullAll = async (list) => { const out = []; for (const m of list) out.push(...(await one(m))); return out; };
   const cur = today.slice(0, 7), ms = [cur]; if (+today.slice(8) <= 3) ms.unshift(addM(cur, -1));
-  let rows = (await Promise.all(ms.map(pull))).flat();
+  let rows = await pullAll(ms);
   const fresh = rows.filter((x) => x.v > 0 && !(map[x.d] > 0));
   // 새로 뜬 사용량이 있거나 처음이면: 올해 1월부터 전부
-  if (fresh.length || have.length === 0) { const all = []; for (let m = `${today.slice(0, 4)}-01`; m <= cur; m = addM(m, 1)) all.push(m); rows = (await Promise.all(all.map(pull))).flat(); }
+  if (fresh.length || have.length === 0) { const all = []; for (let m = `${today.slice(0, 4)}-01`; m <= cur; m = addM(m, 1)) all.push(m); rows = await pullAll(all); }
   const reason = (fresh.length ? `새 사용량 ${fresh.map((x) => `${x.d.slice(5)} ${x.v}`).join(', ')} · ` : '') + (why.length ? '의심: ' + why.join(' / ') : '정기');
+  if (!rows.length) return { checked: true, why, stored: 0 };
   const stored = await rpc('roomtemp_heatuse_ingest', { p_token: process.env.INGEST_TOKEN, p_rows: rows, p_why: reason });
   return { checked: true, why, fresh: fresh.length, stored };
 }
