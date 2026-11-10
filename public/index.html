@@ -808,6 +808,9 @@ svg .tb-raw{fill:none;stroke:var(--ink);stroke-opacity:.28;stroke-width:1}
 .tb.chg .tb-s{color:var(--ink)}
 @media (prefers-reduced-motion:reduce){.tbx-sheen,.tbx-fill::after,.tbx-bolt{animation:none!important}}
 @media(max-width:560px){.tbx-body{height:26px}.tb-sc span:first-child,.tb-sc span:last-child{font-size:10.5px}}
+.tbx-50{position:absolute;top:0;bottom:0;width:0;border-left:1px solid color-mix(in srgb,var(--ink) 30%,transparent)}
+.tb-sc span:nth-child(3){transform:translateX(-50%)}
+@media(max-width:560px){.tb-sc span:nth-child(3){display:none}}
 </style>
 </head>
 <body>
@@ -1494,7 +1497,7 @@ function sunAnalysis(el){
       <span class="bh-c"><i style="height:${(sd * 100).toFixed(0)}%;background:${specColor('temp', r.mean)}"></i></span>
       <span class="bh-s" style="opacity:${(.15 + .85 * Math.min(1, r.kwh / ref)).toFixed(2)}"></span>
       <span class="bh-l">${+r.d.slice(8)}</span></div>`; }).join('');
-  const pp = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v / (BT.hi - BT.lo) * 100))}%p`; // 일평균 변화(°)를 배터리 %p로
+  const pp = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v * BS))}%p`; // 일평균 변화(°)를 배터리 %p로
   const col = (k, v, sub, cls = '') => `<div class="bs"><span class="k">${k}</span><b class="${cls}">${v}</b><em>${sub}</em></div>`;
   const stats = col('오늘 햇빛', today ? `${today.kwh.toFixed(1)}<small> kWh/㎡</small>` : '–', today ? `맑은 날의 ${Math.round(Math.min(1, today.kwh / ref) * 100)}%${today.full ? '' : ' · 진행 중'}` : '집 위치 위성')
     + col('맑은 날 하루', rateS == null ? '–' : pp(rateS), sunny.length ? `${sgn(rateS, 2)} · ${sunny.length}일 평균` : '자료 모으는 중', rateS > 0 ? 'up' : 'dn')
@@ -1542,8 +1545,23 @@ async function loadThermo(){
     const night = q.h >= 19 || q.h <= 6, gap = (p.tin + q.tin) / 2 - (p.tout + q.tout) / 2, d = q.tin - p.tin;
     if(night && Math.abs(gap) > 4 && d * Math.sign(gap) < 0) ks.push(-d / gap); }
   ks.sort((x, y) => x - y);
-  thermo = { key, H, n: ks.length, k: ks.length >= 8 ? ks[Math.floor(ks.length / 2)] : null };
+  // 집과 바깥의 관계: 전체 기록의 일평균으로 '실내 = α + β × 바깥(5일 평균)'을 맞춘다
+  const F = kstMs('2026-09-25'), [st, oa] = await Promise.all([get('/api/stats?range=all').catch(() => null), get(`/api/outdoor?from=${F}&to=${b}&b=60`).catch(() => null)]);
+  const di = {}; (st && st.daily || []).forEach(r => { if(r.temp != null) di[r.d] = r.temp; });
+  const dg = {}; (oa && oa.series || OS).forEach(p => { const d = kstDate(p.ts); (dg[d] = dg[d] || []).push(p.temp); });
+  const dout = {}; Object.keys(dg).forEach(d => { if(dg[d].length >= 18) dout[d] = dg[d].reduce((x, y) => x + y, 0) / dg[d].length; });
+  thermo = { key, H, n: ks.length, k: ks.length >= 8 ? ks[Math.floor(ks.length / 2)] : null, di, dout, M: fitHouse(di, dout) };
   renderAll();
+}
+// 바깥 5일 평균 (그날까지)
+const out5 = (dout, d) => { const v = [0, 1, 2, 3, 4].map(i => dout[addDays(d, -i)]).filter(x => x != null); return v.length >= 3 ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+function fitHouse(di, dout){
+  const P = Object.keys(di).sort().map(d => [out5(dout, d), di[d]]).filter(p => p[0] != null); if(P.length < 14) return null;
+  const n = P.length, mx = P.reduce((a, p) => a + p[0], 0) / n, my = P.reduce((a, p) => a + p[1], 0) / n;
+  const sxx = P.reduce((a, p) => a + (p[0] - mx) ** 2, 0), sxy = P.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0), b = sxy / sxx, a = my - b * mx;
+  const r2 = 1 - P.reduce((s, p) => s + (p[1] - a - b * p[0]) ** 2, 0) / P.reduce((s, p) => s + (p[1] - my) ** 2, 0);
+  const sd = Math.sqrt(P.reduce((s, p) => s + (p[1] - a - b * p[0]) ** 2, 0) / n);
+  return { a, b, r2, n, sd };
 }
 // 지금 상태로 버틸 수 있는 시간(시간). 무한이면 Infinity
 function holdHours(tin, tout, k){
@@ -1553,75 +1571,66 @@ function holdHours(tin, tout, k){
   return Infinity;
 }
 const holdTxt = (t) => t == null ? '–' : t === Infinity ? '계속' : t < 1 ? `${Math.round(t * 60)}분` : t < 48 ? `${Math.round(t)}시간` : `${(t / 24).toFixed(1).replace(/\.0$/, '')}일`;
-// ---- 고정 눈금 배터리 ----
-// 0% = 22° (우리 집 바닥: 기록상 하루 평균이 23° 아래로 내려간 적이 없고 20° 아래로는 안 감) · 100% = 26° (정부 권장 냉방 온도)
-// 1°에 25%p. 여름엔 100%를 넘고(28° = 150%) 추운 날이 이어지면 빠진다. 바닥이 0%라 '햇빛·난방으로 바닥 위에 얼마나 쌓였나'가 잔량.
-// 계절과 상관없이 같은 눈금이라 '지금 집이 절대적으로 따뜻한 편인지'와 '햇빛으로 얼마나 채워지는지'를 바로 비교할 수 있다
-const BT = { lo: 22, hi: 26 };
-const bSoc = (t) => (t - BT.lo) / (BT.hi - BT.lo);
-const bWord = (s) => s < 0 ? '바닥 아래 · 이례적으로 추움' : s < .25 ? '바닥 근처 · 추운 편' : s < .5 ? '서늘한 편' : s < .75 ? '알맞음' : s <= 1 ? '따뜻한 편' : s < 1.5 ? '더운 편 · 냉방 기준 넘음' : '아주 더움';
-function thermoDays(){
-  const H = thermo.H; if(!H.length) return [];
-  const g = {}; H.forEach(r => { const d = kstDate(r.ts); (g[d] = g[d] || []).push(r); });
-  const kwh = {}; solarHours().forEach(x => { const d = kstDate(x.a + 18e5); kwh[d] = (kwh[d] || 0) + x.w / 1000; });
-  const D = Object.keys(g).sort().map(d => { const a = g[d]; return { d, n: a.length, tin: a.reduce((x, r) => x + r.tin, 0) / a.length, tout: a.reduce((x, r) => x + r.tout, 0) / a.length, kwh: kwh[d] ?? null }; });
-  D.forEach((r, i) => { const p = D[i - 1]; r.dS = p && p.n >= 20 && r.n >= 20 ? bSoc(r.tin) - bSoc(p.tin) : null; });
-  return D;
-}
-// 하루 잔량 변화 = 햇빛 충전 − 바깥으로 새는 양. 최근 14일로 직선 맞춤: dS = sun·kWh − loss
-// loss는 그 기간 평균 실내−바깥 차에서의 하루 손실이라, 바깥과 1° 차이당 손실(leak = loss ÷ 평균 차)로 바꿔 오늘 차이에 곱한다
-function thermoBudget(D){
-  const R = D.filter(r => r.dS != null && r.kwh != null); if(R.length < 6) return null;
-  const mx = R.reduce((a, r) => a + r.kwh, 0) / R.length, my = R.reduce((a, r) => a + r.dS, 0) / R.length;
-  const sxx = R.reduce((a, r) => a + (r.kwh - mx) ** 2, 0), sxy = R.reduce((a, r) => a + (r.kwh - mx) * (r.dS - my), 0); if(sxx < .5) return null;
-  const sun = sxy / sxx, loss = sun * mx - my, gap = R.reduce((a, r) => a + (r.tin - r.tout), 0) / R.length;
-  if(!(sun > 0) || !(loss > 0) || !(gap > 1)) return null;
-  return { sun, leak: loss / gap, n: R.length, even: loss / sun };
-}
+// ---- 열 배터리: 바깥과의 관계로 정의 ----
+// 우리 집은 바깥이 따뜻하든 춥든 일정한 관계로 따라간다 (기록 맞춤: 실내 ≈ α + β × 바깥 5일 평균).
+// 그 관계가 말해 주는 '이 바깥 날씨의 평소 실내'가 50%. 그보다 따뜻하면 햇빛·난방으로 열이 더 쌓인 것(충전), 차가우면 빠진 것(방전).
+// 1°에 25%p (평소 +2° = 100%, −2° = 0%). 그래서 같은 25°라도 바깥이 추운 날엔 높고, 더운 날엔 낮다. 이상저온이면 평소 기준이 같이 내려간다.
+const BS = 25; // %p per °
+const bWord = (r) => r <= -1.5 ? '평소보다 많이 차가움' : r < -.5 ? '평소보다 차가움' : r <= .5 ? '평소 수준' : r < 1.5 ? '평소보다 따뜻함' : '평소보다 많이 따뜻함';
+function houseExp(tout5){ const M = thermo.M; return M && tout5 != null ? M.a + M.b * tout5 : null; }
 function thermoNow(){
-  const H = thermo.H; if(H.length < 30) return null;
+  const H = thermo.H, M = thermo.M; if(H.length < 30 || !M) return null;
   const now = H.at(-1).ts, m = (a, b) => { const v = H.filter(r => r.ts > a && r.ts <= b); return v.length >= 12 ? { tin: v.reduce((x, r) => x + r.tin, 0) / v.length, tout: v.reduce((x, r) => x + r.tout, 0) / v.length } : null; };
+  const o5 = (t) => { const v = H.filter(r => r.ts > t - 5 * 864e5 && r.ts <= t); return v.length >= 48 ? v.reduce((x, r) => x + r.tout, 0) / v.length : null; };
   const c24 = m(now - 864e5, now), p24 = m(now - 2 * 864e5, now - 864e5); if(!c24) return null;
-  const soc = bSoc(c24.tin), rate = p24 ? soc - bSoc(p24.tin) : null, st = rate == null ? 'idle' : rate > .02 ? 'chg' : rate < -.02 ? 'dis' : 'idle';
-  const D = thermoDays(), B = thermoBudget(D), today = D.at(-1), yday = D.at(-2);
-  const cur = cache && cache.cur, oc = cache && cache.out && cache.out.cur, hold = holdHours(cur ? cur.temp : c24.tin, oc ? oc.temp : c24.tout, thermo.k);
-  return { soc, rate, st, tin: c24.tin, tout: c24.tout, B, today, yday, hold, D };
+  const tout5 = o5(now) ?? out5(thermo.dout, kstDate(now)), exp = houseExp(tout5), resid = c24.tin - exp, soc = .5 + resid * BS / 100;
+  const pexp = houseExp(o5(now - 864e5)), prev = p24 && pexp != null ? .5 + (p24.tin - pexp) * BS / 100 : null, rate = prev == null ? null : soc - prev;
+  const st = rate == null ? 'idle' : rate > .02 ? 'chg' : rate < -.02 ? 'dis' : 'idle';
+  const cur = cache && cache.cur, oc = cache && cache.out && cache.out.cur;
+  // 최근 3일 햇빛 (평소 대비)
+  const S = solarHours(), sumIn = (a, b) => S.filter(x => x.a >= a && x.a < b).reduce((t, x) => t + x.w / 1000, 0), sun3 = sumIn(now - 3 * 864e5, now);
+  const days = []; for(let i = 3; i < 30; i += 3) days.push(sumIn(now - (i + 3) * 864e5, now - i * 864e5)); const sunAvg = days.filter(v => v > 0).length ? days.filter(v => v > 0).reduce((a, b) => a + b, 0) / days.filter(v => v > 0).length : null;
+  TB.min = exp - 2; // 0% 지점까지 버티는 시간
+  const hold = holdHours(cur ? cur.temp : c24.tin, oc ? oc.temp : c24.tout, thermo.k);
+  return { soc, rate, st, tin: c24.tin, tout: c24.tout, tout5, exp, resid, M, sun3, sunAvg, hold };
 }
 function thermoCard(big){
   const T = thermoNow(); if(!T) return '';
-  const pct = Math.round(T.soc * 100), col = specColor('temp', T.tin), sg = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v * 100))}%p`;
+  const pct = Math.round(T.soc * 100), col = specColor('temp', T.tin), sg = (v, u = '%p', d = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v * (u === '%p' ? 100 : 1)).toFixed(d)}${u}`;
   const stTxt = { chg: '충전 중', dis: '방전 중', idle: '유지' }[T.st] + (T.rate == null ? '' : ` ${sg(T.rate)} / 하루`);
   const fillW = Math.max(0, Math.min(1.5, T.soc)) / 1.5 * 100;
-  const cells = `<div class="tbx"><div class="tbx-body"><div class="tbx-fill" style="width:${fillW.toFixed(1)}%"><i class="tbx-sheen"></i></div>
-      <i class="tbx-100" style="left:${(100 / 1.5).toFixed(2)}%"></i>${[.5].map(v => `<i class="tbx-t" style="left:${(v / 1.5 * 100).toFixed(2)}%"></i>`).join('')}
+  const bar = `<div class="tbx"><div class="tbx-body"><div class="tbx-fill" style="width:${fillW.toFixed(1)}%"><i class="tbx-sheen"></i></div>
+      <i class="tbx-100" style="left:${(100 / 1.5).toFixed(2)}%"></i><i class="tbx-50" style="left:${(50 / 1.5).toFixed(2)}%"></i>
       ${T.st === 'chg' ? `<svg class="tbx-bolt" style="left:max(8px, calc(${fillW.toFixed(1)}% - 22px))" viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 2 5 13.5h6L10 22l9-12.5h-6.2z"/></svg>` : ''}</div><i class="tbx-cap"></i></div>`;
-  const sunToday = T.B && T.today && T.today.kwh != null ? T.B.sun * T.today.kwh : null, sunY = T.B && T.yday && T.yday.kwh != null ? T.B.sun * T.yday.kwh : null, leakDay = T.B ? T.B.leak * (T.tin - T.tout) : null;
-  const f = [
-    `<span>햇빛 충전 <b>${sunY == null ? '–' : sg(sunY)}</b> <i>어제 ${T.yday && T.yday.kwh != null ? T.yday.kwh.toFixed(1) + ' kWh/㎡' : ''}</i></span>`,
-    `<span>바깥으로 <b>${leakDay == null ? '–' : sg(-leakDay)}</b> <i>하루 · 바깥 ${n1(T.tout)}°</i></span>`,
-    `<span>바닥(${TB.min}°)까지 <b>${holdTxt(T.hold)}</b> <i>햇빛·난방 없이</i></span>`].join('');
+  const e = T.exp, f = [
+    `<span>이 바깥 날씨의 평소 <b>${n1(e)}°</b> <i>바깥 5일 평균 ${n1(T.tout5)}°</i></span>`,
+    `<span>지금 <b>${n1(T.tin)}°</b> <i>평소보다 ${sg(T.resid, '°', 1)}</i></span>`,
+    `<span>최근 3일 햇빛 <b>${T.sun3.toFixed(1)} kWh/㎡</b> <i>${T.sunAvg ? `평소의 ${Math.round(T.sun3 / T.sunAvg * 100)}%` : ''}</i></span>`].join('');
   return `<div class="tb${big ? ' big' : ''} ${T.st}" style="--tc:${col}">
     <div class="tb-h"><span class="tb-t">열 배터리</span><span class="tb-s"><i></i>${stTxt}</span></div>
-    <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.soc)}</em> · 24시간 평균 ${n1(T.tin)}°</span></div>
-    ${cells}
-    <div class="tb-sc"><span>${BT.lo}° 우리 집 바닥 · 0%</span><span style="left:${100 / 1.5}%">${BT.hi}° 냉방 기준 · 100%</span><span>${BT.lo + 1.5 * (BT.hi - BT.lo)}° · 150%</span></div>
+    <div class="tb-m"><b>${pct}<small>%</small></b><span><em>${bWord(T.resid)}</em> · 바깥보다 ${sg(T.tin - T.tout, '°', 1)} 따뜻</span></div>
+    ${bar}
+    <div class="tb-sc"><span>평소 −2° · 0%</span><span style="left:${50 / 1.5}%">평소 ${n1(e)}° · 50%</span><span style="left:${100 / 1.5}%">+2° · 100%</span><span>150%</span></div>
     <div class="tb-f">${f}</div>
-    ${big ? `<p class="tb-n" title="햇빛 충전·바깥 손실은 최근 ${T.B ? T.B.n : 0}일의 하루 잔량 변화를 햇빛량과 실내−바깥 차로 나눠 잰 값. 일사량: 최근 약 12일은 집 위치 위성값(한국에너지기술연구원), 그 전은 Open-Meteo">기준 ${BT.lo}°(우리 집 바닥) = 0%, ${BT.hi}°(정부 권장 냉방 온도) = 100%, 1°에 ${Math.round(100 / (BT.hi - BT.lo))}%p.${T.B ? ` 햇빛 1 kWh/㎡에 ${sg(T.B.sun)}, 지금 바깥이면 하루 ${(T.B.leak * (T.tin - T.tout) / T.B.sun).toFixed(1)} kWh/㎡가 들어야 본전.` : ''}</p>` : ''}</div>`;
+    ${big ? `<p class="tb-n" title="햇빛·난방이 없으면 지금 실내·바깥으로 ${n1(e - 2)}°(0%)까지 ${holdTxt(T.hold)}. 일사량: 최근 약 12일은 집 위치 위성값(한국에너지기술연구원), 그 전은 Open-Meteo">기준: 지금까지 ${T.M.n}일 기록으로 본 우리 집의 관계 '실내 ≈ ${T.M.a.toFixed(1)}° + ${T.M.b.toFixed(2)} × 바깥 5일 평균'(설명력 ${Math.round(T.M.r2 * 100)}%). 바깥이 1° 내려가면 집은 평소 ${T.M.b.toFixed(2)}°만 내려가요(완충 ${Math.round((1 - T.M.b) * 100)}%). 이 평소 값보다 따뜻하면 열이 더 쌓인 것, 1°에 ${BS}%p.</p>` : ''}</div>`;
 }
 // 14일 잔량 흐름 + 햇빛
 function thermoChart(el){
   const H = thermo.H; if(H.length < 30){ el.innerHTML = '<div class="empty">자료 모으는 중</div>'; return; }
   const W = Math.max(320, el.clientWidth || 1112), m = { l: 44, r: 8 }, iw = W - m.l - m.r, y0 = 28, h = 160, sy = y0 + h + 18, sh = 34, Hh = sy + sh + 26;
-  // 24시간 이동 평균 잔량 (하루 오르내림보다 '쌓임'을 보이려고)
-  const pts = H.map((r, i) => { const w = H.filter(q => q.ts > r.ts - 864e5 && q.ts <= r.ts); return { ts: r.ts, v: bSoc(w.reduce((x, q) => x + q.tin, 0) / w.length), raw: bSoc(r.tin), tin: r.tin, tout: r.tout }; }).filter((p, i) => i >= 12);
+  // 시각별 잔량 = 그때까지 24시간 평균 실내가 '그때 바깥(5일 평균)의 평소'보다 얼마나 높은지
+  if(!thermo.M){ el.innerHTML = '<div class="empty">집과 바깥의 관계를 재는 중 (기록이 14일 이상 필요)</div>'; return; }
+  const o5 = (t) => { const v = H.filter(q => q.ts > t - 5 * 864e5 && q.ts <= t).map(q => q.tout); const d = kstDate(t); return v.length >= 72 ? v.reduce((a, b) => a + b, 0) / v.length : out5(thermo.dout, d); };
+  const pts = H.map((r) => { const w = H.filter(q => q.ts > r.ts - 864e5 && q.ts <= r.ts), e = houseExp(o5(r.ts)); if(e == null) return null; const m = w.reduce((x, q) => x + q.tin, 0) / w.length;
+    return { ts: r.ts, v: .5 + (m - e) * BS / 100, raw: .5 + (r.tin - e) * BS / 100, tin: r.tin, tout: r.tout, e }; }).filter((p, i) => p && i >= 12);
   const t0 = pts[0].ts, t1 = pts.at(-1).ts, X = (ts) => m.l + (ts - t0) / (t1 - t0 || 1) * iw;
-  const vmax = Math.max(1.5, ...pts.map(p => p.raw)) , vmin = Math.min(0, ...pts.map(p => p.raw)), Y = (v) => y0 + h - (v - vmin) / (vmax - vmin) * h;
+  const vmax = Math.max(1, ...pts.map(p => p.raw)), vmin = Math.min(0, ...pts.map(p => p.raw)), Y = (v) => y0 + h - (v - vmin) / (vmax - vmin) * h;
   let g = '';
-  [0, .5, 1, 1.5].filter(v => v >= vmin && v <= vmax).forEach(v => { g += `<line class="${v === 1 ? 'tb-100' : 'gl'}" x1="${m.l}" x2="${m.l + iw}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${m.l - 8}" y="${Y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`; });
-  const gd = vGrad('temp', BT.lo + vmin * (BT.hi - BT.lo), BT.lo + vmax * (BT.hi - BT.lo), Y(vmin), Y(vmax), .3, true); g += `<defs>${gd.def}</defs>`;
+  [0, .5, 1, 1.5].filter(v => v >= vmin && v <= vmax).forEach(v => { g += `<line class="${v === .5 ? 'tb-100' : 'gl'}" x1="${m.l}" x2="${m.l + iw}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${m.l - 8}" y="${Y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`; });
+  const gd = vGrad('temp', 22 + vmin * 4, 22 + vmax * 4, Y(vmin), Y(vmax), .3, true); g += `<defs>${gd.def}</defs>`;
   const raw = smooth(pts.map(p => [X(p.ts), Y(p.raw)])), avg = smooth(pts.map(p => [X(p.ts), Y(p.v)]));
   g += `<path d="${avg}L${X(t1)},${Y(vmin)}L${X(t0)},${Y(vmin)}Z" fill="url(#${gd.id})"/><path d="${raw}" class="tb-raw"/><path d="${avg}" class="od-line"/>`;
-  g += `<g class="plab"><text x="${m.l - 36}" y="${y0 - 12}">잔량 (24시간 평균)</text></g><text class="od-l" x="${m.l + iw}" y="${y0 - 12}" text-anchor="end">가는 선 = 시각별</text>`;
+  g += `<g class="plab"><text x="${m.l - 36}" y="${y0 - 12}">잔량 (24시간 평균)</text></g><text class="od-l" x="${m.l + iw}" y="${y0 - 12}" text-anchor="end">점선 50% = 그 바깥 날씨의 평소 · 가는 선 = 시각별</text>`;
   const Hs = solarHours().filter(x => x.b > t0 && x.a < t1), mx = Math.max(300, ...Hs.map(x => x.w));
   Hs.forEach(x => { const a = X(Math.max(t0, x.a)), b = X(Math.min(t1, x.b)), hh = x.w / mx * sh; if(hh > .5) g += `<rect x="${a}" y="${sy + sh - hh}" width="${Math.max(.8, b - a - .4)}" height="${hh}" class="ov-sun"/>`; });
   g += `<text class="ov-rl" x="${m.l - 8}" y="${sy + sh - 2}" text-anchor="end">햇빛</text>`;
@@ -1631,7 +1640,7 @@ function thermoChart(el){
   const svg = el.firstChild, cur = svg.querySelector('#tcur');
   svg.querySelector('#thit').onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W; let b = pts[0]; for(const q of pts) if(Math.abs(X(q.ts) - px) < Math.abs(X(b.ts) - px)) b = q;
     cur.setAttribute('opacity', 1); cur.firstChild.setAttribute('x1', X(b.ts)); cur.firstChild.setAttribute('x2', X(b.ts)); cur.lastChild.setAttribute('cx', X(b.ts)); cur.lastChild.setAttribute('cy', Y(b.v));
-    showTip(e, `<b>${when(b.ts)}</b><br>잔량 ${Math.round(b.v * 100)}% (24시간 평균) · 이 시각 ${Math.round(b.raw * 100)}%<br>실내 ${n1(b.tin)}° · 바깥 ${n1(b.tout)}°`); };
+    showTip(e, `<b>${when(b.ts)}</b><br>잔량 ${Math.round(b.v * 100)}% (24시간 평균) · 이 시각 ${Math.round(b.raw * 100)}%<br>실내 ${n1(b.tin)}° · 바깥 ${n1(b.tout)}° · 평소 ${n1(b.e)}°`); };
   svg.querySelector('#thit').onmouseleave = () => { cur.setAttribute('opacity', 0); hideTip(); };
 }
 
