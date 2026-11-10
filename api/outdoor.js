@@ -1,5 +1,5 @@
 import { rpc } from './_db.js';
-import { SDOT_SERIAL, sdotLatest, sdotPage, storeSun } from './_sdot.js';
+import { SDOT_NAME, SDOT_SERIAL, sdotLatest, sdotPage, storeSun } from './_sdot.js';
 // 기상청 AWS 매분자료 (기본: 강동 402). 키는 서버 환경변수에만 둔다.
 // /api/outdoor?from=&to=      → DB에 쌓인 자료 (구간 길이에 따라 1·10·60분 평균)
 // /api/outdoor?backfill=YYYY-MM-DD (Bearer INGEST_TOKEN) → 그 날 1분 자료를 DB에 저장
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
       const now = Date.now(), from = Number(req.query.from) || now - 7 * 864e5, to = Math.min(Number(req.query.to) || now, now);
       const rows = await rpc('roomtemp_sun_series', { p_from: new Date(from).toISOString(), p_to: new Date(to).toISOString() });
       res.setHeader('Cache-Control', to < now - 36e5 ? 's-maxage=3600' : 's-maxage=300, stale-while-revalidate=600');
-      return res.json({ serial: SDOT_SERIAL(), name: 'S-DoT 고덕로 360', series: (rows || []).map((r) => ({ ts: Number(r.ts), illu: r.illu == null ? null : Number(r.illu), illuMax: r.illu_max == null ? null : Number(r.illu_max), uv: r.uv == null ? null : Number(r.uv) })) });
+      return res.json({ serial: SDOT_SERIAL(), name: SDOT_NAME(), series: (rows || []).map((r) => ({ ts: Number(r.ts), illu: r.illu == null ? null : Number(r.illu), illuMax: r.illu_max == null ? null : Number(r.illu_max), uv: r.uv == null ? null : Number(r.uv) })) });
     } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
   }
   // S-DoT 관리용 (Bearer INGEST_TOKEN): ?sdot=now → 지금 받아 저장, ?sdot=probe → 과거 자료를 주는 서비스 탐색

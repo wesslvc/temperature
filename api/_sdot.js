@@ -1,9 +1,11 @@
 import { rpc } from './_db.js';
 // 집 앞 서울시 S-DoT(스마트서울 도시데이터 센서) 1시간 자료에서 조도·자외선을 가져온다.
 // 실시간 API(sDoTEnv)는 시리얼로 거를 수 없고 1,000행씩 페이지로만 받을 수 있어, 앞쪽 몇 페이지를 받아 시리얼로 고른다.
-// 키: SDOT_API_KEY (서울 열린데이터광장), 센서: SDOT_SERIAL (기본 고덕로 360, 상일동)
+// 키: SDOT_API_KEY (서울 열린데이터광장), 센서: SDOT_SERIAL (기본 고덕로 227, 고덕1동)
+// 집 앞 고덕로 360(V02Q1940352)은 조도·자외선이 한 달 내내 0으로 나와(센서 고장), 조도가 정상인 가장 가까운 센서를 쓴다
 const BASE = 'http://openapi.seoul.go.kr:8088';
-export const SDOT_SERIAL = () => (process.env.SDOT_SERIAL || 'V02Q1940352').toUpperCase();
+export const SDOT_SERIAL = () => (process.env.SDOT_SERIAL || 'V02Q1940350').toUpperCase();
+export const SDOT_NAME = () => process.env.SDOT_NAME || (process.env.SDOT_SERIAL ? 'S-DoT ' + SDOT_SERIAL() : 'S-DoT 고덕로 227');
 const num = (v) => { if (v == null) return null; const s = String(v).trim(); if (s === '') return null; const n = Number(s); return Number.isFinite(n) ? n : null; };
 // "2026-11-10_18:07:00" / "2026-11-10 18:07" / "202611101807" → 한국 시간 ms
 export const sdotTs = (s) => { const d = String(s || '').replace(/\D/g, ''); if (d.length < 12) return null;

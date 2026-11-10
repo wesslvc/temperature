@@ -3,3 +3,5 @@
 -- public.roomtemp_sun_ingest(p_token, p_rows jsonb)  : ingest_token 확인 후 upsert (data_no 큰 값=지연 보정 최종값 우선)
 -- public.roomtemp_sun_series(p_from, p_to)           : ts(ms), illu(평균), illu_max, uv(평균)
 -- 수집: api/collect.js(pg_cron 30분마다)가 서울 열린데이터광장 sDoTEnv 를 조회해 저장 (api/_sdot.js)
+-- 센서: 고덕로 227(V02Q1940350). 집 앞 고덕로 360(V02Q1940352)은 조도·자외선이 0만 나와 제외
+-- SENSING_TIME 은 그 1시간의 끝 시각. 과거분(10/10~)은 IotVdata017/{a}/{b}/Gangdong-gu (최근 한 달, 어제까지)로 채움
