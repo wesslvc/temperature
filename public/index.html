@@ -1022,22 +1022,48 @@ svg .tb-lvl{stroke:var(--ink);stroke-opacity:.45;stroke-width:1.2;stroke-dasharr
 .tb .tbx-cap.on{background:var(--bcol)!important}
 .tb .tb-m b{color:var(--ink)}
 .tb.over .tb-m b,.tb.under .tb-m b{color:var(--bcol)}
-/* 크게 보기 */
-.zbtn{display:flex;align-items:center;gap:5px;margin:0 0 6px auto;height:28px;padding:0 11px 0 9px;border-radius:999px;font-size:12px;font-weight:600;color:var(--sub);box-shadow:inset 0 0 0 1px var(--rule);background:none;transition:color .15s,background .15s}
-.zbtn:hover{color:var(--ink);background:var(--sunk)}
+/* 자세히 보기 */
+.zhost{position:relative}
+.zbtn{display:inline-grid;place-items:center;width:28px;height:28px;padding:0;border-radius:9px;color:var(--faint);background:color-mix(in srgb,var(--card) 85%,transparent);box-shadow:inset 0 0 0 1px var(--rule);transition:color .15s,background .15s,box-shadow .15s}
+.zbtn:hover{color:var(--ink);background:var(--sunk);box-shadow:inset 0 0 0 1px var(--sub)}
 .zbtn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-#zoom{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:var(--bg);padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.zhost>.zbtn{position:absolute;top:-6px;right:0;z-index:3}
+#trend.zhost>.zbtn,#hourly.zhost>.zbtn{top:0}
+.oc-n{display:flex;align-items:center;justify-content:space-between}
+.oc-n>.zbtn{margin:-6px -6px -6px 0}
+#zoom{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;gap:12px;background:var(--bg);padding:max(14px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));opacity:0;transform:translateY(10px);transition:opacity .18s ease-out,transform .18s ease-out}
+#zoom.in{opacity:1;transform:none}
 #zoom[hidden]{display:none}
 body.zm-on{overflow:hidden}
-.zm-bar{display:flex;align-items:center;gap:12px;padding:4px 4px 12px}
-.zm-bar b{flex:1;min-width:0;font-size:15px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.zm-x{height:32px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:650;background:var(--ink);color:var(--bg)}
-.zm-sc{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--card);border:1px solid var(--card-b);border-radius:var(--r);padding:16px 0}
-#zmC{min-height:100%;padding:0 12px;box-sizing:border-box}
-#zoom svg,#zoom svg rect{touch-action:pan-x pan-y!important}
-.zm-tip{margin:10px 4px 0;font-size:11.5px;color:var(--faint);text-align:center}
+.zm-bar{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;min-height:40px}
+.zm-back{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:var(--ink);background:var(--sunk)}
+.zm-back:hover{background:var(--sunk-2)}
+.zm-back svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.zm-ttl{display:flex;flex-direction:column;gap:1px;min-width:0}
+.zm-ttl b{font-size:16px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zm-ttl span{font-size:12px;color:var(--faint)}
+.zm-fit{height:32px;padding:0 12px;border-radius:10px;font-size:12.5px;font-weight:650;color:var(--sub);box-shadow:inset 0 0 0 1px var(--rule)}
+.zm-fit:hover{color:var(--ink);background:var(--sunk)}
+.zm-sc{flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;scrollbar-width:none;background:var(--card);border:1px solid var(--card-b);border-radius:var(--r);padding:14px 0 6px}
+.zm-sc::-webkit-scrollbar{display:none}
+#zmC{height:100%;padding:0 12px;box-sizing:border-box}
+#zoom .zm-sc svg,#zoom .zm-sc svg rect{touch-action:pan-x!important}
 #zoom .zbtn{display:none}
+.zm-ax{position:sticky;left:0;width:0;height:0;overflow:visible;z-index:2;pointer-events:none}
+.zm-ax svg{display:block;overflow:hidden!important;background:linear-gradient(90deg,var(--card) 82%,transparent);padding-right:10px;box-sizing:content-box}
+.zm-nav{position:relative;flex:none;height:52px;border-radius:12px;background:var(--card);border:1px solid var(--card-b);overflow:hidden;touch-action:none;cursor:pointer;user-select:none}
+.zm-mini{position:absolute;inset:4px 0;opacity:.55;pointer-events:none}
+.zm-mini svg{width:100%;height:100%;display:block}
+.zm-mini svg text,.zm-mini svg .gl,.zm-mini svg circle,.zm-mini svg [class*="hit"],.zm-mini svg #tcur,.zm-mini svg .ocur,.zm-mini svg g[id]{display:none}
+.zm-mini svg path,.zm-mini svg line{vector-effect:non-scaling-stroke}
+.zm-win{position:absolute;top:0;bottom:0;border-radius:11px;background:color-mix(in srgb,var(--ink) 7%,transparent);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 55%,transparent);cursor:grab}
+.zm-win:active{cursor:grabbing}
+.zm-win.all{box-shadow:inset 0 0 0 1px var(--rule);background:none}
+.zh{position:absolute;top:0;bottom:0;width:16px;cursor:ew-resize;display:grid;place-items:center}
+.zh.l{left:-2px}.zh.r{right:-2px}
+.zh::after{content:'';width:4px;height:20px;border-radius:2px;background:var(--ink);opacity:.75}
 #tip{z-index:70}
+@media (prefers-reduced-motion:reduce){#zoom{transition:none}}
 .tbx-rg{position:absolute;top:3px;bottom:3px;border-radius:6px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 55%,transparent)}
 .bc.sel{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 45%,transparent)}
 .bc.sel.now{box-shadow:inset 0 0 0 2px var(--ink)}
@@ -1132,9 +1158,9 @@ body.zm-on{overflow:hidden}
 
 </div>
 <div id="zoom" hidden role="dialog" aria-modal="true" aria-labelledby="zmT">
-  <div class="zm-bar"><b id="zmT"></b><div class="seg" id="zmSeg"><button data-z="1">1×</button><button data-z="2">2×</button><button data-z="4">4×</button><button data-z="8">8×</button></div><button class="zm-x" id="zmX" aria-label="닫기">닫기</button></div>
+  <header class="zm-bar"><button class="zm-back" id="zmX" aria-label="닫기"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button><div class="zm-ttl"><b id="zmT"></b><span id="zmS"></span></div><button class="zm-fit" id="zmFit" hidden>전체 보기</button></header>
   <div class="zm-sc" id="zmSc"><div id="zmC"></div></div>
-  <p class="zm-tip">옆으로 밀어 보기 · 눌러서 값 보기 · 폰을 가로로 돌리면 더 넓게</p>
+  <div class="zm-nav" id="zmNav"><div class="zm-mini" id="zmMini"></div><div class="zm-win" id="zmWin"><i class="zh l"></i><i class="zh r"></i></div></div>
 </div>
 <div id="tip"></div>
 
@@ -1661,7 +1687,7 @@ function outChart(el, P, D, SUN, sg){
   const nt = narrow ? 2 : 3; for(let i = 0; i <= nt; i++){ const ts = t0 + span * i / nt; g += `<text x="${m.l + iw * i / nt}" y="${H - 4}" text-anchor="${i == 0 ? 'start' : i == nt ? 'end' : 'middle'}">${fmt(ts)}</text>`; }
   g += `<g class="ocur" opacity="0"><line y1="${y0}" y2="${ry + RB}" stroke="var(--ink)" stroke-opacity=".35"/><circle r="4" class="od-dot"/><circle r="3.5" class="od-dot o"/></g><rect class="ohit" id="${el.id}hit" x="${m.l}" y="0" width="${iw}" height="${ry + RB}" fill="transparent"/>`;
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}">${g}</svg>`;
-  zoomable(el, 'out-' + P.d, `${P.name} · AWS vs 실내`, (e) => outChart(e, P, D, SUN, sg));
+  zoomable(el, 'out-' + P.d, `${P.name} · AWS vs 실내`, (e) => outChart(e, P, D, SUN, sg), el.closest('.oc') && el.closest('.oc').querySelector('.oc-n'));
   const svg = el.firstChild, cur = svg.querySelector('.ocur'), [c1, c2] = cur.querySelectorAll('circle'), hit = svg.querySelector('.ohit');
   hit.onmousemove = e => { const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
     let b = D[0]; for(const q of D) if(Math.abs(X(q.ts) - px) < Math.abs(X(b.ts) - px)) b = q;
@@ -2021,7 +2047,7 @@ function thermoChart(el){
     flush(); }
   const DC = dayCycles(pts), BDc = batteryDays(); if(t1 - t0 > 864e5 * 1.2) DC.forEach(c => { const a = X(Math.max(t0, kstMs(c.d))), b = X(Math.min(t1, kstMs(c.d) + 864e5)); if(b - a > 6) g += `<line class="tb-lvl" x1="${a + 2}" x2="${b - 2}" y1="${Y(c.level)}" y2="${Y(c.level)}"/>`; });
   g += `<path d="${ln}" class="od-line"/>`;
-  g += `<g class="plab"><text x="${m.l - 36}" y="${y0 - 12}">잔량 흐름${calSel ? ' · ' + md(kstMs(calSel)) : ''}</text></g><text class="od-l" x="${m.l + iw}" y="${y0 - 12}" text-anchor="end">${W < 600 ? '노랑 충전 · 회색 소모' : '노랑 = 충전 · 회색 = 소모 · 짧은 점선 = 그날 평균 · 노란 바탕 = 햇빛'}</text>`;
+  g += `<g class="plab"><text x="${m.l - 36}" y="${y0 - 12}">잔량 흐름${calSel ? ' · ' + md(kstMs(calSel)) : ''}</text></g><text class="od-l" x="${m.l + iw - (el.id === 'zmC' ? 0 : 36)}" y="${y0 - 12}" text-anchor="end">${W < 600 ? '노랑 충전 · 회색 소모' : '노랑 = 충전 · 회색 = 소모 · 짧은 점선 = 그날 평균 · 노란 바탕 = 햇빛'}</text>`;
   // 햇빛은 배경에 옅게 (따로 막대 없이), 날짜 경계는 점선
   const today = kstDate(Date.now()), span = t1 - t0, Hs = solarHours().filter(x => x.b > t0 && x.a < t1), mx = Math.max(300, ...Hs.map(x => x.w));
   let bg = sunBg(Hs, X, m.l, m.l + iw, y0, h, mx);
@@ -2547,33 +2573,74 @@ $('#hmSeg').onclick = e => { const bb = e.target.dataset.b; if(!bb) return; heat
 $('#unitSeg').onclick = e => { const u = e.target.dataset.u; if(!u) return; unit = u; renderAll(); fx('#rangeT', '#tbl'); };
 $('#tblSeg').onclick = e => { const m = e.target.dataset.m; if(!m) return; tblMetric = m; renderAll(); fx('#rangeT', '#tbl'); };
 $('#ccTog').onclick = () => { ccOpen = !ccOpen; try { localStorage.setItem('ccOpen', ccOpen ? '1' : '0'); } catch {} if(ccArgs){ const a = ccArgs.slice(0, 4); ccFlag = true; comfortClock(...a); } };
-// ---- 크게 보기: 그래프를 넓은 화면에 다시 그려 옆으로 밀어 본다 ----
-const ZF = {}; let zmKey = null, zmZ = 2;
-// 크게 보기에서는 세로도 화면 높이에 맞춰 늘린다 (기본 높이 base → 배율)
-const zk = (el, base) => el && el.id === 'zmC' ? Math.max(1, Math.min(3, (($('#zmSc').clientHeight || 600) - 40) / base)) : 1;
-function zoomable(el, key, title, fn){
+// ---- 자세히 보기: 그래프를 전체 화면 시트로. 아래 미니맵에서 창을 끌어 옮기고, 양 끝을 끌어 넓히고 좁힌다 ----
+const ZF = {}; let zmKey = null, zmZ = 1;
+// 자세히 보기에서는 세로도 화면 높이에 맞춰 늘린다 (기본 높이 base → 배율)
+const zk = (el, base) => el && el.id === 'zmC' ? Math.max(1, Math.min(3, (($('#zmSc').clientHeight || 600) - 24) / base)) : 1;
+const ZICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 2.5h3.5V6M6 13.5H2.5V10M13.5 2.5 9.5 6.5M2.5 13.5l4-4"/></svg>';
+function zoomable(el, key, title, fn, host){
   ZF[key] = { title, fn }; if(el.id === 'zmC' || el.closest('#zoom')) return;
-  let b = el.previousElementSibling; if(!(b && b.classList.contains('zbtn'))){ b = document.createElement('button'); b.className = 'zbtn'; b.type = 'button'; b.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9"/></svg><span>크게 보기</span>'; el.before(b); }
+  host = host || el; if(host === el) el.classList.add('zhost');
+  let b = host.querySelector(':scope > .zbtn'); if(!b){ b = document.createElement('button'); b.className = 'zbtn'; b.type = 'button'; b.title = '자세히 보기'; b.setAttribute('aria-label', title + ' 자세히 보기'); b.innerHTML = ZICON; host.appendChild(b); }
   b.onclick = (e) => { e.stopPropagation(); openZoom(key); };
 }
-function openZoom(key){ zmKey = key; const z = $('#zoom'); z.hidden = false; document.body.classList.add('zm-on'); hideTip(); drawZoom(true); $('#zmX').focus({ preventScroll: true }); }
-function closeZoom(){ $('#zoom').hidden = true; document.body.classList.remove('zm-on'); hideTip(); zmKey = null; $('#zmC').innerHTML = ''; }
-function drawZoom(first){
-  const z = ZF[zmKey]; if(!z) return; const sc = $('#zmSc'), c = $('#zmC'), frac = sc.scrollWidth > sc.clientWidth ? (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth : 1;
-  $('#zmT').textContent = z.title; document.querySelectorAll('#zmSeg button').forEach(b => b.classList.toggle('on', +b.dataset.z === zmZ));
-  c.style.width = Math.round(sc.clientWidth * zmZ) + 'px'; z.fn(c);
-  // 옆으로 밀어도 왼쪽 눈금·이름은 붙어 있게: 왼쪽 44칸을 복제해 고정
-  const sv = c.querySelector('svg'); if(sv && zmZ > 1){ const vb = sv.viewBox.baseVal, k = sv.getBoundingClientRect().width / vb.width, cl = sv.cloneNode(true);
-    cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(n => n.removeAttribute('id')); cl.setAttribute('viewBox', `0 0 44 ${vb.height}`); cl.style.width = (44 * k) + 'px'; cl.style.height = (vb.height * k) + 'px';
-    const ax = document.createElement('div'); ax.className = 'zm-ax'; ax.appendChild(cl); c.prepend(ax); }
-  // 처음엔 최근(오른쪽 끝)부터, 배율을 바꾸면 보던 곳 그대로
-  sc.scrollLeft = first ? sc.scrollWidth : frac * sc.scrollWidth - sc.clientWidth / 2;
+function openZoom(key){
+  zmKey = key; $('#zoom').hidden = false; document.body.classList.add('zm-on'); hideTip();
+  zmZ = innerWidth < 600 ? 3 : 2; drawZoom(1); requestAnimationFrame(() => $('#zoom').classList.add('in')); $('#zmX').focus({ preventScroll: true });
 }
-$('#zmSeg').onclick = (e) => { const v = +e.target.dataset.z; if(v){ zmZ = v; drawZoom(false); } };
+function closeZoom(){ const z = $('#zoom'); z.classList.remove('in'); hideTip(); zmKey = null; document.body.classList.remove('zm-on'); setTimeout(() => { if(!zmKey){ z.hidden = true; $('#zmC').innerHTML = ''; $('#zmMini').innerHTML = ''; } }, 180); }
+// at = 보여 줄 창의 가운데(전체 대비 0~1). 1이면 오른쪽 끝(최근)
+function drawZoom(at){
+  const z = ZF[zmKey]; if(!z) return; const sc = $('#zmSc'), c = $('#zmC');
+  $('#zmT').textContent = z.title; $('#zmS').textContent = zmKey === 'tb' && calSel ? md(kstMs(calSel)) : rangeLabel(range);
+  c.style.width = Math.round(sc.clientWidth * zmZ) + 'px'; z.fn(c);
+  const sv = c.querySelector('svg'); $('#zmMini').innerHTML = ''; $('#zmFit').hidden = zmZ <= 1.01;
+  if(sv){
+    // 미니맵: 같은 그래프를 납작하게 (글자·눈금 없이)
+    const mini = sv.cloneNode(true); mini.removeAttribute('id'); mini.querySelectorAll('[id]').forEach(n => n.removeAttribute('id')); mini.setAttribute('preserveAspectRatio', 'none'); $('#zmMini').appendChild(mini);
+    // 옆으로 밀어도 왼쪽 눈금·이름은 붙어 있게
+    if(zmZ > 1){ const vb = sv.viewBox.baseVal, k = sv.getBoundingClientRect().width / vb.width, cl = sv.cloneNode(true);
+      cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(n => n.removeAttribute('id')); cl.setAttribute('viewBox', `0 0 44 ${vb.height}`); cl.style.width = (44 * k) + 'px'; cl.style.height = (vb.height * k) + 'px';
+      const ax = document.createElement('div'); ax.className = 'zm-ax'; ax.appendChild(cl); c.prepend(ax); }
+  }
+  sc.scrollLeft = at * sc.scrollWidth - sc.clientWidth / 2; zmWin();
+}
+const zmFrac = () => { const sc = $('#zmSc'); return { a: sc.scrollLeft / sc.scrollWidth, w: Math.min(1, sc.clientWidth / sc.scrollWidth) }; };
+function zmWin(a, w){ const f = zmFrac(), W = $('#zmWin'); a = a ?? f.a; w = w ?? f.w; W.style.left = (a * 100).toFixed(3) + '%'; W.style.width = (w * 100).toFixed(3) + '%'; W.classList.toggle('all', w > .995); }
+// 배율 바꾸기: 새 너비 비율 w, 가운데 at
+const zmSet = (w, at) => { zmZ = Math.max(1, Math.min(16, 1 / Math.max(1 / 16, w))); drawZoom(Math.max(0, Math.min(1, at))); };
+(() => {
+  const nav = $('#zmNav'), win = $('#zmWin'), sc = $('#zmSc');
+  let drag = null;
+  nav.addEventListener('pointerdown', (e) => {
+    const r = nav.getBoundingClientRect(), f = zmFrac(), x = (e.clientX - r.left) / r.width, h = e.target.closest('.zh');
+    nav.setPointerCapture(e.pointerId); e.preventDefault();
+    if(h) drag = { m: h.classList.contains('l') ? 'l' : 'r', a: f.a, b: f.a + f.w, r };
+    else if(e.target.closest('#zmWin')) drag = { m: 'move', x0: x, s0: sc.scrollLeft, r };
+    else { sc.scrollTo({ left: (x - f.w / 2) * sc.scrollWidth, behavior: 'smooth' }); drag = null; }
+  });
+  nav.addEventListener('pointermove', (e) => { if(!drag) return; const x = Math.max(0, Math.min(1, (e.clientX - drag.r.left) / drag.r.width));
+    if(drag.m === 'move'){ sc.scrollLeft = drag.s0 + (x - drag.x0) * sc.scrollWidth; return; }
+    const min = 1 / 16; if(drag.m === 'l') drag.a = Math.min(x, drag.b - min); else drag.b = Math.max(x, drag.a + min);
+    zmWin(drag.a, drag.b - drag.a); });
+  const end = () => { if(drag && drag.m !== 'move') zmSet(drag.b - drag.a, (drag.a + drag.b) / 2); drag = null; };
+  nav.addEventListener('pointerup', end); nav.addEventListener('pointercancel', end);
+  sc.addEventListener('scroll', () => { hideTip(); if(!drag || drag.m === 'move') zmWin(); }, { passive: true });
+  // 트랙패드 핀치·Ctrl+휠: 가리킨 곳을 중심으로
+  let wt = 0, wz = null;
+  sc.addEventListener('wheel', (e) => { if(!e.ctrlKey) return; e.preventDefault(); const f = zmFrac(), r = sc.getBoundingClientRect(), at = f.a + (e.clientX - r.left) / r.width * f.w;
+    wz = wz || { w: f.w, at }; wz.w = Math.max(1 / 16, Math.min(1, wz.w * Math.exp(e.deltaY * .01))); zmWin(wz.at - wz.w / 2, wz.w);
+    clearTimeout(wt); wt = setTimeout(() => { zmSet(wz.w, wz.at); wz = null; }, 120); }, { passive: false });
+  // 두 손가락 벌리기·오므리기
+  let pin = null;
+  sc.addEventListener('touchstart', (e) => { if(e.touches.length === 2){ const [p, q] = e.touches, f = zmFrac(), r = sc.getBoundingClientRect(); pin = { d: Math.hypot(p.clientX - q.clientX, p.clientY - q.clientY), at: f.a + (((p.clientX + q.clientX) / 2) - r.left) / r.width * f.w, w: f.w, k: 1 }; } }, { passive: true });
+  sc.addEventListener('touchmove', (e) => { if(pin && e.touches.length === 2){ e.preventDefault(); const [p, q] = e.touches; pin.k = Math.hypot(p.clientX - q.clientX, p.clientY - q.clientY) / pin.d; const w = Math.max(1 / 16, Math.min(1, pin.w / pin.k)); zmWin(pin.at - w / 2, w); } }, { passive: false });
+  sc.addEventListener('touchend', (e) => { if(pin && e.touches.length < 2){ const w = Math.max(1 / 16, Math.min(1, pin.w / pin.k)); if(Math.abs(pin.k - 1) > .05) zmSet(w, pin.at); pin = null; } }, { passive: true });
+})();
+$('#zmFit').onclick = () => { zmZ = 1; drawZoom(.5); };
 $('#zmX').onclick = closeZoom;
 document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && zmKey) closeZoom(); });
-$('#zmSc').addEventListener('scroll', () => hideTip(), { passive: true });
-$('#zoom').addEventListener('pointerdown', (e) => { if(e.pointerType !== 'mouse'){ const t = document.elementFromPoint(e.clientX, e.clientY); if(t && t.onmousemove && /hit$/i.test(t.id || t.getAttribute('class') || '')) t.onmousemove({ clientX: e.clientX, clientY: e.clientY, pointerType: 'touch' }); } });
+$('#zoom').addEventListener('pointerdown', (e) => { if(e.pointerType !== 'mouse' && !e.target.closest('#zmNav')){ const t = document.elementFromPoint(e.clientX, e.clientY); if(t && t.onmousemove && /hit$/i.test(t.id || t.getAttribute('class') || '')) t.onmousemove({ clientX: e.clientX, clientY: e.clientY, pointerType: 'touch' }); } });
 // 폰: 그래프 위에서 손가락을 가로로 끌면 값 확인(세로로는 그대로 스크롤). 손을 떼면 잠시 뒤 툴팁 닫힘
 const scrub = (x, y) => { const t = document.elementFromPoint(x, y); if(t && t.onmousemove && /hit$/i.test(t.id)) t.onmousemove({ clientX: x, clientY: y, pointerType: 'touch' }); };
 document.addEventListener('pointermove', e => { if(e.pointerType !== 'mouse' && !zmKey) scrub(e.clientX, e.clientY); }, { passive: true });
@@ -2584,7 +2651,7 @@ addEventListener('scroll', () => { if(!matchMedia('(hover: none)').matches) hide
 $('#secTabs').onclick = e => { const pn = e.target.dataset.p; if(pn) showPanel(pn); };
 $('#pToggle').onclick = () => { const h = $('#pick2').hidden; $('#pick2').hidden = !h; $('#pToggle').setAttribute('aria-expanded', String(h)); $('#pToggle').textContent = h ? '기간 직접 선택 ▴' : '기간 직접 선택 ▾'; };
 (async () => { try { const b = await get('/api/bounds'); if(b.first){ dataFirst = kstDate(b.first); dataLast = kstDate(Math.max(b.last, Date.now())); } } catch {} syncPick(); })();
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { renderAll(); if(zmKey) drawZoom(false); }, 200); });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { renderAll(); if(zmKey){ const f = zmFrac(); drawZoom(f.a + f.w / 2); } }, 200); });
 if('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 showPanel(panel); load(); loadHeat(); setInterval(load, 30000); setInterval(loadHeat, 300000);
 </script>
