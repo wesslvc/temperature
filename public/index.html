@@ -1137,6 +1137,7 @@ body.zm-on{overflow:hidden}
   #zoom.has-bat #zmBat .tb-h{grid-area:h}#zoom.has-bat #zmBat .tb-m{grid-area:m}#zoom.has-bat #zmBat .tbx{grid-area:b}#zoom.has-bat #zmBat .tb-sc{grid-area:s}
   #zoom.has-bat #zmBat .tb-f{grid-area:f;margin:0!important;padding-left:24px;border-left:1px solid var(--hair);align-self:stretch;align-content:center}
 }
+.bc.hd b::after{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--b-heat,#e85d9c);margin-left:4px;vertical-align:2px}
 </style>
 </head>
 <body>
@@ -1893,8 +1894,8 @@ async function loadThermo(){
   const di = {}; (st && st.daily || []).forEach(r => { if(r.temp != null) di[r.d] = r.temp; });
   const dg = {}; (oa && oa.series || OS).forEach(p => { const d = kstDate(p.ts); (dg[d] = dg[d] || []).push(p.temp); });
   const dout = {}; Object.keys(dg).forEach(d => { if(dg[d].length >= 18) dout[d] = dg[d].reduce((x, y) => x + y, 0) / dg[d].length; });
-  const hn = await get(`/api/outdoor?heat=1&from=${b - 2 * 36e5}&to=${b}`).catch(() => null), hl = (hn && hn.series || []).filter(x => x.room === '침실1').at(-1) || null;
-  thermo = { key, H, n: ks.length, k: ks.length >= 8 ? ks[Math.floor(ks.length / 2)] : null, di, dout, M: fitHouse(di, dout), heat: hl };
+  const hn = await get(`/api/outdoor?heat=1&from=${b - 20 * 864e5}&to=${b}`).catch(() => null), hrows = (hn && hn.series || []).filter(x => x.room === '침실1'), hl = hrows.at(-1) || null;
+  thermo = { key, H, n: ks.length, k: ks.length >= 8 ? ks[Math.floor(ks.length / 2)] : null, di, dout, M: fitHouse(di, dout), heat: hl, heatRows: hrows };
   renderAll();
 }
 // 날짜별 실제 난방 사용량 (HT 에너지 화면 값). 0이면 그날 난방은 안 돈 것
@@ -1903,14 +1904,22 @@ let heatUse = { at: 0, map: {}, ok: false, months: {} };
 // 그래서 ① 날짜 값이 있으면 그대로 ② 그 달 합계가 0이면 안 씀 ③ 합계가 있으면 센서 난방 신호가 2시간 이상인 날만 씀
 function heatSigDays(){
   if(heatUse.sig && heatUse.sig.n === thermo.H.length) return heatUse.sig.d;
-  const H = thermo.H, d = {}; for(let i = 1; i < H.length; i++){ const q = H[i]; if(heatSignal(H[i - 1], q, sunAt(q.ts))){ const k = kstDate(q.ts); d[k] = (d[k] || 0) + 1; } }
-  heatUse.sig = { n: H.length, d }; return d;
+  const H = thermo.H, d = {}, ht = {}, hrs = [], R = thermo.heatRows || [];
+  const stAt = (ts) => { let b = null; for(const x of R) if(Math.abs(x.ts - ts) <= 45 * 60e3 && (!b || Math.abs(x.ts - ts) < Math.abs(b.ts - ts))) b = x; return heatState(b); };
+  for(let i = 1; i < H.length; i++){ const q = H[i]; if(heatSignal(H[i - 1], q, sunAt(q.ts)) || nightHold(H, i)){ const k = kstDate(q.ts); d[k] = (d[k] || 0) + 1; const st = stAt(q.ts); if(st === 'on' || st === 'edge') ht[k] = (ht[k] || 0) + 1; hrs.push({ ts: q.ts, ht: st === 'on' || st === 'edge' }); } }
+  heatUse.sig = { n: H.length, d, ht, hrs }; return d;
+}
+// 그 시각(±45분)에 난방이 돌았나: 난방 쓴 날 + 그 시간에 센서 난방 신호(이번 달 합계가 아직 0이면 월패드도 '설정 > 바닥')
+function heatHour(ts){
+  const d = kstDate(ts); if(heatDay(d) !== true) return false; const M = heatUse.months && heatUse.months[d.slice(0, 7)], needHT = !(M && M.v > 0) && !(heatUse.map[d] > 0);
+  return heatUse.sig.hrs.some(h => Math.abs(h.ts - ts) <= 45 * 60e3 && (!needHT || h.ht));
 }
 function heatDay(d){
   if(!heatUse.ok) return null;
   if(heatUse.map[d] > 0) return true;
   const M = heatUse.months && heatUse.months[d.slice(0, 7)]; if(!M) return heatUse.months && Object.keys(heatUse.months).length ? false : null;
-  if(!(M.v > 0)) return false;
+  // 이번 달 합계가 아직 0이어도(계량이 늦게 반영) 월패드가 '설정 > 바닥'이고 센서도 그렇다고 한 시간이 2시간 넘으면 씀
+  if(!(M.v > 0)){ heatSigDays(); return d.slice(0, 7) === kstDate(Date.now()).slice(0, 7) ? (heatUse.sig.ht[d] || 0) >= 2 : false; }
   return (heatSigDays()[d] || 0) >= 2;
 }
 async function loadHeatUse(){
@@ -1951,6 +1960,14 @@ function heatSignal(p, q, sunW){
   const dT = q.tin - p.tin, dH = q.hin - p.hin, dD = p.dew != null && q.dew != null ? Math.abs(q.dew - p.dew) : 0;
   // 바닥 난방은 온도를 끌어올리기보다 '안 떨어지게' 버티는 편이라, 온도가 그대로(−0.02° 이상)여도 습도만 내려가면 난방으로 본다
   return (sunW == null || sunW < 80) && dT >= -.02 && dH <= -.5 && dD <= .6;
+}
+// 밤에 안 식음: 해가 없고 바깥이 10° 넘게 찬데, 3시간 동안 집이 원래 식는 만큼(k × 실내·바깥 차이 × 3)의 4분의 1도 안 식었으면 열이 들어오는 중
+// (한 시간 단위는 오르내림이 커서 3시간으로 본다. 사람·요리로 잠깐 오른 건 습도·이슬점이 같이 크게 올라 걸러짐)
+function nightHold(H, i){
+  const q = H[i], p = H[i - 3]; if(!p || q.ts - p.ts > 3.6 * 36e5 || !thermo.k || q.tout == null || p.tout == null) return false;
+  for(let j = i - 2; j <= i; j++){ const w = sunAt(H[j].ts); if(w > 20) return false; }
+  const gap = (p.tin + q.tin) / 2 - (p.tout + q.tout) / 2, exp = thermo.k * gap * 3, dT = q.tin - p.tin, dD = q.dew != null && p.dew != null ? q.dew - p.dew : 0;
+  return gap > 10 && exp > .1 && dT >= -.25 * exp && dD < .8;
 }
 // 환기 신호: 온도·이슬점이 함께 내려가고 습도도 내려감 = 바깥의 차고 건조한 공기가 들어옴
 function ventSignal(p, q){
@@ -2049,7 +2066,8 @@ function thermoCard(big){
   if(range !== '24h'){ const rc = thermoRangeCard(big); if(rc) return rc; }
   const T = thermoNow(); if(!T) return '';
   const tdH = heatDay(kstDate(Date.now())), todayUse = tdH == null ? null : tdH ? 1 : 0, monthUse = heatUse.ok ? (heatUse.months[kstDate(Date.now()).slice(0, 7)] || {}).v ?? Object.keys(heatUse.map).filter(d => d.slice(0, 7) === kstDate(Date.now()).slice(0, 7)).reduce((a, d) => a + heatUse.map[d], 0) : null;
-  const hs = thermo.heat ? heatState(thermo.heat) : null, heating = todayUse != null ? todayUse > 0 : hs === 'on' || (hs === 'edge' && (() => { const Hh = thermo.H, q = Hh.at(-1), p = Hh.at(-2); return heatSignal(p, q, sunAt(q && q.ts)); })());
+  // 지금 난방 중 = 오늘 난방 쓴 날이고 최근 2시간 안에 난방 시간이 있음 (해 난 낮에 오른 건 햇빛으로)
+  const hs = thermo.heat ? heatState(thermo.heat) : null, lastTs = thermo.H.length ? thermo.H.at(-1).ts : Date.now(), heating = todayUse != null ? todayUse > 0 && (heatHour(lastTs) || heatHour(lastTs - 36e5)) : hs === 'on';
   const pct = Math.round(T.soc * 100), col = heating ? 'var(--hot)' : specColor('temp', T.tin), sg = (v, u = '%p', d = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v * (u === '%p' ? 100 : 1)).toFixed(d)}${u}`;
   const stTxt = (heating && T.st !== 'dis' ? '난방으로 충전 중' : { chg: '충전 중', dis: '소모 중', idle: '유지' }[T.st]) + (T.rate == null ? '' : ` ${sg(T.rate, '%p', 0)} / 시간`);
   const fillW = Math.max(0, Math.min(1, T.soc)) * 100, over = T.soc > 1 ? Math.round((T.soc - 1) * 100) : 0;
@@ -2080,7 +2098,7 @@ function tbPeek(p, prev, day){
   tbFill(card, p, prev, day);
 }
 function tbFill(card, p, prev, day, cls = 'tb big peek'){
-  const rate = prev && prev !== p ? (p.v - prev.v) / Math.max(.25, (p.ts - prev.ts) / 36e5) : 0, heat = heatDay(p.d) === true && rate > .004;
+  const rate = prev && prev !== p ? (p.v - prev.v) / Math.max(.25, (p.ts - prev.ts) / 36e5) : 0, heat = heatHour(p.ts) && rate > -.004;
   const st = p.v > 1 ? 'over' : p.v < 0 ? 'under' : heat ? 'chg heat' : rate > .008 ? 'chg' : rate < -.008 ? 'dis' : 'idle';
   card.className = `${cls} ${st}`; const pct = Math.round(p.v * 100), sg = (v, d = 0) => `${v >= 0 ? '+' : '−'}${Math.abs(v * 100).toFixed(d)}%p`;
   const q = (s) => card.querySelector(s), fill = q('.tbx-fill');
@@ -2122,7 +2140,7 @@ function thermoChart(el){
   // 같은 상태가 이어지는 구간을 한 덩어리로 (조각 사이 실금 없이)
   { let pu = true, run = null; const flush = () => { if(run && run.p.length > 1) g += `<path d="M${run.p.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L')}L${run.p.at(-1)[0].toFixed(1)},${yb}L${run.p[0][0].toFixed(1)},${yb}Z" class="${run.c}"/>`; run = null; };
     for(let i = 1; i < pts.length; i++){ const p = pts[i - 1], q = pts[i]; if(q.ts - p.ts > 1.6 * 36e5){ flush(); continue; }
-      const dv = q.v - p.v, up = Math.abs(dv) < .004 ? pu : dv > 0; pu = up; const c = up ? (hd(q.d) ? 'tb-cu h' : 'tb-cu') : 'tb-cd';
+      const dv = q.v - p.v, up = Math.abs(dv) < .004 ? pu : dv > 0; pu = up; const c = up ? (heatHour(q.ts) ? 'tb-cu h' : 'tb-cu') : 'tb-cd';
       if(!run || run.c !== c){ const st = run ? run.p.at(-1) : [X(p.ts), Y(p.v)]; flush(); run = { c, p: [st] }; }
       run.p.push([X(q.ts), Y(q.v)]); }
     flush(); }
@@ -2136,7 +2154,7 @@ function thermoChart(el){
   g = bg + g;
   // 침실1 난방이 돌던 시간 (시간 단위). 진하게 = HT로 확실 또는 '경계'인데 센서 신호도 있음, 옅게 = HT 기록 없는 시간의 센서 추정
   { const HS = HT.filter(x => x.room === '침실1').sort((x, y) => x.ts - y.ts), htAt = (ts) => { let best = null; for(const x of HS){ if(Math.abs(x.ts - ts) <= 45 * 60e3 && (!best || Math.abs(x.ts - ts) < Math.abs(best.ts - ts))) best = x; } return best; };
-    for(let i = 1; i < H.length; i++){ const q = H[i]; if(q.ts < t0 || q.ts > t1) continue; const sig = heatSignal(H[i - 1], q, sunAt(q.ts)), st = heatState(htAt(q.ts));
+    for(let i = 1; i < H.length; i++){ const q = H[i]; if(q.ts < t0 || q.ts > t1) continue; const sig = heatSignal(H[i - 1], q, sunAt(q.ts)) || nightHold(H, i), st = heatState(htAt(q.ts));
       const vent = !sig && ventSignal(H[i - 1], q);
       // HT 에너지 사용량이 0인 날은 난방이 안 돈 것 → 센서 추정(습도만 내려감)은 빨강으로 그리지 않는다
       const dq = kstDate(q.ts), used = heatDay(dq);
@@ -2163,13 +2181,16 @@ function thermoChart(el){
 function batteryDays(){
   if(!thermo.M || !thermo.H.length) return [];
   const kwh = {}; solarHours().forEach(x => { const d = kstDate(x.a + 18e5); kwh[d] = (kwh[d] || 0) + x.w / 1000; });
-  const today = kstDate(Date.now()), C = dayCycles(socPts(thermo.H)), useOK = heatUse.ok, heatDays = new Set(useOK ? C.map(r => r.d).filter(d => heatDay(d) === true) : []);
+  const today = kstDate(Date.now()), SP = socPts(thermo.H), C = dayCycles(SP), useOK = heatUse.ok, heatDays = new Set(useOK ? C.map(r => r.d).filter(d => heatDay(d) === true) : []);
   const R = C.filter(r => kwh[r.d] != null && !heatDays.has(r.d) && r.d !== today);
   let a = null, c = null; if(R.length >= 8){ const mx = R.reduce((t, r) => t + kwh[r.d], 0) / R.length, my = R.reduce((t, r) => t + r.charge, 0) / R.length, sxx = R.reduce((t, r) => t + (kwh[r.d] - mx) ** 2, 0);
     if(sxx > .5){ a = R.reduce((t, r) => t + (kwh[r.d] - mx) * (r.charge - my), 0) / sxx; c = my - a * mx; } }
   C.forEach((r, i) => { r.kwh = kwh[r.d] ?? null; r.soc = r.level; r.use = useOK ? (heatDay(r.d) ? 1 : 0) : null; r.useM = useOK ? (heatUse.months[r.d.slice(0, 7)] || {}).v ?? null : null; r.dS = i ? r.level - C[i - 1].level : null;
     const pred = a != null && r.kwh != null ? Math.max(0, a * r.kwh + c) : null;
-    r.heatGain = heatDays.has(r.d) ? (pred != null ? Math.min(r.charge, Math.max(0, r.charge - pred)) : r.charge / 2) : 0; r.sunGain = r.charge - r.heatGain;
+    // 난방 몫 = 충전 구간(아침 최저→낮 최고) 중 난방이 돈 시간에 오른 만큼. 그 시간 정보가 없으면 햇빛으로 설명 안 되는 만큼
+    let hr = null; if(heatDays.has(r.d) && heatUse.sig && heatUse.sig.hrs){ hr = 0; for(let i = 1; i < SP.length; i++){ const q = SP[i], p = SP[i - 1]; if(q.ts > r.loTs && q.ts <= r.hiTs && q.soc > p.soc && heatHour(q.ts)) hr += q.soc - p.soc; } }
+    r.heatGain = heatDays.has(r.d) ? Math.min(r.charge, hr != null ? hr : pred != null ? Math.max(0, r.charge - pred) : r.charge / 2) : 0; r.sunGain = r.charge - r.heatGain;
+    r.heatHold = heatDays.has(r.d);
     r.src = r.charge < .02 ? 'flat' : r.heatGain > .01 && r.sunGain > .01 ? 'both' : r.heatGain > .01 ? 'heat' : 'sun'; });
   return C;
 }
@@ -2188,7 +2209,7 @@ function batteryStrip(el){
     if(!r) return `<div class="bc nil${d === today ? ' now' : ''}"><b>${day}</b></div>`;
     const f = Math.max(0, Math.min(1, r.level)), sg = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v * 100))}`;
     const tip = `${md(kstMs(d))} · 평균 잔량 ${Math.round(r.level * 100)}% (실내 ${n1(r.tin)}° / 평소 ${n1(r.e)}°) · 충전 +${Math.round(r.charge * 100)}%p (${hhmm(r.loTs)}→${hhmm(r.hiTs)})${r.heatGain > .01 ? ` 중 난방 +${Math.round(r.heatGain * 100)}%p` : ''}${r.drain != null ? ` · 밤 소모 −${Math.round(r.drain * 100)}%p` : ''}${r.kwh != null ? ` · 햇빛 ${r.kwh.toFixed(1)} kWh/㎡` : ''}${r.useM != null ? ` · 난방 ${r.use ? '씀' : '안 씀'} (그달 합계 ${r.useM})` : ''}`;
-    return `<div class="bc ${r.src}${inM ? '' : ' out'}${d === today ? ' now' : ''}${inSel(d) ? ' sel' : ''}${calSel === d ? ' pick' : ''}${r.level > 1 ? ' over' : ''}" data-d="${d}" style="--bc:${specColor('temp', r.tin)}" title="${tip}">
+    return `<div class="bc ${r.src}${inM ? '' : ' out'}${d === today ? ' now' : ''}${inSel(d) ? ' sel' : ''}${calSel === d ? ' pick' : ''}${r.level > 1 ? ' over' : ''}${r.heatHold ? ' hd' : ''}" data-d="${d}" style="--bc:${specColor('temp', r.tin)}" title="${tip}">
       <u style="height:${(f * 100).toFixed(0)}%"></u><b>${day}</b><em>${sg(r.charge)}</em>
       <span class="bc-d"><i class="s" style="width:${pc(r.sunGain)}%"></i><i class="h" style="width:${pc(r.heatGain)}%"></i></span>${r.drain != null ? `<span class="bc-d n"><i class="n" style="width:${pc(r.drain)}%"></i></span>` : ''}</div>`; };
   const cells = Array.from({ length: 42 }, (_, i) => cell(addDays(start, i))).join('');
@@ -2197,7 +2218,7 @@ function batteryStrip(el){
     <div class="bc-w">${'월화수목금토일'.split('').map(x => `<span>${x}</span>`).join('')}</div>
     <div class="bc-g">${cells}</div>
     <div class="bc-s">${RG ? `<em class="bc-sl">${rangeLabel(range)}</em>` : ''}<span>평균 잔량 <b>${avg('level') == null ? '–' : Math.round(avg('level') * 100) + '%'}</b></span><span>하루 충전 <b>${avg('charge') == null ? '–' : '+' + Math.round(avg('charge') * 100) + '%p'}</b></span><span>난방 쓴 날 <b>${inMon.filter(r => r.heatGain > .01 || r.use > 0).length}일</b></span></div>
-    <p class="bc-lg"><span><i class="sun"></i>햇빛·생활열 충전</span><span><i class="heat"></i>난방 충전</span><span><i class="down"></i>밤 소모</span><span class="f">채움 = 그날 평균 잔량 · 숫자 = 그날 충전</span></p>`;
+    <p class="bc-lg"><span><i class="sun"></i>햇빛·생활열 충전</span><span><i class="heat"></i>난방 충전</span><span><i class="down"></i>밤 소모</span><span class="f">채움 = 그날 평균 잔량 · 숫자 = 그날 충전 · 날짜 옆 점 = 난방 돈 날</span></p>`;
   el.querySelectorAll('.bc-nav').forEach(b => b.onclick = () => { bcMon = addMonths(bcMon, +b.dataset.m); batteryStrip(el); });
   el.querySelectorAll('.bc[data-d]').forEach(c => c.onclick = () => calPick(c.dataset.d, c));
 }

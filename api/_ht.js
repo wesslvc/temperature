@@ -71,6 +71,10 @@ async function suspect(now, heater) {
       let sun = null; try { const g = await rpc('roomtemp_ghi_series', { p_from: new Date(now - 2 * 36e5).toISOString(), p_to: new Date(now).toISOString() }); if (g && g.length) sun = Number(g.at(-1).ghi); } catch {}
       const hr = new Date(now + 9 * 36e5).getUTCHours(), low = sun != null ? sun < 80 : hr < 8 || hr >= 17;
       if (low && dT >= -0.02 && dH <= -0.5 && dD <= 0.6) why.push(`센서 (온도 ${dT >= 0 ? '+' : ''}${dT.toFixed(2)}°, 습도 ${dH.toFixed(1)}%p)`);
+      // 밤에 안 식음: 바깥이 10° 넘게 찬데 한 시간 동안 거의 안 식었으면 열이 들어오는 중
+      if (hr < 7 || hr >= 19) { try { const O = (await rpc('roomtemp_out_series', { p_from: new Date(now - 2 * 36e5).toISOString(), p_to: new Date(now).toISOString(), p_bucket_min: 30 })) || [];
+        const ot = O.length ? O.reduce((a, r) => a + Number(r.temp), 0) / O.length : null, tin = mean(B, 'temp');
+        if (ot != null && tin - ot > 10 && dT >= -0.03) why.push(`밤인데 안 식음 (실내 ${tin.toFixed(1)}°, 바깥 ${ot.toFixed(1)}°, ${dT >= 0 ? '+' : ''}${dT.toFixed(2)}°/h)`); } catch {} }
     }
   } catch (e) { console.error('suspect', e.message); }
   return why;
