@@ -1962,12 +1962,12 @@ function heatSignal(p, q, sunW){
   return (sunW == null || sunW < 80) && dT >= -.02 && dH <= -.5 && dD <= .6;
 }
 // 밤에 안 식음: 해가 없고 바깥이 10° 넘게 찬데, 3시간 동안 집이 원래 식는 만큼(k × 실내·바깥 차이 × 3)의 4분의 1도 안 식었으면 열이 들어오는 중
-// (한 시간 단위는 오르내림이 커서 3시간으로 본다. 사람·요리로 잠깐 오른 건 습도·이슬점이 같이 크게 올라 걸러짐)
+// (한 시간 단위는 오르내림이 커서 3시간으로 본다.) 우리 집은 난방이 돌면 건조해진다 → 습도가 오르면 난방이 아님(사람·요리·샤워 열)
 function nightHold(H, i){
   const q = H[i], p = H[i - 3]; if(!p || q.ts - p.ts > 3.6 * 36e5 || !thermo.k || q.tout == null || p.tout == null) return false;
   for(let j = i - 2; j <= i; j++){ const w = sunAt(H[j].ts); if(w > 20) return false; }
-  const gap = (p.tin + q.tin) / 2 - (p.tout + q.tout) / 2, exp = thermo.k * gap * 3, dT = q.tin - p.tin, dD = q.dew != null && p.dew != null ? q.dew - p.dew : 0;
-  return gap > 10 && exp > .1 && dT >= -.25 * exp && dD < .8;
+  const gap = (p.tin + q.tin) / 2 - (p.tout + q.tout) / 2, exp = thermo.k * gap * 3, dT = q.tin - p.tin, dD = q.dew != null && p.dew != null ? q.dew - p.dew : 0, dH = q.hin != null && p.hin != null ? q.hin - p.hin : 0;
+  return gap > 10 && exp > .1 && dT >= -.25 * exp && dH <= 0 && dD <= .3;
 }
 // 환기 신호: 온도·이슬점이 함께 내려가고 습도도 내려감 = 바깥의 차고 건조한 공기가 들어옴
 function ventSignal(p, q){
