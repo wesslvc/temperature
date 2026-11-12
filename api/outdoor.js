@@ -1,6 +1,6 @@
 import { rpc } from './_db.js';
 import { GHI_LAT, GHI_LON, ghiDay, ghiFill, storeGhi } from './_ghi.js';
-import { heatUsageMonth } from './_ht.js';
+import { heatUsageMonth, heatUsageYear } from './_ht.js';
 // 기상청 AWS 매분자료 (기본: 강동 402). 키는 서버 환경변수에만 둔다.
 // /api/outdoor?from=&to=      → DB에 쌓인 자료 (구간 길이에 따라 1·10·60분 평균)
 // /api/outdoor?backfill=YYYY-MM-DD (Bearer INGEST_TOKEN) → 그 날 1분 자료를 DB에 저장
@@ -54,6 +54,14 @@ export async function storeOutdoor(t0, t1) {
 export default async function handler(req, res) {
   // 날짜별 난방 사용량(HT 에너지, 단지 계량기): /api/outdoor?heatuse=YYYY-MM
   // DB에 쌓인 날짜별 사용량 전체 (수집이 난방 의심 때·6시간마다 넣음): /api/outdoor?heatuse=db
+  // HT 연 화면 달별 합계를 지금 바로: /api/outdoor?heatuse=year:YYYY (캐시 10분)
+  if (/^year:\d{4}$/.test(String(req.query.heatuse || ''))) {
+    try {
+      const y = String(req.query.heatuse).slice(5), u = await heatUsageYear(y); if (!u) return res.status(501).json({ error: 'HT 계정 없음' });
+      res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
+      return res.json({ year: y, months: u, at: Date.now() });
+    } catch (e) { res.setHeader('Cache-Control', 'no-store'); return res.status(502).json({ error: e.message }); }
+  }
   if (req.query.heatuse === 'db') {
     try {
       const [rows, mon] = await Promise.all([rpc('roomtemp_heatuse_series'), rpc('roomtemp_heatmonth_series')]);
